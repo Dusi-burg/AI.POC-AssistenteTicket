@@ -1,0 +1,81 @@
+# AI.POC-AssistenteTicket
+
+**Bozze di risposta dentro Zammad, basate sullo storico dei ticket e sulla knowledge base, con un modello locale.**
+
+*[Read in English](README.md)*
+
+Un proof of concept: quando un cliente scrive all'helpdesk, un assistente recupera ticket simili già risolti, articoli della
+knowledge base e note di rilascio, e propone all'operatore una **bozza di risposta con le fonti**, direttamente dentro
+[Zammad](https://zammad.org) (helpdesk open source) come bozza condivisa. L'operatore la modifica e la invia con i controlli di
+Zammad: nulla parte in automatico. Tutto gira in locale: modelli su Ollama, dati su SQL Server LocalDB, Zammad in Docker dentro
+WSL.
+
+> **Stato: Fase 1 — scaffolding.** Servizi, controlli di salute e orchestrazione di Zammad sono pronti; dati, retrieval e
+> pipeline della bozza arrivano nelle prossime fasi. Tutti i dati sono sintetici e fittizi.
+
+Che cosa aggiunge agli altri POC della serie (Order-to-Cash, Assistente sinistri, Trasporto digitale):
+
+1. integrazione con un prodotto reale di terze parti (Zammad) invece di un sistema simulato;
+2. l'operatore resta nel suo strumento: nessuna interfaccia nuova da imparare;
+3. ricerca ibrida (BM25 lessicale + vettoriale, Reciprocal Rank Fusion) con filtri di applicabilità per versione;
+4. utilità misurata dal comportamento reale dell'operatore (distanza fra bozza e testo inviato).
+
+## Architettura
+
+.NET 10 + Aspire. Il servizio `Agent` è proprietario del database, ospita i client dei modelli e parla con Zammad; la console
+`Web` mostra lo stato dei servizi. Zammad gira dallo stack ufficiale `zammad-docker-compose` dentro WSL, avviato e fermato
+dall'AppHost. Dettagli in [docs/architettura.md](docs/architettura.md).
+
+| Componente | Indirizzo |
+|---|---|
+| Dashboard di Aspire | `https://localhost:17579` |
+| Agent | `http://localhost:5401` (tutte le interfacce: il webhook di Zammad arriva da WSL) |
+| Console Web | `http://localhost:5402` |
+| Zammad | `http://127.0.0.1:8080` |
+
+## Come si avvia
+
+Prerequisiti: .NET SDK 10.0.4xx, istanza LocalDB `localdev` di SQL Server 2025, [Ollama](https://ollama.com) con
+`qwen3.5:9b` e `embeddinggemma`, distro WSL `Ubuntu-26.04` con Docker Engine e Compose, `vm.max_map_count` ≥ 262144
+(Elasticsearch).
+
+```powershell
+# 1. Connection string negli user-secrets dell'AppHost
+dotnet user-secrets set "ConnectionStrings:sql" "Server=(localdb)\localdev;Database=Ticket;Trusted_Connection=True;TrustServerCertificate=True" --project src/Dusiburg.AI.Ticket.AppHost
+
+# 2. Token dell'API di Zammad (profilo di Zammad > Accesso token, permessi admin + ticket.agent)
+dotnet user-secrets set "Parameters:zammad-api-token" "<token>" --project src/Dusiburg.AI.Ticket.AppHost
+
+# 3. Avvio: Agent, Web, Zammad in WSL e dashboard di Aspire
+dotnet run --project src/Dusiburg.AI.Ticket.AppHost
+```
+
+Al primo avvio l'AppHost clona lo stack di Zammad dentro WSL e Docker scarica ~5 GB di immagini; l'amministratore di Zammad si
+crea con la procedura guidata su `http://127.0.0.1:8080`, poi si crea il token. Chiudendo l'AppHost i container di Zammad si
+fermano (`Zammad:StopOnExit=false` li lascia accesi).
+
+Le manopole dei modelli e di Zammad (`OLLAMA_*`, `MODEL_*_PROVIDER`, `EMBEDDING_*`, `ZAMMAD_URL`, `Zammad:*`) sono in
+[docs/architettura.md](docs/architettura.md#manopole).
+
+### Build e test
+
+```powershell
+dotnet build Dusiburg.AI.Ticket.slnx
+dotnet test --solution Dusiburg.AI.Ticket.slnx
+```
+
+I test non chiamano mai Ollama né Zammad (handler HTTP finti, probe stub); i test di salute di SQL usano LocalDB `localdev`.
+La CI (GitHub Actions, Windows) esegue gli stessi.
+
+## Struttura
+
+```text
+src/       AppHost, ServiceDefaults, Shared, Ai, Zammad, Agent, Web
+tests/     un progetto NUnit per area
+infra/     zammad/: configurazione dello stack (zammad.env) e script di avvio in WSL
+docs/      architettura
+```
+
+## Licenza
+
+MIT, vedi [LICENSE](LICENSE). Lo stack Docker di Zammad (AGPL-3.0) non fa parte del repository: viene clonato all'avvio.

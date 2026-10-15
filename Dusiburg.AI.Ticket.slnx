@@ -1,0 +1,20 @@
+<Solution>
+  <Folder Name="/Solution Items/">
+    <File Path="Directory.Packages.props" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/Dusiburg.AI.Ticket.Agent/Dusiburg.AI.Ticket.Agent.csproj" />
+    <Project Path="src/Dusiburg.AI.Ticket.Ai/Dusiburg.AI.Ticket.Ai.csproj" />
+    <Project Path="src/Dusiburg.AI.Ticket.AppHost/Dusiburg.AI.Ticket.AppHost.csproj" />
+    <Project Path="src/Dusiburg.AI.Ticket.ServiceDefaults/Dusiburg.AI.Ticket.ServiceDefaults.csproj" />
+    <Project Path="src/Dusiburg.AI.Ticket.Shared/Dusiburg.AI.Ticket.Shared.csproj" />
+    <Project Path="src/Dusiburg.AI.Ticket.Web/Dusiburg.AI.Ticket.Web.csproj" />
+    <Project Path="src/Dusiburg.AI.Ticket.Zammad/Dusiburg.AI.Ticket.Zammad.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Dusiburg.AI.Ticket.Agent.Tests/Dusiburg.AI.Ticket.Agent.Tests.csproj" />
+    <Project Path="tests/Dusiburg.AI.Ticket.Ai.Tests/Dusiburg.AI.Ticket.Ai.Tests.csproj" />
+    <Project Path="tests/Dusiburg.AI.Ticket.Web.Tests/Dusiburg.AI.Ticket.Web.Tests.csproj" />
+    <Project Path="tests/Dusiburg.AI.Ticket.Zammad.Tests/Dusiburg.AI.Ticket.Zammad.Tests.csproj" />
+  </Folder>
+</Solution>
