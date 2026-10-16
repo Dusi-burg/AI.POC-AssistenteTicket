@@ -57,8 +57,9 @@ non esiste.
 | `Dusiburg.AI.Ticket.Web` | console Razor Pages: stato dei servizi |
 | `tools/Dusiburg.AI.Ticket.DbInit` | ricrea il database dal modello e carica catalogo demo e dati simulati di `data/` |
 | `tools/Dusiburg.AI.Ticket.DataGen` | genera `data/tickets.json` dai testi di `data/`, con seed fisso |
+| `tools/Dusiburg.AI.Ticket.Cli` | riga di comando: `zammad bootstrap`, `zammad seed`, `demo <n>` (dalle fasi successive `embed`, `search`, `eval`) |
 
-Arrivano con le loro fasi: `Cli` (Fase 4), `Rag` (Fase 5), `Core` (Fase 6).
+Arrivano con le loro fasi: `Rag` (Fase 5), `Core` (Fase 6).
 
 Regole di confine: l'Agent è l'unico proprietario del database; la Web parla solo con l'Agent via HTTP; solo `Ai` conosce i
 provider dei modelli e solo `Zammad` conosce l'API di Zammad.
@@ -153,9 +154,17 @@ default del codice.
 | `Zammad:Managed` | `true` (l'AppHost avvia lo stack) |
 | `Zammad:StopOnExit` | `true` (alla chiusura i container si fermano) |
 | `Zammad:WslDistro`, `Zammad:StackTag`, `Zammad:ComposeDir` | `Ubuntu-26.04`, `v17.5.2`, `infra/zammad` |
+| `ZAMMAD_WEBHOOK_TARGET` | `http://172.24.176.1:5401/webhooks/zammad` (scritto nel webhook da `zammad bootstrap`) |
 
-Segreti (user-secrets dell'AppHost): `ConnectionStrings:sql`, `Parameters:zammad-api-token`, `Parameters:anthropic-api-key`
-(facoltativa).
+Segreti (user-secrets dell'AppHost, mai stampati):
+
+| Chiave | Chi la scrive | Chi la usa |
+|---|---|---|
+| `ConnectionStrings:sql` | l'utente | Agent, `DbInit`, Cli |
+| `Parameters:zammad-admin-token` | l'utente (il primo `zammad bootstrap` ci sposta il token che trova sotto la chiave dell'Agent) | solo la Cli |
+| `Parameters:zammad-api-token` | `zammad bootstrap`: token di `ai-assistant` | Agent (`ZAMMAD_API_TOKEN`) |
+| `Parameters:zammad-webhook-secret` | `zammad bootstrap` (generato una volta) | Agent (`ZAMMAD_WEBHOOK_SECRET`, firma HMAC del webhook, Fase 6) |
+| `Parameters:anthropic-api-key` | l'utente, facoltativa | Agent, confronto della Fase 8 |
 
 ## 5. Controlli di salute
 
@@ -175,7 +184,7 @@ Segreti (user-secrets dell'AppHost): `ConnectionStrings:sql`, `Parameters:zammad
 | 9 | Chiave Anthropic | informativo se nessun compito è sul cloud; errore se un compito c'è e la chiave manca |
 | 10 | Posizionamento modelli | informativo: chat in GPU, embedding fuori dalla VRAM |
 | 11 | Zammad raggiungibile | la pagina iniziale di `ZAMMAD_URL` risponde 200 (502 mentre il railsserver riparte) |
-| 12 | Token Zammad | `GET /api/v1/users/me` riconosce il token; avviso se è di un amministratore |
+| 12 | Token Zammad | `GET /api/v1/users/me` riconosce il token di `ai-assistant` (scritto da `zammad bootstrap`); avviso se è di un amministratore |
 
 ## 6. Zammad in WSL
 
@@ -206,6 +215,35 @@ Per lasciare Zammad acceso: `Zammad:StopOnExit=false`.
 Fermarlo a mano: `wsl -d Ubuntu-26.04 -- docker compose --project-name zammad stop`. I dati stanno nei volumi
 `zammad_postgresql-data`, `zammad_elasticsearch-data`, `zammad_redis-data`, `zammad_zammad-storage`, `zammad_zammad-backup`.
 
+### Struttura dell'helpdesk (Cli, Fase 4)
+
+```powershell
+dotnet run --project tools/Dusiburg.AI.Ticket.Cli -- zammad bootstrap [--rotate-token]   # struttura, idempotente
+dotnet run --project tools/Dusiburg.AI.Ticket.Cli -- zammad seed [--count 80]            # organizzazioni, referenti, storico
+dotnet run --project tools/Dusiburg.AI.Ticket.Cli -- demo <1-6>                          # ticket in arrivo di uno scenario
+```
+
+La Cli legge connection string e token dagli user-secrets dell'AppHost e lavora con il token amministratore. I suoi
+`HttpClient` non hanno la resilienza standard di ServiceDefaults: un retry su POST duplicherebbe utenti e ticket.
+
+| `zammad bootstrap` crea | Dettagli |
+|---|---|
+| Gruppi | `Supporto`, `Fatturazione elettronica` (FattureFlow), `Documentale` (DocuArchive), con le bozze condivise attive; l'amministratore riceve l'accesso |
+| Campi personalizzati | organizzazione: `prodotto`, `versione_prodotto`, `modalita`, `livello_sla`; ticket: `prodotto`, `versione_prodotto`, `rif_storico`. Una sola migrazione (riavvia il railsserver, il comando aspetta) |
+| Tag | `ai-bozza`, `ai-bassa-confidenza`; per P8 `ai-generata`, `ai-generata-in-parte`, `ai-dicitura-rimossa` |
+| Utenti | `ai-assistant` (Agent dei tre gruppi) e i 6 operatori che firmano le risposte dello storico (`*@dusiburg-software.example.it`) |
+| Token | di `ai-assistant` (permesso `ticket.agent`), creato agendo per conto dell'utente (header `From`) e salvato negli user-secrets |
+| Webhook e trigger | webhook firmato verso `ZAMMAD_WEBHOOK_TARGET`; trigger sugli articoli del **cliente** dei tre gruppi, **disattivo** fino alla Fase 6 |
+
+`zammad seed` crea le 40 organizzazioni (con dominio e `domain_assignment`, P4) e importa gli 80 ticket storici più recenti in
+`import_mode`, con date originali: il ticket e ogni articolo si creano per conto di chi li ha scritti (cliente o operatore),
+perché Zammad ignora `created_by_id` e registra come autore l'utente della richiesta; stato finale, owner, priorità e chiusura li
+imposta poi l'amministratore. `import_mode` viene rispento anche in caso di errore; in `import_mode` i trigger non partono. Il
+campo `rif_storico` (numero `HT-…`) rende il seed idempotente e collega `HistoricalTicket.ZammadTicketId`.
+
+`demo <n>` crea il ticket dello scenario `n` (testi in `data/demo.json`) per conto del referente del cliente, senza
+`import_mode`: dalla Fase 6 è l'evento che fa partire l'agente.
+
 ### Fatti verificati sull'API (Fase 0)
 
 | Tema | Comportamento |
@@ -214,6 +252,9 @@ Fermarlo a mano: `wsl -d Ubuntu-26.04 -- docker compose --project-name zammad st
 | Pagina iniziale | con `Accept: application/json` risponde 500 (`UnknownFormat`): va chiesta come HTML |
 | Bozza condivisa | `PUT /api/v1/tickets/{id}/shared_draft` con `new_article` (HTML) e `ticket_attributes`; una per ticket; l'interfaccia la mostra con la formattazione; all'invio Zammad la cancella |
 | Webhook | payload personalizzato con `#{ticket.id}`, `#{article.id}` (tipi nativi nel JSON); firma `X-Hub-Signature: sha1=<HMAC-SHA1 del corpo>`; `X-Zammad-Delivery` univoco per consegna |
+| Segreto del webhook | nelle risposte dell'API è mascherato (solo asterischi): non si può rileggere |
+| Per conto di un altro utente | header `From` (login o email) con un token amministratore; `X-On-Behalf-Of` è deprecato dalla 7 |
+| Autore e date in import | in `import_mode` `created_at` e `close_at` restano quelli passati; `created_by_id` no (vale l'utente della richiesta) |
 | Campi personalizzati | `POST /object_manager_attributes` + `POST /object_manager_attributes_execute_migrations`, che riavvia il railsserver (~11 s) |
 | Date storiche | solo con il setting `import_mode` acceso |
 | Ricerca | `GET /tickets/search?query=updated_at:[<ISO> TO *]`; un nuovo articolo è ricercabile dopo 2–3,5 s |

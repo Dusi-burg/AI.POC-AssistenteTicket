@@ -10,9 +10,10 @@ articles and release notes, and proposes a **reply draft with its sources** to t
 nothing is ever sent automatically. Everything runs locally: models on Ollama, data on SQL Server LocalDB, Zammad in Docker
 inside WSL.
 
-> **Status: Phase 3 — synthetic data.** Services, health checks, Zammad orchestration, the database and the simulated helpdesk
-> history (950 tickets, 46 knowledge base articles, 60 release notes, loaded by `DbInit`) are in place; Zammad seeding,
-> retrieval and the draft pipeline arrive in the next phases. All data is synthetic and fictitious.
+> **Status: Phase 4 — Zammad set up.** Services, health checks, the database with the simulated helpdesk history (950 tickets,
+> 46 knowledge base articles, 60 release notes) and a ready Zammad (groups, custom fields, technical user `ai-assistant`,
+> 40 organizations, 80 imported tickets, demo tickets on demand) are in place; retrieval and the draft pipeline arrive in the
+> next phases. All data is synthetic and fictitious.
 
 What it adds to the other POCs of the series (Order-to-Cash, Claims assistant, Digital transport):
 
@@ -44,19 +45,27 @@ Prerequisites: .NET SDK 10.0.4xx, SQL Server 2025 LocalDB instance `localdev`, [
 # 1. Connection string in the AppHost user-secrets
 dotnet user-secrets set "ConnectionStrings:sql" "Server=(localdb)\localdev;Database=Ticket;Trusted_Connection=True;TrustServerCertificate=True" --project src/Dusiburg.AI.Ticket.AppHost
 
-# 2. Zammad API token (Zammad profile > Token Access, permissions admin + ticket.agent)
-dotnet user-secrets set "Parameters:zammad-api-token" "<token>" --project src/Dusiburg.AI.Ticket.AppHost
+# 2. Zammad administrator token (Zammad profile > Token Access, permissions admin + ticket.agent)
+dotnet user-secrets set "Parameters:zammad-admin-token" "<token>" --project src/Dusiburg.AI.Ticket.AppHost
 
 # 3. Ticket database recreated from the model, with the demo catalog and the synthetic data of data/ (drops the existing one)
 dotnet run --project tools/Dusiburg.AI.Ticket.DbInit
 
 # 4. Start: Agent, Web, Zammad in WSL and the Aspire dashboard
 dotnet run --project src/Dusiburg.AI.Ticket.AppHost
+
+# 5. With the AppHost running: helpdesk structure, then customers and 80 historical tickets (both idempotent)
+dotnet run --project tools/Dusiburg.AI.Ticket.Cli -- zammad bootstrap
+dotnet run --project tools/Dusiburg.AI.Ticket.Cli -- zammad seed
+
+# 6. Restart the AppHost (the Agent now uses the ai-assistant token), then create the incoming ticket of a demo scenario
+dotnet run --project tools/Dusiburg.AI.Ticket.Cli -- demo 1
 ```
 
 On the very first run the AppHost clones the Zammad stack inside WSL and Docker pulls ~5 GB of images; create the Zammad
-administrator from the setup wizard at `http://127.0.0.1:8080`, then create the token. Closing the AppHost stops the Zammad
-containers (`Zammad:StopOnExit=false` keeps them running).
+administrator from the setup wizard at `http://127.0.0.1:8080`, then create the token. `zammad bootstrap` creates the technical
+user `ai-assistant` and writes its token and the webhook secret into the AppHost user-secrets. Closing the AppHost stops the
+Zammad containers (`Zammad:StopOnExit=false` keeps them running).
 
 Model and Zammad knobs (`OLLAMA_*`, `MODEL_*_PROVIDER`, `EMBEDDING_*`, `ZAMMAD_URL`, `Zammad:*`) are listed in
 [docs/architettura.md](docs/architettura.md#manopole).
@@ -76,7 +85,7 @@ database created by `DbInit` and dropped afterwards. The CI (GitHub Actions, Win
 
 ```text
 src/       AppHost, ServiceDefaults, Shared, Data, Ai, Zammad, Agent, Web
-tools/     DbInit: recreates the database from the model · DataGen: generates data/tickets.json
+tools/     DbInit: recreates the database · DataGen: generates data/tickets.json · Cli: Zammad bootstrap/seed, demo tickets
 tests/     one NUnit project per area
 data/      synthetic data: hand-written cases, KB, release notes, customers; generated tickets (Italian)
 infra/     zammad/: stack configuration (zammad.env) and start script for WSL

@@ -15,6 +15,9 @@
     <PackageVersion Include="Microsoft.Extensions.Configuration" Version="10.0.13" />
     <PackageVersion Include="Microsoft.Extensions.Configuration.Abstractions" Version="10.0.13" />
     <PackageVersion Include="Microsoft.Extensions.Http" Version="10.0.13" />
+    <PackageVersion Include="Microsoft.Extensions.Hosting" Version="10.0.13" />
+    <PackageVersion Include="Microsoft.Extensions.Configuration.UserSecrets" Version="10.0.13" />
+    <PackageVersion Include="System.CommandLine" Version="2.0.13" />
     <!-- Aspire.Hosting 13.6.1 porta la 2.5.302, con vulnerabilità nota (GHSA-qhrr-8q5h-9q3h, 2026-10-15): patch della stessa linea. -->
     <PackageVersion Include="MessagePack" Version="2.5.307" />
   </ItemGroup>

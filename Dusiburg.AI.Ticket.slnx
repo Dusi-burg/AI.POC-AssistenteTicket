@@ -15,11 +15,13 @@
   <Folder Name="/tests/">
     <Project Path="tests/Dusiburg.AI.Ticket.Agent.Tests/Dusiburg.AI.Ticket.Agent.Tests.csproj" />
     <Project Path="tests/Dusiburg.AI.Ticket.Ai.Tests/Dusiburg.AI.Ticket.Ai.Tests.csproj" />
+    <Project Path="tests/Dusiburg.AI.Ticket.Cli.Tests/Dusiburg.AI.Ticket.Cli.Tests.csproj" />
     <Project Path="tests/Dusiburg.AI.Ticket.Data.Tests/Dusiburg.AI.Ticket.Data.Tests.csproj" />
     <Project Path="tests/Dusiburg.AI.Ticket.Web.Tests/Dusiburg.AI.Ticket.Web.Tests.csproj" />
     <Project Path="tests/Dusiburg.AI.Ticket.Zammad.Tests/Dusiburg.AI.Ticket.Zammad.Tests.csproj" />
   </Folder>
   <Folder Name="/tools/">
+    <Project Path="tools/Dusiburg.AI.Ticket.Cli/Dusiburg.AI.Ticket.Cli.csproj" />
     <Project Path="tools/Dusiburg.AI.Ticket.DataGen/Dusiburg.AI.Ticket.DataGen.csproj" />
     <Project Path="tools/Dusiburg.AI.Ticket.DbInit/Dusiburg.AI.Ticket.DbInit.csproj" />
   </Folder>

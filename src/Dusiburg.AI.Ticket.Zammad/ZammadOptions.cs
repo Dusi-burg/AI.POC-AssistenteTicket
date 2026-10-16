@@ -11,10 +11,19 @@ public sealed record ZammadOptions(Uri BaseUrl, string? ApiToken)
     /// <summary>Porta pubblicata da WSL su Windows solo su localhost (fase-0.md §4 bis).</summary>
     public const string DefaultBaseUrl = "http://127.0.0.1:8080";
 
+    /// <summary>Windows visto da WSL e dai container (fase-0.md §1 bis): lì ascolta l'Agent.</summary>
+    public const string DefaultWebhookTarget = "http://172.24.176.1:5401/webhooks/zammad";
+
     public static class Keys
     {
         public const string BaseUrl = "ZAMMAD_URL";
         public const string ApiToken = "ZAMMAD_API_TOKEN";
+
+        /// <summary>Segreto HMAC del webhook (<c>Parameters:zammad-webhook-secret</c>, generato da <c>zammad bootstrap</c>).</summary>
+        public const string WebhookSecret = "ZAMMAD_WEBHOOK_SECRET";
+
+        /// <summary>Indirizzo scritto nel webhook da <c>zammad bootstrap</c>.</summary>
+        public const string WebhookTarget = "ZAMMAD_WEBHOOK_TARGET";
     }
 
     public bool HasApiToken => !string.IsNullOrWhiteSpace(ApiToken);

@@ -321,7 +321,8 @@ public sealed class TicketGenerator
                 : m with { Body = m.Body.Replace(OriginalNumberPlaceholder, duplicateOf, StringComparison.Ordinal) })];
 
             return new GeneratedTicket(
-                number, Voice.Customer.EmailDomain, Voice.Customer.Product, Voice.Version, Voice.Customer.Mode,
+                number, Voice.Customer.EmailDomain, $"{Voice.Contact.FirstName} {Voice.Contact.LastName}", Voice.Contact.Email,
+                Voice.Customer.Product, Voice.Version, Voice.Customer.Mode,
                 CategoryOverride ?? Voice.Case.Definition.Category, Priority, State, Subject, messages[0].Body, OpenedAt,
                 State == TicketState.Open ? null : messages[^1].SentAt, IsTestSet, CaseCode, TrapKind, duplicateOf, messages, Resolution);
         }

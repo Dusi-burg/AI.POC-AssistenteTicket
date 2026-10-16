@@ -61,6 +61,8 @@ public static class ColumnSizes
     public const int Version = 20;
     public const int EmailDomain = 100;
     public const int CustomerName = 200;
+    public const int ContactName = 100;
+    public const int ContactEmail = 200;
     public const int TicketNumber = 20;
     public const int Category = 50;
     public const int CaseCode = 40;

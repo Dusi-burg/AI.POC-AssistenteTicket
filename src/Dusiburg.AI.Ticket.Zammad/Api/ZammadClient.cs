@@ -9,7 +9,7 @@ namespace Dusiburg.AI.Ticket.Zammad.Api;
 /// Client tipizzato dell'API REST di Zammad (<c>/api/v1</c>), con il token nell'header <c>Authorization: Token token=…</c>
 /// impostato alla registrazione (<see cref="ZammadServiceCollectionExtensions"/>). La resilienza standard viene da ServiceDefaults.
 /// </summary>
-public sealed class ZammadClient(HttpClient http)
+public sealed partial class ZammadClient(HttpClient http)
 {
     /// <summary>Zammad usa lo snake_case (<c>first_response_at</c>, <c>ticket_id</c>).</summary>
     internal static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web) { PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower };

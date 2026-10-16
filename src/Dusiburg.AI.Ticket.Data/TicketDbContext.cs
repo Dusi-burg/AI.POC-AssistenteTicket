@@ -62,7 +62,8 @@ public sealed class TicketDbContext(DbContextOptions<TicketDbContext> options, T
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        modelBuilder.ApplyConfigurationsFromAssembly(typeof(TicketDbContext).Assembly);
+        // ChunkConfiguration ha un parametro (la dimensione del vettore): si esclude dalla scansione e si applica a mano.
+        modelBuilder.ApplyConfigurationsFromAssembly(typeof(TicketDbContext).Assembly, type => type != typeof(ChunkConfiguration));
         modelBuilder.ApplyConfiguration(new ChunkConfiguration(EmbeddingDimensions));
     }
 }

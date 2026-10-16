@@ -45,11 +45,17 @@ if (zammad.Managed)
     builder.AddZammadStack(zammad);
 }
 
-// Token dell'utente tecnico ai-assistant (Fase 4; fino ad allora il token personale della Fase 0): Parameters:zammad-api-token.
+// Token dell'utente tecnico ai-assistant, scritto da "zammad bootstrap" (Fase 4): Parameters:zammad-api-token.
 // Il parametro si dichiara solo se valorizzato, così l'AppHost parte anche senza e /api/health segnala la mancanza.
 if (builder.Configuration["Parameters:zammad-api-token"] is { Length: > 0 })
 {
     agent.WithEnvironment(ZammadSettings.ApiTokenKey, builder.AddParameter("zammad-api-token", secret: true));
+}
+
+// Segreto HMAC del webhook di Zammad (generato da "zammad bootstrap"): l'Agent verifica la firma delle consegne (Fase 6).
+if (builder.Configuration["Parameters:zammad-webhook-secret"] is { Length: > 0 })
+{
+    agent.WithEnvironment("ZAMMAD_WEBHOOK_SECRET", builder.AddParameter("zammad-webhook-secret", secret: true));
 }
 
 // Chiave del modello Claude, solo per il confronto della Fase 8 (G10): Parameters:anthropic-api-key, dichiarata se valorizzata.

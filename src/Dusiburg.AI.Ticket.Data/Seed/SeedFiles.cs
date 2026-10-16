@@ -98,6 +98,8 @@ public sealed record TicketsFile(int RandomSeed, IReadOnlyList<GeneratedTicket> 
 public sealed record GeneratedTicket(
     string Number,
     string Customer,
+    string ContactName,
+    string ContactEmail,
     string Product,
     string? Version,
     DeploymentMode Mode,

@@ -13,6 +13,9 @@ internal sealed class FakeZammadHandler : HttpMessageHandler
 
     public List<HttpRequestMessage> Requests { get; } = [];
 
+    /// <summary>Corpi delle richieste, letti alla ricezione: il client chiude la richiesta dopo l'invio.</summary>
+    public List<string?> Bodies { get; } = [];
+
     /// <param name="pathAndQuery">Percorso relativo alla radice, per esempio <c>/api/v1/users/me?expand=true</c>.</param>
     public FakeZammadHandler Respond(string pathAndQuery, HttpStatusCode status, string body = "")
     {
@@ -21,19 +24,20 @@ internal sealed class FakeZammadHandler : HttpMessageHandler
         return this;
     }
 
-    protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+    protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
         Requests.Add(request);
+        Bodies.Add(request.Content is null ? null : await request.Content.ReadAsStringAsync(cancellationToken));
 
         (HttpStatusCode status, string body) = _responses.TryGetValue(request.RequestUri!.PathAndQuery, out var response)
             ? response
             : (HttpStatusCode.NotFound, """{"error":"percorso non previsto dal test"}""");
 
-        return Task.FromResult(new HttpResponseMessage(status)
+        return new HttpResponseMessage(status)
         {
             RequestMessage = request,
-            Content = new StringContent(body, Encoding.UTF8, body.StartsWith('{') ? "application/json" : "text/html")
-        });
+            Content = new StringContent(body, Encoding.UTF8, body.StartsWith('{') || body.StartsWith('[') ? "application/json" : "text/html")
+        };
     }
 
     /// <summary>Servizi come nell'Agent (<see cref="ZammadServiceCollectionExtensions.AddTicketZammad"/>), con questo handler al posto della rete.</summary>

@@ -125,6 +125,8 @@ public static class SeedDataImporter
         {
             Number = ticket.Number,
             CustomerId = customers[ticket.Customer],
+            ContactName = ticket.ContactName,
+            ContactEmail = ticket.ContactEmail,
             ProductId = products[ticket.Product],
             ProductVersionId = ticket.Version is null ? null : versions[(ticket.Product, ticket.Version)],
             DeploymentMode = ticket.Mode,

@@ -64,6 +64,11 @@ public sealed class HistoricalTicket
 
     public int CustomerId { get; set; }
 
+    /// <summary>Referente del cliente che ha aperto il ticket: diventa l'utente cliente in Zammad (seed della Fase 4).</summary>
+    public required string ContactName { get; set; }
+
+    public required string ContactEmail { get; set; }
+
     public short ProductId { get; set; }
 
     public int? ProductVersionId { get; set; }

@@ -67,6 +67,8 @@ internal sealed class HistoricalTicketConfiguration : IEntityTypeConfiguration<H
         builder.ToTable(nameof(HistoricalTicket), TicketDbContext.SupportSchema);
 
         builder.Property(t => t.Number).HasMaxLength(ColumnSizes.TicketNumber).IsUnicode(false);
+        builder.Property(t => t.ContactName).HasMaxLength(ColumnSizes.ContactName);
+        builder.Property(t => t.ContactEmail).HasMaxLength(ColumnSizes.ContactEmail).IsUnicode(false);
         builder.Property(t => t.Category).HasMaxLength(ColumnSizes.Category).IsUnicode(false);
         builder.Property(t => t.Subject).HasMaxLength(ColumnSizes.Subject);
         builder.Property(t => t.DeploymentMode).HasColumnName("DeploymentModeId").HasConversion<byte>();
