@@ -10,8 +10,9 @@ articles and release notes, and proposes a **reply draft with its sources** to t
 nothing is ever sent automatically. Everything runs locally: models on Ollama, data on SQL Server LocalDB, Zammad in Docker
 inside WSL.
 
-> **Status: Phase 1 — scaffolding.** Services, health checks and Zammad orchestration are in place; data, retrieval and the
-> draft pipeline arrive in the next phases. All data is synthetic and fictitious.
+> **Status: Phase 2 — data model.** Services, health checks, Zammad orchestration and the database (schemas `support`, `rag`,
+> `agent`, recreated by `DbInit`) are in place; synthetic data, retrieval and the draft pipeline arrive in the next phases.
+> All data is synthetic and fictitious.
 
 What it adds to the other POCs of the series (Order-to-Cash, Claims assistant, Digital transport):
 
@@ -46,7 +47,10 @@ dotnet user-secrets set "ConnectionStrings:sql" "Server=(localdb)\localdev;Datab
 # 2. Zammad API token (Zammad profile > Token Access, permissions admin + ticket.agent)
 dotnet user-secrets set "Parameters:zammad-api-token" "<token>" --project src/Dusiburg.AI.Ticket.AppHost
 
-# 3. Start: Agent, Web, Zammad in WSL and the Aspire dashboard
+# 3. Ticket database recreated from the model, with the demo catalog (drops the existing one)
+dotnet run --project tools/Dusiburg.AI.Ticket.DbInit
+
+# 4. Start: Agent, Web, Zammad in WSL and the Aspire dashboard
 dotnet run --project src/Dusiburg.AI.Ticket.AppHost
 ```
 
@@ -64,13 +68,15 @@ dotnet build Dusiburg.AI.Ticket.slnx
 dotnet test --solution Dusiburg.AI.Ticket.slnx
 ```
 
-Tests never call Ollama or Zammad (fake HTTP handlers, stub probes); the SQL health tests use LocalDB `localdev`. The CI
-(GitHub Actions, Windows) runs the same.
+Tests never call Ollama or Zammad (fake HTTP handlers, stub probes); SQL tests use LocalDB `localdev`, each class on its own
+database created by `DbInit` and dropped afterwards. The CI (GitHub Actions, Windows) runs the same; when its LocalDB has no
+`VECTOR` type it skips the `RequiresSql2025` category.
 
 ## Layout
 
 ```text
-src/       AppHost, ServiceDefaults, Shared, Ai, Zammad, Agent, Web
+src/       AppHost, ServiceDefaults, Shared, Data, Ai, Zammad, Agent, Web
+tools/     DbInit: recreates the database from the model
 tests/     one NUnit project per area
 infra/     zammad/: stack configuration (zammad.env) and start script for WSL
 docs/      architecture (Italian)

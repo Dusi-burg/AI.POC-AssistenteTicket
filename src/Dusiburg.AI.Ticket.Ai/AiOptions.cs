@@ -85,8 +85,12 @@ public sealed record AiOptions(
         NonEmpty(configuration[Keys.AnthropicModel]) ?? DefaultAnthropicModel,
         Enum.GetValues<ModelTask>().ToDictionary(task => task, task => ReadProvider(configuration, task)),
         NonEmpty(configuration[Keys.EmbeddingModel]) ?? DefaultEmbeddingModel,
-        ReadInt(configuration, Keys.EmbeddingDimensions, DefaultEmbeddingDimensions, minimum: 1, maximum: MaxEmbeddingDimensions),
+        ReadEmbeddingDimensions(configuration),
         NonEmpty(configuration[Keys.PromptCaptureDirectory]));
+
+    /// <summary><c>EMBEDDING_DIMENSIONS</c> da sola: la usa anche chi crea la colonna <c>VECTOR</c> (<c>DbInit</c>).</summary>
+    public static int ReadEmbeddingDimensions(IConfiguration configuration) =>
+        ReadInt(configuration, Keys.EmbeddingDimensions, DefaultEmbeddingDimensions, minimum: 1, maximum: MaxEmbeddingDimensions);
 
     private static string ReadProvider(IConfiguration configuration, ModelTask task)
     {

@@ -1,10 +1,13 @@
+using System.Globalization;
+using Dusiburg.AI.Ticket.Ai;
 using Dusiburg.AI.Ticket.Shared.Health;
 using Microsoft.Data.SqlClient;
 
 namespace Dusiburg.AI.Ticket.Agent.Health;
 
 /// <summary>
-/// Controlli 1–4 di <c>/api/health</c>: connessione, versione ≥ 17 (SQL Server 2025), tipo <c>VECTOR</c>, database applicativo.
+/// Controlli 1–4 di <c>/api/health</c>: connessione, versione ≥ 17 (SQL Server 2025), tipo <c>VECTOR</c>, database applicativo
+/// con la colonna <c>VECTOR</c> della dimensione configurata.
 /// Server e versione si leggono da <c>master</c>, così il controllo risponde anche prima che <c>DbInit</c> abbia creato il database.
 /// </summary>
 public sealed class SqlHealthProbe(IConfiguration configuration) : IHealthProbe
@@ -89,7 +92,7 @@ public sealed class SqlHealthProbe(IConfiguration configuration) : IHealthProbe
         return (ProbeStatus.Ok, $"VECTOR_DISTANCE disponibile (coseno di vettori ortogonali = {distance:0.###})");
     }
 
-    private static async Task<(ProbeStatus, string)> CheckDatabaseAsync(SqlConnection connection, string database, CancellationToken cancellationToken)
+    private async Task<(ProbeStatus, string)> CheckDatabaseAsync(SqlConnection connection, string database, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(database))
         {
@@ -102,9 +105,38 @@ public sealed class SqlHealthProbe(IConfiguration configuration) : IHealthProbe
 
         object? databaseId = await command.ExecuteScalarAsync(cancellationToken);
 
-        return databaseId is null or DBNull
-            ? (ProbeStatus.Warning, $"il database '{database}' non esiste ancora: lo crea tools/Dusiburg.AI.Ticket.DbInit (Fase 2)")
-            : (ProbeStatus.Ok, $"'{database}' presente");
+        if (databaseId is null or DBNull)
+        {
+            return (ProbeStatus.Warning, $"il database '{database}' non esiste ancora: lo crea tools/Dusiburg.AI.Ticket.DbInit");
+        }
+
+        return await CheckVectorColumnAsync(connection, database, cancellationToken);
+    }
+
+    /// <summary>La colonna <c>VECTOR</c> deve avere la dimensione del modello di embedding configurato (<c>EMBEDDING_DIMENSIONS</c>).</summary>
+    private async Task<(ProbeStatus, string)> CheckVectorColumnAsync(SqlConnection connection, string database, CancellationToken cancellationToken)
+    {
+        int expected = AiOptions.ReadEmbeddingDimensions(configuration);
+
+        await connection.ChangeDatabaseAsync(database, cancellationToken);
+
+        await using SqlCommand command = connection.CreateCommand();
+        command.CommandText = "SELECT vector_dimensions FROM sys.columns WHERE object_id = OBJECT_ID(N'rag.Chunk') AND name = N'Embedding'";
+
+        object? dimensions = await command.ExecuteScalarAsync(cancellationToken);
+
+        if (dimensions is null or DBNull)
+        {
+            return (ProbeStatus.Warning, $"'{database}' presente ma senza rag.Chunk.Embedding: rieseguire tools/Dusiburg.AI.Ticket.DbInit");
+        }
+
+        int actual = Convert.ToInt32(dimensions, CultureInfo.InvariantCulture);
+
+        return actual == expected
+            ? (ProbeStatus.Ok, $"'{database}' presente, rag.Chunk.Embedding VECTOR({actual})")
+            : (ProbeStatus.Warning,
+                $"'{database}': rag.Chunk.Embedding è VECTOR({actual}) ma {AiOptions.Keys.EmbeddingDimensions} = {expected}: " +
+                "rieseguire tools/Dusiburg.AI.Ticket.DbInit e ricalcolare gli embedding");
     }
 
     private static IEnumerable<ProbeResult> SkipAfterConnection(string reason) =>

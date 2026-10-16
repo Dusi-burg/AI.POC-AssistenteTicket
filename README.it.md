@@ -10,8 +10,9 @@ knowledge base e note di rilascio, e propone all'operatore una **bozza di rispos
 Zammad: nulla parte in automatico. Tutto gira in locale: modelli su Ollama, dati su SQL Server LocalDB, Zammad in Docker dentro
 WSL.
 
-> **Stato: Fase 1 — scaffolding.** Servizi, controlli di salute e orchestrazione di Zammad sono pronti; dati, retrieval e
-> pipeline della bozza arrivano nelle prossime fasi. Tutti i dati sono sintetici e fittizi.
+> **Stato: Fase 2 — modello dati.** Servizi, controlli di salute, orchestrazione di Zammad e database (schemi `support`, `rag`,
+> `agent`, ricreato da `DbInit`) sono pronti; dati simulati, retrieval e pipeline della bozza arrivano nelle prossime fasi.
+> Tutti i dati sono sintetici e fittizi.
 
 Che cosa aggiunge agli altri POC della serie (Order-to-Cash, Assistente sinistri, Trasporto digitale):
 
@@ -46,7 +47,10 @@ dotnet user-secrets set "ConnectionStrings:sql" "Server=(localdb)\localdev;Datab
 # 2. Token dell'API di Zammad (profilo di Zammad > Accesso token, permessi admin + ticket.agent)
 dotnet user-secrets set "Parameters:zammad-api-token" "<token>" --project src/Dusiburg.AI.Ticket.AppHost
 
-# 3. Avvio: Agent, Web, Zammad in WSL e dashboard di Aspire
+# 3. Database Ticket ricreato dal modello, con il catalogo demo (cancella quello esistente)
+dotnet run --project tools/Dusiburg.AI.Ticket.DbInit
+
+# 4. Avvio: Agent, Web, Zammad in WSL e dashboard di Aspire
 dotnet run --project src/Dusiburg.AI.Ticket.AppHost
 ```
 
@@ -64,13 +68,15 @@ dotnet build Dusiburg.AI.Ticket.slnx
 dotnet test --solution Dusiburg.AI.Ticket.slnx
 ```
 
-I test non chiamano mai Ollama né Zammad (handler HTTP finti, probe stub); i test di salute di SQL usano LocalDB `localdev`.
-La CI (GitHub Actions, Windows) esegue gli stessi.
+I test non chiamano mai Ollama né Zammad (handler HTTP finti, probe stub); i test di SQL usano LocalDB `localdev`, con un
+database dedicato per classe creato da `DbInit` e poi cancellato. La CI (GitHub Actions, Windows) esegue gli stessi; se il suo
+LocalDB non ha il tipo `VECTOR` salta quelli della categoria `RequiresSql2025`.
 
 ## Struttura
 
 ```text
-src/       AppHost, ServiceDefaults, Shared, Ai, Zammad, Agent, Web
+src/       AppHost, ServiceDefaults, Shared, Data, Ai, Zammad, Agent, Web
+tools/     DbInit: ricrea il database dal modello
 tests/     un progetto NUnit per area
 infra/     zammad/: configurazione dello stack (zammad.env) e script di avvio in WSL
 docs/      architettura

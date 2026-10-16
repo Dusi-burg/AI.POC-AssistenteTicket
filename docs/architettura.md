@@ -49,16 +49,45 @@ non esiste.
 |---|---|
 | `Dusiburg.AI.Ticket.AppHost` | Aspire: Agent, Web, Ollama (se non risponde), stack Zammad in WSL, manopole |
 | `Dusiburg.AI.Ticket.ServiceDefaults` | OpenTelemetry, health check, resilienza, service discovery, `ApiProblems` |
-| `Dusiburg.AI.Ticket.Shared` | probe e report di salute, telemetria, JSON, codici d'errore |
+| `Dusiburg.AI.Ticket.Shared` | enum del dominio, `DemoCatalog`, probe e report di salute, telemetria, JSON, codici d'errore |
+| `Dusiburg.AI.Ticket.Data` | EF Core: `TicketDbContext` con gli schemi `support`, `rag`, `agent`, seed del catalogo demo |
 | `Dusiburg.AI.Ticket.Ai` | fabbrica dei client di chat per compito, embedding su CPU, `EmbeddingProfile`, cattura dei prompt |
 | `Dusiburg.AI.Ticket.Zammad` | client tipizzato dell'API di Zammad, modelli dell'API, probe |
 | `Dusiburg.AI.Ticket.Agent` | Minimal API: `/api/health`; dalle prossime fasi event source, coda e pipeline |
 | `Dusiburg.AI.Ticket.Web` | console Razor Pages: stato dei servizi |
+| `tools/Dusiburg.AI.Ticket.DbInit` | ricrea il database dal modello e inserisce il catalogo demo |
 
-Arrivano con le loro fasi: `Data` e `tools/DbInit` (Fase 2), `Cli` (Fase 4), `Rag` (Fase 5), `Core` (Fase 6).
+Arrivano con le loro fasi: `Cli` (Fase 4), `Rag` (Fase 5), `Core` (Fase 6).
 
 Regole di confine: l'Agent è l'unico proprietario del database; la Web parla solo con l'Agent via HTTP; solo `Ai` conosce i
 provider dei modelli e solo `Zammad` conosce l'API di Zammad.
+
+### Database
+
+LocalDB `(localdb)\localdev`, database `Ticket`, un solo `DbContext` (`TicketDbContext`) per tre schemi: l'Agent è l'unico
+proprietario, e così le FK fra schemi sono vere. Nessuna migration: `tools/Dusiburg.AI.Ticket.DbInit` cancella e ricrea il
+database dal modello; le query vettoriali (Fase 5) sono Dapper con `SqlVector<float>`.
+
+| Schema | Tabelle | Lookup dagli enum |
+|---|---|---|
+| `support` | `Product`, `ProductVersion` (`Sequence` = ordine di rilascio), `Customer` (chiave `EmailDomain`), `HistoricalTicket` (chiave `Number`, `IsTestSet`), `TicketMessage`, `Resolution`, `KbArticle` (chiave `Code`), `ReleaseNote` (chiave `Code`) | `DeploymentMode`, `SlaLevel`, `TicketPriority`, `TicketState`, `MessageAuthor`, `ReleaseNoteType` |
+| `rag` | `Chunk` (fonte, metadati di applicabilità, testo, `Embedding VECTOR(n)`), `EmbeddingInfo` (riga unica: modello e dimensione dei vettori salvati) | `ChunkSource` |
+| `agent` | `AgentRun` (univoco su ticket + articolo di Zammad: idempotenza), `AgentDraft` (segnali e confidenza, testo, esito del feedback), `AgentDraftSource` | `RunTrigger`, `AgentRunState`, `DraftKind`, `DraftOutcome` |
+
+- Le chiavi di business (`Number`, `Code`) sono gli id con cui il modello cita le fonti, e la verifica a valle li confronta con
+  quelli recuperati.
+- Un `Chunk` ha una sola FK verso la fonte (ticket, articolo o nota di rilascio), coerente con `ChunkSourceId`
+  (`CK_Chunk_Source`).
+- La dimensione di `Embedding` viene da `EMBEDDING_DIMENSIONS` (default 768) al momento di `DbInit`: è un parametro del modello EF,
+  che la include nella chiave della cache (i test usano `VECTOR(4)`). Il controllo 4 di `/api/health` segnala se non coincide.
+
+```powershell
+dotnet run --project tools/Dusiburg.AI.Ticket.DbInit [-- "<connection string>"] [--no-seed] [--allow-non-local]
+```
+
+Senza argomenti usa `ConnectionStrings__sql` o `(localdb)\localdev`; fuori da LocalDB chiede `--allow-non-local`. Il seed
+inserisce il catalogo demo (`DemoCatalog`: prodotti FattureFlow e DocuArchive con le versioni, clienti dei sei scenari);
+storico, knowledge base e note di rilascio arrivano con i dati simulati (Fase 3).
 
 ## 4. Modelli
 
@@ -105,7 +134,7 @@ Segreti (user-secrets dell'AppHost): `ConnectionStrings:sql`, `Parameters:zammad
 | 1 | Connessione SQL | `ConnectionStrings:sql` configurata e il server risponde (letto da `master`) |
 | 2 | Versione SQL Server | ≥ 17 (SQL Server 2025) |
 | 3 | Supporto VECTOR | `VECTOR_DISTANCE` disponibile |
-| 4 | Database applicativo | il database `Ticket` esiste (avviso finché `DbInit` non lo crea) |
+| 4 | Database applicativo | il database `Ticket` esiste e `rag.Chunk.Embedding` è `VECTOR(EMBEDDING_DIMENSIONS)` (avviso altrimenti: rieseguire `DbInit`) |
 | 5 | Ollama raggiungibile | `GET /api/version` |
 | 6 | Modello chat presente | `OLLAMA_CHAT_MODEL` installato |
 | 7 | Modello embedding presente | `EMBEDDING_MODEL` installato |

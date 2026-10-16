@@ -21,6 +21,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Dusiburg.AI.Ticket.Agent\Dusiburg.AI.Ticket.Agent.csproj" />
+    <!-- Creazione dei database di test dal modello -->
+    <ProjectReference Include="..\..\tools\Dusiburg.AI.Ticket.DbInit\Dusiburg.AI.Ticket.DbInit.csproj" />
   </ItemGroup>
 
 </Project>

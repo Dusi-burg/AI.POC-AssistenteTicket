@@ -32,7 +32,7 @@ app.UseExceptionHandler();
 
 app.MapDefaultEndpoints();
 
-app.MapGet("/", () => new { service = "Dusiburg.AI.Ticket.Agent", phase = 1 });
+app.MapGet("/", () => new { service = "Dusiburg.AI.Ticket.Agent", phase = 2 });
 
 app.MapGroup("/api")
     .MapHealthEndpoints();

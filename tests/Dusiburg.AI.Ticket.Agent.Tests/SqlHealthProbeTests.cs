@@ -5,8 +5,8 @@ using Microsoft.Extensions.Configuration;
 namespace Dusiburg.AI.Ticket.Agent.Tests;
 
 /// <summary>
-/// Controlli SQL veri su <c>(localdb)\localdev</c>, senza creare database: il database applicativo arriva con <c>DbInit</c>
-/// (Fase 2), qui si usa <c>master</c> come database esistente.
+/// Controlli SQL veri su <c>(localdb)\localdev</c>, senza creare database: <c>master</c> fa da database esistente senza lo schema
+/// Ticket. Il database creato da <c>DbInit</c> è in <see cref="SqlHealthProbeDatabaseTests"/>.
 /// </summary>
 public class SqlHealthProbeTests
 {
@@ -17,7 +17,7 @@ public class SqlHealthProbeTests
 
     [Test]
     [Category(RequiresSql2025)]
-    public async Task RunAsync_ExistingDatabase_AllChecksOk()
+    public async Task RunAsync_DatabaseWithoutTicketSchema_ServerChecksOkAndWarningPointingToDbInit()
     {
         //SETUP
         var probe = new SqlHealthProbe(Configuration(LocalConnectionString("master")));
@@ -26,7 +26,9 @@ public class SqlHealthProbeTests
         IReadOnlyList<ProbeResult> results = await probe.RunAsync(CancellationToken);
 
         Assert.That(results.Select(r => r.Number), Is.EqualTo(new[] { 1, 2, 3, 4 }));
-        Assert.That(results.Select(r => r.Status), Is.All.EqualTo(ProbeStatus.Ok), string.Join(" | ", results.Select(r => r.Detail)));
+        Assert.That(results.Take(3).Select(r => r.Status), Is.All.EqualTo(ProbeStatus.Ok), string.Join(" | ", results.Select(r => r.Detail)));
+        Assert.That(results[3].Status, Is.EqualTo(ProbeStatus.Warning));
+        Assert.That(results[3].Detail, Does.Contain("rag.Chunk").And.Contain("DbInit"));
     }
 
     [Test]
