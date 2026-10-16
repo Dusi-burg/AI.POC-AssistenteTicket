@@ -72,8 +72,13 @@ internal sealed class HistoricalTicketConfiguration : IEntityTypeConfiguration<H
         builder.Property(t => t.DeploymentMode).HasColumnName("DeploymentModeId").HasConversion<byte>();
         builder.Property(t => t.Priority).HasColumnName("TicketPriorityId").HasConversion<byte>();
         builder.Property(t => t.State).HasColumnName("TicketStateId").HasConversion<byte>();
+        builder.Property(t => t.CaseCode).HasMaxLength(ColumnSizes.CaseCode).IsUnicode(false);
+        builder.Property(t => t.TrapKind).HasColumnName("TrapKindId").HasConversion<byte?>();
 
         builder.HasIndex(t => t.Number).IsUnique();
+
+        // Verità di riferimento della valutazione: fonti dello stesso caso.
+        builder.HasIndex(t => t.CaseCode);
         builder.HasIndex(t => t.ZammadTicketId).IsUnique();
 
         // L'indicizzazione legge i ticket fuori dal test set, la valutazione quelli dentro.
@@ -85,6 +90,8 @@ internal sealed class HistoricalTicketConfiguration : IEntityTypeConfiguration<H
         builder.HasOne<EnumLookup<DeploymentMode>>().WithMany().HasForeignKey(t => t.DeploymentMode).OnDelete(DeleteBehavior.Restrict);
         builder.HasOne<EnumLookup<TicketPriority>>().WithMany().HasForeignKey(t => t.Priority).OnDelete(DeleteBehavior.Restrict);
         builder.HasOne<EnumLookup<TicketState>>().WithMany().HasForeignKey(t => t.State).OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<EnumLookup<TrapKind>>().WithMany().HasForeignKey(t => t.TrapKind).OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<HistoricalTicket>().WithMany().HasForeignKey(t => t.DuplicateOfId).OnDelete(DeleteBehavior.Restrict);
 
         builder.HasMany(t => t.Messages)
             .WithOne()

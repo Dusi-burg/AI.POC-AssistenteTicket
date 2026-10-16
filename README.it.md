@@ -10,9 +10,9 @@ knowledge base e note di rilascio, e propone all'operatore una **bozza di rispos
 Zammad: nulla parte in automatico. Tutto gira in locale: modelli su Ollama, dati su SQL Server LocalDB, Zammad in Docker dentro
 WSL.
 
-> **Stato: Fase 2 — modello dati.** Servizi, controlli di salute, orchestrazione di Zammad e database (schemi `support`, `rag`,
-> `agent`, ricreato da `DbInit`) sono pronti; dati simulati, retrieval e pipeline della bozza arrivano nelle prossime fasi.
-> Tutti i dati sono sintetici e fittizi.
+> **Stato: Fase 3 — dati simulati.** Servizi, controlli di salute, orchestrazione di Zammad, database e storico simulato
+> dell'helpdesk (950 ticket, 46 articoli di knowledge base, 60 note di rilascio, caricati da `DbInit`) sono pronti; seed di
+> Zammad, retrieval e pipeline della bozza arrivano nelle prossime fasi. Tutti i dati sono sintetici e fittizi.
 
 Che cosa aggiunge agli altri POC della serie (Order-to-Cash, Assistente sinistri, Trasporto digitale):
 
@@ -47,7 +47,7 @@ dotnet user-secrets set "ConnectionStrings:sql" "Server=(localdb)\localdev;Datab
 # 2. Token dell'API di Zammad (profilo di Zammad > Accesso token, permessi admin + ticket.agent)
 dotnet user-secrets set "Parameters:zammad-api-token" "<token>" --project src/Dusiburg.AI.Ticket.AppHost
 
-# 3. Database Ticket ricreato dal modello, con il catalogo demo (cancella quello esistente)
+# 3. Database Ticket ricreato dal modello, con il catalogo demo e i dati simulati di data/ (cancella quello esistente)
 dotnet run --project tools/Dusiburg.AI.Ticket.DbInit
 
 # 4. Avvio: Agent, Web, Zammad in WSL e dashboard di Aspire
@@ -76,8 +76,9 @@ LocalDB non ha il tipo `VECTOR` salta quelli della categoria `RequiresSql2025`.
 
 ```text
 src/       AppHost, ServiceDefaults, Shared, Data, Ai, Zammad, Agent, Web
-tools/     DbInit: ricrea il database dal modello
+tools/     DbInit: ricrea il database dal modello · DataGen: genera data/tickets.json
 tests/     un progetto NUnit per area
+data/      dati simulati: casi, KB, note di rilascio, clienti scritti a mano; ticket generati
 infra/     zammad/: configurazione dello stack (zammad.env) e script di avvio in WSL
 docs/      architettura
 ```

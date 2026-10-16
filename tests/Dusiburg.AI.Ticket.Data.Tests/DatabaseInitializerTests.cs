@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore;
 namespace Dusiburg.AI.Ticket.Data.Tests;
 
 /// <summary>
-/// <c>DbInit</c> su un database dedicato di <c>(localdb)\localdev</c> con <c>VECTOR(4)</c>: schemi, lookup, seed del catalogo,
+/// <c>DbInit</c> su un database dedicato di <c>(localdb)\localdev</c> con <c>VECTOR(4)</c>: schemi, lookup, seed del catalogo e di data/,
 /// riesecuzione e vincoli. La colonna <c>VECTOR</c> esiste solo da SQL Server 2025, che la CI può non avere.
 /// </summary>
 [Category("RequiresSql2025")]
@@ -17,6 +17,7 @@ public class DatabaseInitializerTests
     private const int Dimensions = 4;
 
     private string _connectionString = null!;
+    private Seed.SeedData _seed = null!;
 
     private static CancellationToken CancellationToken => TestContext.CurrentContext.CancellationToken;
 
@@ -24,7 +25,7 @@ public class DatabaseInitializerTests
     public async Task CreateDatabase()
     {
         _connectionString = TicketDatabaseInitializer.LocalConnectionStringFor($"Ticket_Test_{Guid.NewGuid():N}");
-        await TicketDatabaseInitializer.RecreateAsync(_connectionString, Dimensions, seed: true, CancellationToken);
+        _seed = (await TicketDatabaseInitializer.RecreateAsync(_connectionString, Dimensions, seed: true, CancellationToken))!;
     }
 
     [OneTimeTearDown]
@@ -83,16 +84,42 @@ public class DatabaseInitializerTests
         //SUT
         List<Product> products = await db.Products.Include(p => p.Versions).OrderBy(p => p.Id).ToListAsync(CancellationToken);
         List<Customer> customers = await db.Customers.ToListAsync(CancellationToken);
-        int tickets = await db.HistoricalTickets.CountAsync(CancellationToken);
         int embeddingInfo = await db.EmbeddingInfo.CountAsync(CancellationToken);
 
         Assert.That(products.Select(p => p.Code), Is.EqualTo(DemoCatalog.Products.Select(p => p.Code)));
         Assert.That(
             products.Single(p => p.Code == DemoCatalog.FattureFlow).Versions.OrderBy(v => v.Sequence).Select(v => v.Version),
             Is.EqualTo(DemoCatalog.Product(DemoCatalog.FattureFlow).Versions.Select(v => v.Version)));
-        Assert.That(customers.Select(c => c.EmailDomain), Is.EquivalentTo(DemoCatalog.Customers.Select(c => c.EmailDomain)));
+        Assert.That(customers.Select(c => c.EmailDomain), Is.SupersetOf(DemoCatalog.Customers.Select(c => c.EmailDomain)));
         Assert.That(customers.Single(c => c.EmailDomain == "archivinotarili.example.it").ProductVersionId, Is.Null, "scenario 3: versione sconosciuta");
-        Assert.That((tickets, embeddingInfo), Is.EqualTo((0, 0)), "storico dalla Fase 3, EmbeddingInfo da Cli embed");
+        Assert.That(embeddingInfo, Is.Zero, "EmbeddingInfo la scrive Cli embed");
+    }
+
+    [Test]
+    public async Task Recreate_WithSeed_LoadsTheSimulatedData()
+    {
+        //SETUP
+        await using TicketDbContext db = Open();
+
+        //SUT
+        int customers = await db.Customers.CountAsync(CancellationToken);
+        int articles = await db.KbArticles.CountAsync(a => !a.Code.StartsWith("KB-TEST"), CancellationToken);
+        int notes = await db.ReleaseNotes.CountAsync(CancellationToken);
+        int tickets = await db.HistoricalTickets.CountAsync(CancellationToken);
+        int messages = await db.TicketMessages.CountAsync(CancellationToken);
+        int duplicates = await db.HistoricalTickets.CountAsync(t => t.DuplicateOfId != null, CancellationToken);
+        int traps = await db.HistoricalTickets.CountAsync(t => t.TrapKind != null && t.IsTestSet, CancellationToken);
+        HistoricalTicket demo = await db.HistoricalTickets.Include(t => t.Messages).Include(t => t.Resolution)
+            .Where(t => !t.IsTestSet && t.Resolution != null).OrderBy(t => t.Id).FirstAsync(CancellationToken);
+
+        Assert.That((customers, articles, notes), Is.EqualTo((_seed.Customers.Count, _seed.KbArticles.Count, _seed.ReleaseNotes.Count)));
+        Assert.That(tickets, Is.EqualTo(_seed.Tickets!.Tickets.Count));
+        Assert.That(messages, Is.EqualTo(_seed.Tickets.Tickets.Sum(t => t.Messages.Count)));
+        Assert.That((duplicates, traps), Is.EqualTo((_seed.Tickets.Tickets.Count(t => t.DuplicateOf is not null), _seed.Traps.Count)));
+        Assert.That(demo.Messages.Select(m => m.Sequence), Is.Ordered.And.Unique);
+        Assert.That(demo.CaseCode, Is.Not.Null);
+        Assert.That(await db.KbArticles.Where(a => a.Code == "KB-FF-0004").Select(a => a.Body).SingleAsync(CancellationToken),
+            Does.StartWith("## Sintomo"), "le sezioni dell'articolo restano titoli per il chunking");
     }
 
     [Test]
@@ -122,7 +149,7 @@ public class DatabaseInitializerTests
             await TicketDatabaseInitializer.RecreateAsync(connectionString, Dimensions, seed: true, CancellationToken);
 
             await using TicketDbContext db = TicketDatabaseInitializer.Create(connectionString, Dimensions);
-            Assert.That(await db.Customers.CountAsync(CancellationToken), Is.EqualTo(DemoCatalog.Customers.Count));
+            Assert.That(await db.Customers.CountAsync(CancellationToken), Is.EqualTo(_seed.Customers.Count));
         }
         finally
         {

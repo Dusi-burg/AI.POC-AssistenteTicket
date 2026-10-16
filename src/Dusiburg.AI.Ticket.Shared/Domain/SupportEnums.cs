@@ -51,3 +51,25 @@ public enum ChunkSource : byte
     KbArticle = 2,
     ReleaseNote = 3
 }
+
+/// <summary>Tipo di caso "trabocchetto" del test set (PLAN §6.1): mette alla prova retrieval e regole, non si indicizza.</summary>
+public enum TrapKind : byte
+{
+    /// <summary>La soluzione giusta dipende dalla modalità del cliente, diversa da quella che il testo lascia intendere.</summary>
+    ModeMismatch = 1,
+
+    /// <summary>Sintomo di un bug noto, ma su una versione fuori dall'intervallo del bug.</summary>
+    VersionOutOfRange = 2,
+
+    /// <summary>Nessuna fonte pertinente: va dichiarato, con escalation.</summary>
+    NoHistory = 3,
+
+    /// <summary>Richiesta senza informazioni: servono domande, non soluzioni.</summary>
+    Vague = 4,
+
+    /// <summary>Istruzioni malevole nel testo, da trattare come dato.</summary>
+    PromptInjection = 5,
+
+    /// <summary>Lessico dell'altro prodotto (es. "fatture" in DocuArchive).</summary>
+    AmbiguousProduct = 6
+}

@@ -90,6 +90,18 @@ public sealed class HistoricalTicket
     /// <summary>Valorizzato per i ticket importati anche in Zammad (Fase 4).</summary>
     public int? ZammadTicketId { get; set; }
 
+    /// <summary>
+    /// Caso della matrice da cui nasce il ticket simulato: è la verità di riferimento della valutazione (le fonti pertinenti sono
+    /// quelle dello stesso caso). Per un trabocchetto è il caso atteso, <c>null</c> se nessuno lo è.
+    /// </summary>
+    public string? CaseCode { get; set; }
+
+    /// <summary>Solo nel test set: il tipo di trabocchetto.</summary>
+    public TrapKind? TrapKind { get; set; }
+
+    /// <summary>Ticket di cui questo è il duplicato (chiuso senza soluzione propria).</summary>
+    public int? DuplicateOfId { get; set; }
+
     public List<TicketMessage> Messages { get; } = [];
 
     public Resolution? Resolution { get; set; }

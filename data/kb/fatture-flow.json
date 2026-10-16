@@ -1,0 +1,143 @@
+{
+  "articles": [
+    {
+      "code": "KB-FF-0001", "products": ["FF"], "mode": "OnPrem", "versionFrom": null, "versionTo": null, "updatedOn": "2026-07-22",
+      "title": "Rinnovare il certificato di firma (on-premise)",
+      "sections": [
+        { "title": "Sintomo", "body": "L'invio si ferma con FF-E1102 \"Firma digitale non apposta: certificato di firma scaduto o revocato\". Le fatture restano nello stato \"Da firmare\". Dalla 4.8.5 FattureFlow avvisa trenta giorni prima della scadenza." },
+        { "title": "Rinnovo", "body": "1. Richiedere il nuovo certificato al certificatore e salvarlo in formato .p12 o .pfx.\n2. In Impostazioni > Firma scegliere \"Sostituisci certificato\" e importare il file con la relativa password (dalla 5.2.1 la procedura guidata verifica la catena prima di attivarlo).\n3. Se il certificato è su token o smart card, collegare il dispositivo al server e selezionarlo dall'elenco.\n4. Riavviare il servizio FattureFlow Sender." },
+        { "title": "Ripresa delle fatture", "body": "Le fatture nello stato \"Da firmare\" vengono firmate e inviate automaticamente al riavvio del servizio. Non vanno create di nuovo: un secondo invio genererebbe lo scarto per file duplicato (FF-E2210)." }
+      ]
+    },
+    {
+      "code": "KB-FF-0002", "products": ["FF"], "mode": "Saas", "versionFrom": "5.0.3", "versionTo": null, "updatedOn": "2026-03-02",
+      "title": "Firma remota: delega e codice OTP (SaaS)",
+      "sections": [
+        { "title": "Come funziona", "body": "Nella versione SaaS le fatture sono firmate con firma remota. La firma richiede una delega attiva, valida dodici mesi, e un codice OTP generato dall'app di autenticazione del firmatario. Il cliente non deve installare certificati." },
+        { "title": "Delega scaduta (FF-E1102)", "body": "Se la delega è scaduta l'invio si ferma con FF-E1102. Il legale rappresentante o il firmatario rinnova la delega da Impostazioni > Firma remota > Rinnova delega, con il riconoscimento tramite SPID o CIE. Il rinnovo è immediato; le fatture \"Da firmare\" ripartono da sole entro dieci minuti." },
+        { "title": "OTP rifiutato (FF-E1105)", "body": "FF-E1105 indica un OTP errato o scaduto. Verificare che l'ora del telefono sia automatica: con uno scarto superiore a 30 secondi i codici vengono rifiutati. Dopo cinque tentativi errati la firma si blocca per 15 minuti." }
+      ]
+    },
+    {
+      "code": "KB-FF-0003", "products": ["FF"], "mode": "OnPrem", "versionFrom": null, "versionTo": null, "updatedOn": "2025-11-10",
+      "title": "Dispositivo di firma: PIN e driver (on-premise)",
+      "sections": [
+        { "title": "Sintomo", "body": "La firma fallisce con FF-E1105 \"PIN del dispositivo di firma errato o dispositivo non disponibile\"." },
+        { "title": "Verifiche", "body": "1. Il PIN si configura in Impostazioni > Firma > Dispositivo; dopo un cambio del PIN sul token va aggiornato anche lì.\n2. Tre PIN errati consecutivi bloccano il dispositivo: serve il PUK del certificatore.\n3. Se il servizio gira su una macchina virtuale, verificare che il token USB sia ancora collegato alla VM dopo un riavvio dell'host.\n4. Reinstallare il driver del token alla versione indicata dal certificatore." }
+      ]
+    },
+    {
+      "code": "KB-FF-0004", "products": ["FF"], "mode": "OnPrem", "versionFrom": "5.0.3", "versionTo": null, "updatedOn": "2026-05-18",
+      "title": "Errore FF-E2041: handshake TLS rifiutato sul canale di trasmissione (on-premise)",
+      "sections": [
+        { "title": "Sintomo", "body": "Gli invii falliscono con FF-E2041 \"Connessione al canale di trasmissione non riuscita: handshake TLS rifiutato\". Nel log del servizio FattureFlow Sender compare \"The remote certificate is invalid according to the validation procedure\" oppure \"Authentication failed\"." },
+        { "title": "Causa più frequente", "body": "Il gateway di interscambio ha rinnovato il certificato e la sua nuova CA intermedia non è nel truststore del server FattureFlow. Succede di solito dopo l'avviso di rinnovo del canale pubblicato nell'area clienti. Meno spesso, un proxy o un firewall con ispezione TLS sostituisce il certificato del gateway." },
+        { "title": "Soluzione", "body": "1. Scaricare dall'area clienti il pacchetto \"Catena certificati canale\" aggiornato.\n2. Da prompt dei comandi come amministratore: ffadmin truststore import <file .p7b>\n3. Verificare con ffadmin truststore verify --channel che restituisca \"OK\".\n4. Riavviare il servizio FattureFlow Sender: le fatture in errore vengono ritrasmesse.\nSe è presente un proxy con ispezione TLS, escludere dall'ispezione l'indirizzo del gateway." },
+        { "title": "Versione 4.8.5", "body": "Sulla 4.8.5 lo stesso errore dipende dal fatto che la versione supporta solo TLS 1.2: vedere KB-FF-0016." }
+      ]
+    },
+    {
+      "code": "KB-FF-0005", "products": ["FF"], "mode": "Saas", "versionFrom": null, "versionTo": null, "updatedOn": "2026-06-08",
+      "title": "Invii in errore nella versione SaaS: stato della piattaforma e ritrasmissione automatica",
+      "sections": [
+        { "title": "Sintomo", "body": "Alcune fatture risultano in errore con FF-E2041 o restano \"In invio\" più del solito. Nella versione SaaS il canale di trasmissione è gestito da Dusiburg: il cliente non ha server, certificati o proxy da configurare." },
+        { "title": "Cosa fare", "body": "1. Controllare la pagina di stato della piattaforma (link nel menu Aiuto): eventuali interruzioni del gateway di interscambio sono pubblicate lì.\n2. Non reinviare né duplicare le fatture: la piattaforma le ritrasmette automaticamente ogni 15 minuti per 24 ore.\n3. Se l'errore persiste oltre quattro ore senza interruzioni segnalate, aprire un ticket indicando il numero di almeno una fattura." },
+        { "title": "Termini di invio", "body": "Un ritardo dovuto a un'interruzione del sistema di interscambio non comporta sanzioni se la fattura viene trasmessa entro i termini; la piattaforma conserva la prova dei tentativi." }
+      ]
+    },
+    {
+      "code": "KB-FF-0006", "products": ["FF"], "mode": "OnPrem", "versionFrom": null, "versionTo": null, "updatedOn": "2026-07-22",
+      "title": "Proxy e timeout del canale di trasmissione (on-premise)",
+      "sections": [
+        { "title": "Sintomo", "body": "Gli invii vanno in timeout con FF-E2050 \"Tempo scaduto in attesa del canale di trasmissione\" dopo circa 100 secondi." },
+        { "title": "Configurazione del proxy", "body": "Il servizio FattureFlow Sender non usa il proxy del browser: va configurato in FattureFlow.config con le chiavi ProxyAddress, ProxyUser e ProxyPassword, poi si riavvia il servizio. Il proxy deve consentire l'uscita verso il gateway sulla porta 443. I proxy con autenticazione NTLM sono supportati dalla 5.2.1; con le versioni precedenti serve un'eccezione senza autenticazione." },
+        { "title": "Verifica", "body": "Il comando ffadmin channel test esegue una connessione di prova e indica se il problema è la risoluzione DNS, il proxy o il certificato." }
+      ]
+    },
+    {
+      "code": "KB-FF-0007", "products": ["FF"], "mode": null, "versionFrom": null, "versionTo": null, "updatedOn": "2026-02-16",
+      "title": "Scarti del sistema di interscambio: i codici più comuni",
+      "sections": [
+        { "title": "FF-E2210 — file duplicato", "body": "Il sistema di interscambio ha già ricevuto una fattura con lo stesso numero, data e partita IVA del cedente. Succede quando una fattura viene inviata di nuovo dopo un errore che in realtà era andato a buon fine. Verificare nel dettaglio della prima fattura la ricevuta di consegna: se c'è, la fattura duplicata va annullata in FattureFlow, non rinviata." },
+        { "title": "FF-E2215 — partita IVA del destinatario non valida", "body": "La partita IVA del cliente non risulta in anagrafe tributaria o ha la cifra di controllo errata. Correggere l'anagrafica del cliente in FattureFlow (Clienti > Dati fiscali), quindi creare una nuova fattura con lo stesso numero: una fattura scartata non è emessa e il numero si può riutilizzare entro cinque giorni dallo scarto." },
+        { "title": "FF-E2230 — codice destinatario non valido", "body": "Il codice destinatario di sette caratteri non esiste o non è attivo. Chiedere al cliente il codice corretto o l'indirizzo PEC; per i privati senza codice usare 0000000. Anche in questo caso si emette di nuovo la fattura con lo stesso numero entro cinque giorni." }
+      ]
+    },
+    {
+      "code": "KB-FF-0008", "products": ["FF"], "mode": null, "versionFrom": null, "versionTo": null, "updatedOn": "2026-07-22",
+      "title": "Validazione del file XML: campi obbligatori e totali",
+      "sections": [
+        { "title": "FF-E2301 — campo obbligatorio mancante", "body": "FattureFlow controlla il file prima dell'invio. Il messaggio indica il campo mancante, per esempio ModalitaPagamento o IndirizzoCedente. I campi di testata si completano in Impostazioni > Azienda; quelli di pagamento nel modello di fattura o nella singola fattura." },
+        { "title": "FF-E2305 — totali che non quadrano", "body": "Il totale del documento non coincide con la somma delle righe e dell'IVA, di solito per arrotondamenti su righe con sconto percentuale o con prezzi a più di due decimali. Impostare l'arrotondamento per riga in Impostazioni > Calcolo; dalla 5.2.1 è stato corretto un caso di differenza di un centesimo con gli sconti di riga." },
+        { "title": "Fatture importate dal gestionale", "body": "Per le fatture importate da file il controllo vale allo stesso modo: correggere il gestionale di origine, altrimenti l'errore si ripete a ogni importazione." }
+      ]
+    },
+    {
+      "code": "KB-FF-0009", "products": ["FF"], "mode": null, "versionFrom": "5.0.3", "versionTo": null, "updatedOn": "2025-04-07",
+      "title": "Natura IVA: sottocodici obbligatori dalla 5.0",
+      "sections": [
+        { "title": "Sintomo", "body": "Dopo l'aggiornamento alla 5.0.3 alcune fatture vengono bloccate prima dell'invio con FF-E2320 \"Natura IVA senza sottocodice\"." },
+        { "title": "Soluzione", "body": "Le nature N2, N3 e N6 vanno indicate con il sottocodice (N2.1, N2.2, N3.1…N3.6, N6.1…N6.9). In Impostazioni > Codici IVA aprire ogni codice esente o non imponibile e scegliere la natura completa. Le fatture già bloccate si correggono aprendole e salvandole di nuovo: la natura viene ripresa dal codice IVA aggiornato." }
+      ]
+    },
+    {
+      "code": "KB-FF-0010", "products": ["FF"], "mode": "OnPrem", "versionFrom": null, "versionTo": null, "updatedOn": "2026-01-19",
+      "title": "Ricezione delle fatture passive: canale e credenziali (on-premise)",
+      "sections": [
+        { "title": "Sintomo", "body": "Le fatture dei fornitori non arrivano più in FattureFlow; nel cruscotto compare FF-E3310 \"Ricezione non allineata: canale di ricezione non raggiungibile o credenziali non valide\"." },
+        { "title": "Cause", "body": "1. La password dell'utenza del canale di ricezione è scaduta (scade ogni 90 giorni) o è stata cambiata sul portale.\n2. Il servizio FattureFlow Receiver è fermo.\n3. Il codice destinatario registrato sul portale non è più quello di FattureFlow." },
+        { "title": "Soluzione", "body": "Aggiornare la password in Impostazioni > Ricezione > Credenziali e premere \"Verifica\". Riavviare il servizio FattureFlow Receiver: le fatture arrivate nel frattempo vengono scaricate al primo ciclo (ogni 30 minuti; si può forzare con ffadmin receive --now)." }
+      ]
+    },
+    {
+      "code": "KB-FF-0011", "products": ["FF"], "mode": "Saas", "versionFrom": null, "versionTo": null, "updatedOn": "2026-04-20",
+      "title": "Ricezione delle fatture passive nella versione SaaS: la delega",
+      "sections": [
+        { "title": "Sintomo", "body": "Le fatture passive non compaiono più e il cruscotto mostra FF-E3310. Nella versione SaaS la ricezione usa la delega al servizio di consultazione e acquisizione rilasciata dal cliente sul portale fiscale." },
+        { "title": "Soluzione", "body": "La delega dura al massimo quattro anni e può essere revocata o scadere. Il legale rappresentante la rinnova sul portale fiscale indicando Dusiburg Software come intermediario, con la funzione \"Consultazione e acquisizione delle fatture elettroniche\". Entro 24 ore la piattaforma riprende la ricezione e recupera le fatture dei 90 giorni precedenti. Non c'è nulla da configurare in FattureFlow." }
+      ]
+    },
+    {
+      "code": "KB-FF-0012", "products": ["FF"], "mode": null, "versionFrom": null, "versionTo": null, "updatedOn": "2026-03-30",
+      "title": "Conservazione digitale: pacchetti di versamento rifiutati",
+      "sections": [
+        { "title": "FF-E4101 — metadati mancanti", "body": "Il conservatore rifiuta il pacchetto perché mancano metadati obbligatori, di solito il codice fiscale del soggetto produttore o il responsabile della conservazione. Si completano in Impostazioni > Conservazione > Dati del produttore. Dalla 5.1.2, con il nuovo conservatore accreditato, è obbligatorio anche il campo \"Tipologia documentale\". Dopo la correzione usare \"Rinvia pacchetti rifiutati\"." },
+        { "title": "FF-E4120 — contratto di conservazione", "body": "Il pacchetto non viene accettato perché il contratto di conservazione è scaduto o lo spazio acquistato è esaurito. La scadenza è visibile in Impostazioni > Conservazione > Contratto. Per il rinnovo contattare l'ufficio commerciale; i pacchetti restano in coda e vengono inviati appena il contratto è attivo, entro i termini di legge." }
+      ]
+    },
+    {
+      "code": "KB-FF-0013", "products": ["FF"], "mode": null, "versionFrom": null, "versionTo": null, "updatedOn": "2026-04-13",
+      "title": "Numerazione e sezionali",
+      "sections": [
+        { "title": "FF-E5010 — numero già usato", "body": "Il numero è già stato assegnato a un'altra fattura dello stesso sezionale e dello stesso anno. Succede spesso a inizio anno, se il contatore non è stato azzerato, o quando le fatture vengono numerate anche dal gestionale. Controllare in Impostazioni > Numerazione il prossimo numero del sezionale e allinearlo; non modificare i numeri di fatture già inviate." },
+        { "title": "Cambio d'anno", "body": "Il contatore riparte da 1 il primo gennaio solo se l'opzione \"Azzera ogni anno\" è attiva sul sezionale. Le fatture con data dell'anno precedente emesse a gennaio usano il contatore dell'anno precedente." },
+        { "title": "Creare un nuovo sezionale", "body": "In Impostazioni > Numerazione > Nuovo sezionale indicare prefisso o suffisso (per esempio /A), anno e numero iniziale. Dalla 5.2.0 si possono avere più sezionali nello stesso anno. Il sezionale si sceglie nel modello di fattura o al momento della creazione." }
+      ]
+    },
+    {
+      "code": "KB-FF-0014", "products": ["FF"], "mode": "OnPrem", "versionFrom": null, "versionTo": null, "updatedOn": "2026-04-13",
+      "title": "Coda di invio ferma: il servizio FattureFlow Sender",
+      "sections": [
+        { "title": "Sintomo", "body": "Le fatture restano \"In coda\" e non partono; dalla 5.2.0 il cruscotto mostra FF-E2001 \"Coda di invio ferma\"." },
+        { "title": "Soluzione", "body": "1. Aprire Servizi di Windows sul server e verificare lo stato di FattureFlow Sender.\n2. Se è fermo, avviarlo; se non parte, controllare nel log (C:\\ProgramData\\FattureFlow\\logs) il motivo, spesso la password dell'account di servizio cambiata o il database non raggiungibile.\n3. Impostare il ripristino automatico del servizio (Proprietà > Ripristino > Riavvia il servizio).\nAl riavvio le fatture in coda vengono inviate in ordine." }
+      ]
+    },
+    {
+      "code": "KB-FF-0015", "products": ["FF"], "mode": null, "versionFrom": "5.1.2", "versionTo": null, "updatedOn": "2026-04-13",
+      "title": "Invio massivo: limiti e buone pratiche",
+      "sections": [
+        { "title": "Versione 5.1.2", "body": "Sulla 5.1.2 un invio massivo di più di 500 fatture si interrompe con FF-E2099 (bug noto). Soluzione temporanea: inviare blocchi di al massimo 400 fatture; le fatture rimaste \"Da inviare\" si selezionano con il filtro di stato e si inviano di nuovo. La correzione definitiva è nella 5.2.0: aggiornare." },
+        { "title": "Buone pratiche", "body": "Programmare gli invii massivi fuori dall'orario di picco e verificare prima che la firma sia attiva: un certificato scaduto blocca tutto il lotto." }
+      ]
+    },
+    {
+      "code": "KB-FF-0016", "products": ["FF"], "mode": "OnPrem", "versionFrom": null, "versionTo": "4.8.5", "updatedOn": "2026-06-30",
+      "title": "FattureFlow 4.8: fine del supporto e passaggio alla 5.x",
+      "sections": [
+        { "title": "Fine del supporto", "body": "La serie 4.8 è fuori supporto dal 30 giugno 2026: non riceve correzioni né aggiornamenti di sicurezza." },
+        { "title": "Errore FF-E2041 sulla 4.8.5", "body": "La 4.8.5 negozia il canale di trasmissione solo con TLS 1.2 e suite di cifratura ormai dismesse dal gateway: l'invio fallisce con FF-E2041 e non si risolve importando certificati. L'unica soluzione è aggiornare almeno alla 5.0.3, che supporta TLS 1.3." },
+        { "title": "Aggiornamento", "body": "Si può passare dalla 4.8.5 direttamente all'ultima 5.x. Prima dell'aggiornamento eseguire un backup del database e verificare i permessi dell'utente del database (vedere l'articolo sull'aggiornamento on-premise). Dopo l'aggiornamento controllare i codici IVA: dalla 5.0 la natura richiede il sottocodice." }
+      ]
+    }
+  ]
+}

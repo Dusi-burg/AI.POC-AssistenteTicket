@@ -1,0 +1,125 @@
+{
+  "_comment": "Frasi di contorno per comporre i messaggi. Segnaposto: {nome} {cognome} {ruolo} {azienda} {telefono} {cellulare} {email} {piva} {cf} {iban} {token} {operatore} {numero} {data}.",
+  "customerOpeners": [
+    "Buongiorno,",
+    "Buongiorno,\nvi scrivo per segnalare un problema.",
+    "Salve,",
+    "Gentile assistenza,",
+    "Buonasera,",
+    "Ciao,",
+    "Buongiorno a tutti,",
+    "Spett.le supporto,",
+    "Buongiorno, scusate il disturbo.",
+    "Salve, avremmo bisogno di una mano.",
+    "Buongiorno,\ncome da telefonata di stamattina vi riassumo il problema.",
+    ""
+  ],
+  "customerClosers": [
+    "Grazie in anticipo.",
+    "Restiamo in attesa di un vostro riscontro.",
+    "Grazie, buona giornata.",
+    "Attendo vostre indicazioni.",
+    "Mi fate sapere al più presto? È abbastanza urgente.",
+    "Grazie mille per l'aiuto.",
+    "Cordiali saluti.",
+    "Fatemi sapere se vi servono altre informazioni.",
+    "Saluti.",
+    "Grazie e buon lavoro.",
+    ""
+  ],
+  "signatures": [
+    "{nome} {cognome}\n{ruolo}\n{azienda}\nTel. {telefono}",
+    "--\n{nome} {cognome}\n{azienda} | {ruolo}\n{telefono} | {email}",
+    "{nome} {cognome}\n{azienda}\nP.IVA {piva}\nTel. {telefono} - Cell. {cellulare}",
+    "{nome}",
+    "{nome} {cognome}",
+    "Ufficio amministrazione\n{azienda}\n{telefono}",
+    "{nome} {cognome} - {ruolo}\n{azienda}\nwww.{dominio}",
+    "--\n{nome} {cognome}\nCell. {cellulare}\nInviato da smartphone",
+    "Cordiali saluti\n{nome} {cognome}\n{ruolo} - {azienda}\nC.F. e P.IVA {piva}"
+  ],
+  "disclaimers": [
+    "Questo messaggio e gli eventuali allegati sono riservati e destinati esclusivamente ai destinatari indicati. Se avete ricevuto questa comunicazione per errore, vi preghiamo di cancellarla e di darne notizia al mittente.",
+    "Le informazioni contenute in questa e-mail sono confidenziali ai sensi del Regolamento UE 2016/679. Ne è vietata la diffusione non autorizzata.",
+    "Prima di stampare pensa all'ambiente.",
+    "AVVISO DI RISERVATEZZA: il contenuto di questo messaggio è riservato. Qualsiasi utilizzo non autorizzato è vietato."
+  ],
+  "attachmentMentions": [
+    "Allego lo screenshot dell'errore.",
+    "In allegato trovate il file di log.",
+    "Vi allego il file che non viene accettato.",
+    "Allego il log del servizio di ieri sera.",
+    "Vi mando in allegato la schermata."
+  ],
+  "pastedSecrets": [
+    "Se vi serve per entrare la chiave API della nostra integrazione è {token}",
+    "Per il rimborso del canone il nostro IBAN è {iban}",
+    "Il codice fiscale del legale rappresentante è {cf}, se serve per la delega.",
+    "Vi lascio anche il token che usa il gestionale: {token}"
+  ],
+  "customerThanks": [
+    "Perfetto, ora funziona. Grazie!",
+    "Confermo che il problema è risolto, grazie mille.",
+    "Tutto a posto, potete chiudere il ticket.",
+    "Grazie, abbiamo verificato e ora è tutto regolare.",
+    "Ok, risolto. Grazie della rapidità.",
+    "Funziona, grazie. Buona giornata."
+  ],
+  "customerFollowUpPrefixes": [
+    "Vi rispondo:",
+    "Ecco le informazioni:",
+    "Allora:",
+    "Ho controllato:",
+    ""
+  ],
+  "agentGreetings": [
+    "Gentile {nome},",
+    "Buongiorno {nome},",
+    "Gentile cliente,",
+    "Buongiorno,",
+    "Gentile {nome} {cognome},"
+  ],
+  "agentInfoRequests": [
+    "per poterla aiutare ci servono alcune informazioni:",
+    "prima di procedere le chiediamo qualche dettaglio:",
+    "grazie della segnalazione. Per capire meglio la situazione ci può indicare:",
+    "abbiamo preso in carico la richiesta. Ci servirebbe sapere:"
+  ],
+  "agentGenericQuestions": [
+    "Quale versione di {prodotto} è installata?",
+    "Da quando si presenta il problema?",
+    "Il problema riguarda tutti gli utenti o solo alcuni?",
+    "Compare un codice di errore? Se sì, quale?",
+    "Ci può inviare il log del servizio relativo all'orario dell'errore?",
+    "Sono state fatte modifiche recenti al server o alla rete?"
+  ],
+  "agentClosings": [
+    "Restiamo a disposizione per qualsiasi chiarimento.\n\nCordiali saluti,\n{operatore}\nSupporto Dusiburg Software",
+    "Ci faccia sapere se il problema si risolve.\n\nUn saluto,\n{operatore}\nAssistenza clienti",
+    "Se il problema dovesse ripresentarsi può rispondere a questo ticket.\n\nCordiali saluti,\n{operatore}",
+    "Cordiali saluti,\n{operatore}\nSupporto tecnico Dusiburg Software"
+  ],
+  "agentQuestionClosings": [
+    "Restiamo in attesa di un suo riscontro.\n\nCordiali saluti,\n{operatore}\nSupporto Dusiburg Software",
+    "Appena ci risponde procediamo con l'analisi.\n\nUn saluto,\n{operatore}\nAssistenza clienti",
+    "Grazie per la collaborazione.\n\nCordiali saluti,\n{operatore}"
+  ],
+  "agentDuplicateReplies": [
+    "Gentile cliente, la segnalazione è già in carico nel ticket {numero}: chiudiamo questo per non duplicare le comunicazioni.",
+    "Buongiorno, vediamo che lo stesso problema è già aperto nel ticket {numero}. Proseguiamo lì, questo ticket viene chiuso."
+  ],
+  "agentUnresolvedReplies": [
+    "Non avendo ricevuto riscontro chiudiamo il ticket. Se il problema si ripresenta può riaprirlo rispondendo a questa e-mail.",
+    "Abbiamo inoltrato la segnalazione al team di sviluppo; al momento non è disponibile una soluzione. Chiudiamo il ticket e la ricontatteremo in caso di novità.",
+    "Dalle verifiche non siamo riusciti a riprodurre il problema. Se si ripresenta ci invii il log completo e riapriremo l'analisi."
+  ],
+  "quoteHeaders": [
+    "-----Messaggio originale-----\nDa: Supporto Dusiburg Software\nData: {data}",
+    "Il {data} Supporto Dusiburg Software ha scritto:",
+    "> Da: assistenza\n> Inviato: {data}"
+  ],
+  "operators": [ "Marta Ferrari", "Luca Conti", "Giulia Esposito", "Andrea Ricci", "Sara Lombardi", "Davide Greco" ],
+  "firstNames": [ "Alessandro", "Chiara", "Francesco", "Elena", "Matteo", "Valentina", "Lorenzo", "Silvia", "Paolo", "Federica", "Giorgio", "Anna", "Stefano", "Laura", "Roberto", "Martina", "Simone", "Paola", "Michele", "Ilaria", "Fabio", "Cristina", "Emanuele", "Monica", "Riccardo", "Barbara", "Daniele", "Elisa", "Massimo", "Sonia" ],
+  "lastNames": [ "Rossi", "Colombo", "Bruno", "Gallo", "Fontana", "Caputo", "Mariani", "Rinaldi", "Barbieri", "Ferrara", "Santoro", "Pellegrini", "Martinelli", "Vitale", "Leone", "Longo", "Gentile", "Serra", "Monti", "Cattaneo", "Villa", "Fabbri", "Bassi", "Benedetti", "Sala", "Orlando", "Testa", "Donati" ],
+  "roles": [ "Ufficio amministrazione", "Responsabile IT", "Contabilità", "Sistemi informativi", "Segreteria", "Ufficio acquisti", "Amministratore di sistema", "Responsabile archivio", "Titolare", "Back office" ]
+}

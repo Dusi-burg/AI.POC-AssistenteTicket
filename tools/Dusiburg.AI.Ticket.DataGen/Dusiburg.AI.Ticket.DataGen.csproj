@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Generatore deterministico dei ticket storici (fase-3.md §2): combina i testi di data/ e scrive data/tickets.json. -->
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Dusiburg.AI.Ticket.Data\Dusiburg.AI.Ticket.Data.csproj" />
+  </ItemGroup>
+
+</Project>

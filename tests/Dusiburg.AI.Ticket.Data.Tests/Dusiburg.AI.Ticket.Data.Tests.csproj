@@ -22,6 +22,8 @@
     <ProjectReference Include="..\..\src\Dusiburg.AI.Ticket.Data\Dusiburg.AI.Ticket.Data.csproj" />
     <!-- Creazione dei database di test dal modello -->
     <ProjectReference Include="..\..\tools\Dusiburg.AI.Ticket.DbInit\Dusiburg.AI.Ticket.DbInit.csproj" />
+    <!-- Rigenerazione di data/tickets.json: il test verifica che il file versionato sia aggiornato -->
+    <ProjectReference Include="..\..\tools\Dusiburg.AI.Ticket.DataGen\Dusiburg.AI.Ticket.DataGen.csproj" />
   </ItemGroup>
 
 </Project>

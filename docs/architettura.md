@@ -55,7 +55,8 @@ non esiste.
 | `Dusiburg.AI.Ticket.Zammad` | client tipizzato dell'API di Zammad, modelli dell'API, probe |
 | `Dusiburg.AI.Ticket.Agent` | Minimal API: `/api/health`; dalle prossime fasi event source, coda e pipeline |
 | `Dusiburg.AI.Ticket.Web` | console Razor Pages: stato dei servizi |
-| `tools/Dusiburg.AI.Ticket.DbInit` | ricrea il database dal modello e inserisce il catalogo demo |
+| `tools/Dusiburg.AI.Ticket.DbInit` | ricrea il database dal modello e carica catalogo demo e dati simulati di `data/` |
+| `tools/Dusiburg.AI.Ticket.DataGen` | genera `data/tickets.json` dai testi di `data/`, con seed fisso |
 
 Arrivano con le loro fasi: `Cli` (Fase 4), `Rag` (Fase 5), `Core` (Fase 6).
 
@@ -70,7 +71,7 @@ database dal modello; le query vettoriali (Fase 5) sono Dapper con `SqlVector<fl
 
 | Schema | Tabelle | Lookup dagli enum |
 |---|---|---|
-| `support` | `Product`, `ProductVersion` (`Sequence` = ordine di rilascio), `Customer` (chiave `EmailDomain`), `HistoricalTicket` (chiave `Number`, `IsTestSet`), `TicketMessage`, `Resolution`, `KbArticle` (chiave `Code`), `ReleaseNote` (chiave `Code`) | `DeploymentMode`, `SlaLevel`, `TicketPriority`, `TicketState`, `MessageAuthor`, `ReleaseNoteType` |
+| `support` | `Product`, `ProductVersion` (`Sequence` = ordine di rilascio), `Customer` (chiave `EmailDomain`), `HistoricalTicket` (chiave `Number`, `IsTestSet`, `CaseCode`, `TrapKindId`, `DuplicateOfId`), `TicketMessage`, `Resolution`, `KbArticle` (chiave `Code`), `ReleaseNote` (chiave `Code`) | `DeploymentMode`, `SlaLevel`, `TicketPriority`, `TicketState`, `MessageAuthor`, `ReleaseNoteType`, `TrapKind` |
 | `rag` | `Chunk` (fonte, metadati di applicabilità, testo, `Embedding VECTOR(n)`), `EmbeddingInfo` (riga unica: modello e dimensione dei vettori salvati) | `ChunkSource` |
 | `agent` | `AgentRun` (univoco su ticket + articolo di Zammad: idempotenza), `AgentDraft` (segnali e confidenza, testo, esito del feedback), `AgentDraftSource` | `RunTrigger`, `AgentRunState`, `DraftKind`, `DraftOutcome` |
 
@@ -86,8 +87,40 @@ dotnet run --project tools/Dusiburg.AI.Ticket.DbInit [-- "<connection string>"] 
 ```
 
 Senza argomenti usa `ConnectionStrings__sql` o `(localdb)\localdev`; fuori da LocalDB chiede `--allow-non-local`. Il seed
-inserisce il catalogo demo (`DemoCatalog`: prodotti FattureFlow e DocuArchive con le versioni, clienti dei sei scenari);
-storico, knowledge base e note di rilascio arrivano con i dati simulati (Fase 3).
+inserisce il catalogo demo (`DemoCatalog`: prodotti FattureFlow e DocuArchive con le versioni, clienti dei sei scenari) e i dati
+simulati di `data/` (circa 4 secondi).
+
+### Dati simulati
+
+Tutto è inventato. I testi sono scritti a mano in `data/`; un generatore con seed li combina nei ticket storici (metodo
+"ibrido", `fase-3.md` del piano).
+
+| File | Contenuto |
+|---|---|
+| `scenari/*.json` | 54 **casi**: prodotto × modalità × intervallo di versioni × causa × soluzione, con 3–6 varianti di sintomo (l'ultima riservata al test set), dettagli, domande, risposte e le fonti KB/note pertinenti. I casi trasversali valgono per entrambi i prodotti (64 istanze) |
+| `kb/*.json` | 46 articoli divisi in sezioni (i comuni ai due prodotti sono modelli con `{P}` e `{prodotto}`) |
+| `note-rilascio.json` | 60 note: novità, correzioni, bug noti con la versione che li corregge |
+| `clienti.json` | 34 clienti oltre ai 6 del catalogo demo (40 in tutto, 23 on-premise e 17 SaaS) |
+| `rumore.json` | aperture, chiusure, firme, disclaimer, citazioni, nomi dei referenti e degli operatori |
+| `trabocchetti.json` | 15 ticket del test set scritti per intero: modalità sbagliata, versione fuori intervallo, nessuno storico, richiesta vaga, istruzioni malevole, prodotto ambiguo |
+| `tickets.json` | **generato**: 950 ticket (800 indicizzabili, 150 di test set) |
+
+```powershell
+dotnet run --project tools/Dusiburg.AI.Ticket.DataGen            # rigenera data/tickets.json
+dotnet run --project tools/Dusiburg.AI.Ticket.DataGen -- --check # verifica che sia aggiornato
+```
+
+Regole del generatore (seed `20261016`): cliente compatibile con prodotto e modalità del caso; versione del cliente alla data
+(SaaS sempre l'ultima; on-premise ogni versione fino all'attuale, con un ritardo per cliente); data dentro l'intervallo del caso;
+varianti che citano solo versioni già rilasciate alla data del messaggio (prima della correzione di un bug c'è solo la soluzione
+temporanea); risposte degli operatori in orario d'ufficio; ~83% risolti con soluzione, ~9% senza, ~4% aperti nell'ultimo mese, 32
+duplicati; firme con telefoni, partite IVA (ufficio fittizio `000`), codici fiscali, IBAN e token formalmente validi, materiale
+per l'anonimizzazione della Fase 5.
+
+`HistoricalTicket.CaseCode` è la **verità di riferimento** della valutazione: le fonti pertinenti per un ticket del test set
+sono quelle dello stesso caso (ticket storici, articoli e note che il caso cita). I test di `Data.Tests` controllano versioni,
+codici errore documentati, fonti citate, bug noti con la nota di correzione, test set disgiunto dall'indice, assenza di
+anacronismi e che `tickets.json` coincida con una rigenerazione.
 
 ## 4. Modelli
 

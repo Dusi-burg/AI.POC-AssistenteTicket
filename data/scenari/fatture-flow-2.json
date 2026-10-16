@@ -1,0 +1,294 @@
+{
+  "_comment": "Casi FattureFlow: natura IVA, ricezione, conservazione, numerazione, invio, stampa, configurazione.",
+  "cases": [
+    {
+      "code": "FF-XML-NATURA", "products": ["FF"], "modes": ["OnPrem", "Saas"], "versionFrom": "5.0.3", "versionTo": null,
+      "category": "validazione-xml", "priority": "Normal", "errorCode": "FF-E2320", "weight": 3,
+      "subjects": ["Errore natura IVA", "{codice} dopo l'aggiornamento", "Fatture esenti bloccate"],
+      "symptoms": [
+        "dopo l'aggiornamento le fatture esenti vengono bloccate con l'errore {codice}, natura IVA senza sottocodice.",
+        "tutte le fatture con IVA non imponibile non partono più, errore {codice}.",
+        "il sistema dice che la natura N2 non è completa. Prima andava bene.",
+        "le fatture in reverse charge sono ferme con un errore sulla natura IVA."
+      ],
+      "details": ["Abbiamo aggiornato alla {versione} il fine settimana.", "Si tratta delle fatture verso l'estero.", "Sono circa venti fatture."],
+      "questions": ["L'errore riguarda solo le fatture con codici IVA esenti o non imponibili?"],
+      "followUps": ["Sì, solo quelle esenti art. 10 e quelle UE.", "Solo quelle con natura N3 e N6."],
+      "cause": "Dalla 5.0.3 le nature N2, N3 e N6 richiedono il sottocodice; i codici IVA del cliente avevano la natura generica.",
+      "solutions": [
+        "Aggiornati i codici IVA in Impostazioni > Codici IVA con la natura completa (es. N3.2, N6.9); riaperte e salvate le fatture bloccate, inviate regolarmente.",
+        "Impostati i sottocodici di natura sui codici IVA esenti e non imponibili; le fatture hanno ripreso la natura corretta al salvataggio."
+      ],
+      "replies": [
+        "dalla 5.0.3 le nature N2, N3 e N6 vanno indicate con il sottocodice (per esempio N2.2, N3.1, N6.9), come richiesto dalle specifiche. In Impostazioni > Codici IVA apra ogni codice esente o non imponibile e scelga la natura completa; poi riapra le fatture bloccate e le salvi: prenderanno la natura aggiornata.",
+        "l'errore {codice} blocca la fattura prima dell'invio per evitare lo scarto: basta completare la natura con il sottocodice nei codici IVA usati e salvare di nuovo le fatture."
+      ],
+      "kb": ["KB-FF-0009"], "releaseNotes": ["RN-FF-5.0.3-02"]
+    },
+    {
+      "code": "FF-RICEZIONE-ALLEGATI-520", "products": ["FF"], "modes": ["OnPrem"], "versionFrom": "5.2.0", "versionTo": "5.2.0",
+      "category": "ricezione", "priority": "High", "errorCode": "FF-E3307", "weight": 4,
+      "subjects": ["Fatture passive ferme in ricezione", "Errore {codice}", "Fatture fornitori non registrate"],
+      "symptoms": [
+        "alcune fatture dei fornitori restano nello stato \"In ricezione\" con l'errore {codice} e non vengono registrate.",
+        "le fatture passive di un fornitore sono bloccate da giorni, il messaggio è {codice}.",
+        "non riusciamo a vedere alcune fatture ricevute: restano in ricezione, le altre arrivano normalmente.",
+        "da quando abbiamo aggiornato le fatture del fornitore dell'energia, che hanno il dettaglio in PDF allegato, non vengono più acquisite.",
+        "ci sono fatture passive bloccate in \"In ricezione\" con {codice}; sembra che siano tutte quelle con allegati pesanti."
+      ],
+      "details": ["Abbiamo aggiornato alla {versione} a maggio.", "Sono le fatture con allegati PDF di parecchie pagine.", "Il servizio FattureFlow Receiver è avviato."],
+      "questions": ["Le fatture ferme hanno allegati di dimensione superiore a 5 MB?"],
+      "followUps": ["Sì, gli allegati sono tra 6 e 12 MB.", "Controllando, hanno tutte allegati grandi."],
+      "cause": "Bug noto della 5.2.0: le fatture passive con allegati oltre 5 MB restano ferme in ricezione (FF-E3307).",
+      "solutions": [
+        "Aggiornato FattureFlow alla 5.2.1: al riavvio del servizio le fatture ferme sono state elaborate automaticamente.",
+        "In attesa dell'aggiornamento impostato ReceiveAttachmentPreview=false in FattureFlow.config e riavviato FattureFlow Receiver; le fatture ferme sono state riprese. Poi aggiornato alla 5.2.1.",
+        "Applicata la soluzione temporanea (ReceiveAttachmentPreview=false in FattureFlow.config e riavvio di FattureFlow Receiver): le fatture ferme sono state elaborate. La correzione arriverà con la prossima versione."
+      ],
+      "replies": [
+        "si tratta di un bug noto della 5.2.0: le fatture passive con allegati oltre 5 MB restano nello stato \"In ricezione\" con l'errore {codice}. È corretto nella 5.2.1: le consigliamo di aggiornare; all'avvio del servizio aggiornato le fatture ferme vengono elaborate da sole. Se non può aggiornare subito, imposti ReceiveAttachmentPreview=false nel file FattureFlow.config e riavvii il servizio FattureFlow Receiver.",
+        "il comportamento è descritto nelle note di rilascio della 5.2.0 come bug noto ed è risolto nella 5.2.1. Aggiornando, le fatture bloccate vengono riprese automaticamente; come soluzione temporanea può disattivare l'anteprima degli allegati (ReceiveAttachmentPreview=false) e riavviare FattureFlow Receiver.",
+        "si tratta di un bug noto della versione installata: le fatture passive con allegati oltre 5 MB restano nello stato \"In ricezione\" con l'errore {codice}. Il team di sviluppo sta preparando la correzione, che arriverà con il prossimo aggiornamento. Nel frattempo imposti ReceiveAttachmentPreview=false nel file FattureFlow.config e riavvii il servizio FattureFlow Receiver: le fatture ferme vengono riprese al riavvio. Le scriveremo quando la versione correttiva sarà disponibile."
+      ],
+      "kb": [], "releaseNotes": ["RN-FF-5.2.0-03", "RN-FF-5.2.1-01"]
+    },
+    {
+      "code": "FF-RICEZIONE-ALLEGATI-520-SAAS", "products": ["FF"], "modes": ["Saas"], "versionFrom": "5.2.0", "versionTo": "5.2.0",
+      "category": "ricezione", "priority": "Normal", "errorCode": "FF-E3307", "weight": 1,
+      "subjects": ["Fatture passive ferme", "Errore {codice} in ricezione"],
+      "symptoms": [
+        "alcune fatture dei fornitori sono ferme \"In ricezione\" con l'errore {codice}. Usiamo FattureFlow online.",
+        "nella versione cloud non vediamo due fatture passive, risultano in ricezione da ieri.",
+        "una fattura del fornitore con un allegato grande è bloccata in ricezione."
+      ],
+      "details": ["Il fornitore ci ha mandato copia via e-mail.", "Sono fatture di questa settimana."],
+      "questions": [],
+      "followUps": [],
+      "cause": "Bug della 5.2.0 sugli allegati oltre 5 MB; sulla piattaforma SaaS è stata applicata la correzione.",
+      "solutions": [
+        "Applicata sulla piattaforma la correzione per gli allegati oltre 5 MB; le fatture ferme sono state elaborate senza azioni del cliente."
+      ],
+      "replies": [
+        "il blocco riguarda le fatture con allegati superiori a 5 MB ed è un problema noto della versione attuale. Sulla piattaforma abbiamo applicato la correzione: le sue fatture sono state elaborate e ora sono visibili. Non deve fare nulla."
+      ],
+      "kb": [], "releaseNotes": ["RN-FF-5.2.0-03"]
+    },
+    {
+      "code": "FF-RICEZIONE-CANALE", "products": ["FF"], "modes": ["OnPrem"], "versionFrom": null, "versionTo": null,
+      "category": "ricezione", "priority": "High", "errorCode": "FF-E3310", "weight": 3,
+      "subjects": ["Non arrivano le fatture passive", "Errore {codice} ricezione", "Ricezione fatture ferma"],
+      "symptoms": [
+        "da una settimana non riceviamo più fatture dai fornitori, nel cruscotto c'è {codice}.",
+        "le fatture passive non arrivano più in FattureFlow, ma i fornitori dicono di averle inviate.",
+        "il cruscotto segnala \"ricezione non allineata\". Le ultime fatture ricevute sono di dieci giorni fa.",
+        "nessuna fattura dei fornitori dal primo del mese, compare l'avviso {codice}."
+      ],
+      "details": ["Abbiamo cambiato la password del portale il mese scorso.", "Il server è sempre acceso.", "Sul portale fiscale le fatture si vedono."],
+      "questions": ["Sono state cambiate di recente le credenziali del canale di ricezione?"],
+      "followUps": ["Sì, la password l'abbiamo cambiata sul portale perché era scaduta.", "Non che io sappia, ma potrebbe essere scaduta."],
+      "cause": "Password dell'utenza del canale di ricezione scaduta o cambiata e non aggiornata in FattureFlow.",
+      "solutions": [
+        "Aggiornata la password in Impostazioni > Ricezione > Credenziali, riavviato FattureFlow Receiver e forzata la ricezione con ffadmin receive --now: scaricate le fatture arretrate.",
+        "Il servizio FattureFlow Receiver era fermo dopo un riavvio del server: avviato e impostato in automatico, ricezione ripresa."
+      ],
+      "replies": [
+        "l'avviso {codice} indica che FattureFlow non riesce a collegarsi al canale di ricezione. La causa più comune è la password dell'utenza del canale, che scade ogni 90 giorni: la aggiorni in Impostazioni > Ricezione > Credenziali e prema \"Verifica\". Poi riavvii il servizio FattureFlow Receiver; le fatture arrivate nel frattempo vengono scaricate al primo ciclo, oppure subito con ffadmin receive --now.",
+        "verifichi le credenziali del canale di ricezione in Impostazioni > Ricezione e che il servizio FattureFlow Receiver sia avviato. Corrette le credenziali, le fatture arretrate vengono recuperate automaticamente."
+      ],
+      "kb": ["KB-FF-0010"], "releaseNotes": []
+    },
+    {
+      "code": "FF-RICEZIONE-DELEGA-SAAS", "products": ["FF"], "modes": ["Saas"], "versionFrom": null, "versionTo": null,
+      "category": "ricezione", "priority": "High", "errorCode": "FF-E3310", "weight": 2,
+      "subjects": ["Fatture passive non ricevute", "Avviso {codice}", "Ricezione ferma"],
+      "symptoms": [
+        "non vediamo più le fatture dei fornitori su FattureFlow online, c'è l'avviso {codice}.",
+        "le fatture passive non arrivano da inizio mese. Dobbiamo configurare qualcosa?",
+        "il cruscotto ci segnala la ricezione non allineata ma noi non abbiamo server, usiamo il servizio in cloud.",
+        "da qualche giorno le fatture ricevute non si aggiornano più, nel portale fiscale invece ci sono."
+      ],
+      "details": ["Abbiamo cambiato commercialista quest'anno.", "Il legale rappresentante è lo stesso."],
+      "questions": ["Avete revocato o modificato di recente le deleghe sul portale fiscale?"],
+      "followUps": ["Il nuovo commercialista ha rifatto le deleghe, forse ha tolto la vostra.", "Non ricordiamo, la delega l'avevamo fatta anni fa."],
+      "cause": "Delega al servizio di consultazione e acquisizione scaduta o revocata (versione SaaS).",
+      "solutions": [
+        "Il legale rappresentante ha rinnovato la delega sul portale fiscale indicando Dusiburg Software come intermediario; entro 24 ore la ricezione è ripresa con il recupero degli ultimi 90 giorni.",
+        "Delega revocata per errore durante il cambio di commercialista: rilasciata di nuovo, fatture recuperate automaticamente."
+      ],
+      "replies": [
+        "nella versione SaaS la ricezione funziona tramite la delega al servizio di consultazione e acquisizione delle fatture elettroniche sul portale fiscale. La vostra risulta scaduta o revocata. Il legale rappresentante deve rinnovarla indicando Dusiburg Software come intermediario; entro 24 ore la piattaforma riprende la ricezione e recupera le fatture dei 90 giorni precedenti. Non c'è nulla da configurare in FattureFlow.",
+        "l'avviso {codice} nella versione online dipende dalla delega sul portale fiscale. Rinnovandola, la ricezione riparte da sola e recupera le fatture arretrate."
+      ],
+      "kb": ["KB-FF-0011"], "releaseNotes": []
+    },
+    {
+      "code": "FF-CONSERVAZIONE-METADATI", "products": ["FF"], "modes": ["OnPrem", "Saas"], "versionFrom": "5.1.2", "versionTo": null,
+      "category": "conservazione", "priority": "Normal", "errorCode": "FF-E4101", "weight": 2,
+      "subjects": ["Pacchetti di conservazione rifiutati", "Errore {codice} conservazione"],
+      "symptoms": [
+        "i pacchetti di versamento in conservazione vengono rifiutati con {codice}, metadati mancanti.",
+        "dal passaggio al nuovo conservatore la conservazione dà sempre errore.",
+        "ci arrivano notifiche di pacchetto rifiutato dalla conservazione digitale.",
+        "la conservazione delle fatture del trimestre non è andata a buon fine, il messaggio parla di metadati obbligatori."
+      ],
+      "details": ["Abbiamo scelto il nuovo conservatore il mese scorso.", "Il responsabile della conservazione è cambiato."],
+      "questions": ["Avete scelto il nuovo conservatore accreditato?"],
+      "followUps": ["Sì, da settembre.", "Sì, ci era stato consigliato."],
+      "cause": "Con il nuovo conservatore (dalla 5.1.2) sono obbligatori metadati aggiuntivi, tra cui la tipologia documentale.",
+      "solutions": [
+        "Completati i dati del produttore e la tipologia documentale in Impostazioni > Conservazione > Dati del produttore; rinviati i pacchetti rifiutati.",
+        "Inserito il codice fiscale del nuovo responsabile della conservazione; i pacchetti sono stati accettati al rinvio."
+      ],
+      "replies": [
+        "il nuovo conservatore richiede alcuni metadati obbligatori in più. In Impostazioni > Conservazione > Dati del produttore completi il codice fiscale del soggetto produttore, il responsabile della conservazione e la tipologia documentale; poi usi \"Rinvia pacchetti rifiutati\".",
+        "l'errore {codice} indica metadati mancanti nel pacchetto: completati i dati del produttore, i pacchetti si possono rinviare senza perdere i termini."
+      ],
+      "kb": ["KB-FF-0012"], "releaseNotes": ["RN-FF-5.1.2-02"]
+    },
+    {
+      "code": "FF-CONSERVAZIONE-CONTRATTO", "products": ["FF"], "modes": ["OnPrem", "Saas"], "versionFrom": null, "versionTo": null,
+      "category": "conservazione", "priority": "Normal", "errorCode": "FF-E4120", "weight": 2,
+      "subjects": ["Conservazione non accettata", "Errore {codice}"],
+      "symptoms": [
+        "la conservazione si blocca con l'errore {codice}.",
+        "ci dice che il contratto di conservazione non è attivo, ma noi paghiamo regolarmente.",
+        "i documenti restano in coda di conservazione da settimane."
+      ],
+      "details": ["Il contratto dovrebbe essersi rinnovato a gennaio.", "Abbiamo molte più fatture dell'anno scorso."],
+      "questions": ["Può controllare la scadenza in Impostazioni > Conservazione > Contratto?"],
+      "followUps": ["Risulta scaduto a fine giugno.", "Lo spazio risulta esaurito."],
+      "cause": "Contratto di conservazione scaduto o spazio acquistato esaurito.",
+      "solutions": [
+        "Rinnovato il contratto tramite l'ufficio commerciale; i pacchetti in coda sono stati inviati automaticamente.",
+        "Acquistato spazio aggiuntivo di conservazione; la coda è stata smaltita entro i termini."
+      ],
+      "replies": [
+        "l'errore {codice} indica che il contratto di conservazione è scaduto o che lo spazio acquistato è esaurito; lo vede in Impostazioni > Conservazione > Contratto. Per il rinnovo o lo spazio aggiuntivo la mettiamo in contatto con l'ufficio commerciale. I pacchetti restano in coda e partono appena il contratto è attivo, entro i termini di legge."
+      ],
+      "kb": ["KB-FF-0012"], "releaseNotes": []
+    },
+    {
+      "code": "FF-NUMERAZIONE-ANNO", "products": ["FF"], "modes": ["OnPrem", "Saas"], "versionFrom": null, "versionTo": null,
+      "category": "numerazione", "priority": "High", "errorCode": "FF-E5010", "weight": 3,
+      "subjects": ["Numero fattura già usato", "Errore {codice} numerazione", "Problema numerazione nuovo anno"],
+      "symptoms": [
+        "non riusciamo a emettere la prima fattura dell'anno, errore {codice} numero già utilizzato.",
+        "il sistema propone il numero 1 ma dice che è già usato.",
+        "la numerazione è ripartita da un numero sbagliato e adesso FattureFlow blocca le fatture.",
+        "compare {codice} quando salviamo la fattura: il numero risulterebbe già assegnato nel sezionale."
+      ],
+      "details": ["Le fatture le numeriamo anche dal gestionale.", "Abbiamo emesso ieri una fattura con data dell'anno scorso.", "Usiamo due sezionali."],
+      "questions": ["Il sezionale ha l'opzione \"Azzera ogni anno\" attiva?"],
+      "followUps": ["No, l'opzione non era attiva.", "Sì, ma il gestionale manda anche lui il numero."],
+      "cause": "Contatore del sezionale non azzerato a inizio anno o numerazione assegnata anche dal gestionale.",
+      "solutions": [
+        "Allineato il prossimo numero del sezionale in Impostazioni > Numerazione e attivato \"Azzera ogni anno\"; le fatture sono state emesse.",
+        "Disattivata la numerazione dal gestionale per lasciarla solo a FattureFlow; risolti i conflitti di numero."
+      ],
+      "replies": [
+        "l'errore {codice} indica che il numero è già assegnato nello stesso sezionale e anno. Controlli in Impostazioni > Numerazione il prossimo numero del sezionale e lo allinei; se vuole che riparta da 1 ogni gennaio attivi l'opzione \"Azzera ogni anno\". Non modifichi i numeri delle fatture già inviate. Se anche il gestionale assegna i numeri, la numerazione va lasciata a uno solo dei due.",
+        "il contatore del sezionale non è stato azzerato a inizio anno. Lo allinei in Impostazioni > Numerazione: le fatture con data dell'anno precedente emesse a gennaio continuano invece a usare il contatore vecchio."
+      ],
+      "kb": ["KB-FF-0013"], "releaseNotes": ["RN-FF-5.2.0-04"]
+    },
+    {
+      "code": "FF-INVIO-MASSIVO-512", "products": ["FF"], "modes": ["OnPrem", "Saas"], "versionFrom": "5.1.2", "versionTo": "5.1.2",
+      "category": "invio", "priority": "High", "errorCode": "FF-E2099", "weight": 3,
+      "subjects": ["Invio massivo interrotto", "Errore {codice}", "Fatture rimaste da inviare"],
+      "symptoms": [
+        "l'invio massivo di fine mese si è interrotto con l'errore {codice} e metà delle fatture sono rimaste da inviare.",
+        "abbiamo lanciato l'invio di circa 800 fatture e si è fermato a 500 con {codice}.",
+        "l'invio cumulativo si blocca sempre allo stesso punto, le fatture restanti restano \"Da inviare\".",
+        "quando inviamo tutte le fatture del mese insieme il processo si interrompe con un errore."
+      ],
+      "details": ["Il mese scorso con meno fatture era andato bene.", "Abbiamo la {versione}."],
+      "questions": ["Quante fatture contiene l'invio che si interrompe?"],
+      "followUps": ["Circa 700.", "Più di mille."],
+      "cause": "Bug noto della 5.1.2: gli invii massivi oltre 500 fatture si interrompono con FF-E2099.",
+      "solutions": [
+        "Suddiviso l'invio in blocchi da 400 fatture come soluzione temporanea; poi aggiornato alla 5.2.0.",
+        "Aggiornato alla 5.2.0, che elimina il limite: l'invio massivo è stato completato.",
+        "Suddiviso l'invio in blocchi da al massimo 400 fatture: tutte le fatture sono state inviate. Il limite sarà rimosso in una prossima versione."
+      ],
+      "replies": [
+        "è un bug noto della 5.1.2: un invio massivo di più di 500 fatture si interrompe con {codice}. Le fatture rimaste \"Da inviare\" si selezionano con il filtro di stato e si inviano di nuovo, in blocchi da al massimo 400. La correzione definitiva è nella 5.2.0: le consigliamo di aggiornare.",
+        "l'interruzione oltre le 500 fatture è descritta nelle note della 5.1.2 ed è risolta nella 5.2.0. Nel frattempo divida l'invio in blocchi più piccoli: nessuna fattura va persa, quelle non inviate restano nello stato \"Da inviare\".",
+        "è un problema noto della versione installata: oltre le 500 fatture l'invio massivo si interrompe con {codice}. Nessuna fattura va persa: quelle rimaste \"Da inviare\" si selezionano con il filtro di stato e si inviano di nuovo, in blocchi da al massimo 400. La correzione è prevista in una prossima versione."
+      ],
+      "kb": ["KB-FF-0015"], "releaseNotes": ["RN-FF-5.1.2-03", "RN-FF-5.2.0-01"]
+    },
+    {
+      "code": "FF-PDF-ACCENTI-503", "products": ["FF"], "modes": ["OnPrem", "Saas"], "versionFrom": "5.0.3", "versionTo": "5.0.3",
+      "category": "stampa", "priority": "Low", "errorCode": null, "weight": 2,
+      "subjects": ["Caratteri strani nel PDF", "PDF di cortesia con punti interrogativi", "Lettere accentate sbagliate"],
+      "symptoms": [
+        "nel PDF di cortesia le lettere accentate maiuscole escono come punti interrogativi.",
+        "i clienti ci segnalano che nelle fatture in PDF \"È\" diventa \"?\".",
+        "dopo l'aggiornamento il PDF delle fatture ha caratteri strani al posto degli accenti.",
+        "nella copia PDF che mandiamo ai clienti alcuni simboli, tipo l'euro e le accentate, non si leggono."
+      ],
+      "details": ["Usiamo il modello di stampa standard.", "Nel file XML i caratteri sono corretti."],
+      "questions": [],
+      "followUps": [],
+      "cause": "Bug noto della 5.0.3 nel PDF di cortesia con il carattere predefinito.",
+      "solutions": [
+        "Impostato il carattere Liberation Sans nel modello di stampa come soluzione temporanea; consigliato l'aggiornamento alla 5.1.2.",
+        "Aggiornato alla 5.1.2, che corregge la stampa dei caratteri accentati.",
+        "Impostato il carattere Liberation Sans nel modello di stampa: il PDF di cortesia ora riporta correttamente le lettere accentate."
+      ],
+      "replies": [
+        "è un problema noto della 5.0.3 che riguarda solo il PDF di cortesia, non il file XML trasmesso, che è corretto. Come soluzione temporanea imposti il carattere \"Liberation Sans\" nel modello di stampa; la correzione è nella 5.1.2.",
+        "è un problema noto della versione installata e riguarda solo il PDF di cortesia: il file XML trasmesso è corretto. Imposti il carattere \"Liberation Sans\" nel modello di stampa e le lettere accentate verranno stampate correttamente; la correzione definitiva arriverà con un prossimo aggiornamento."
+      ],
+      "kb": [], "releaseNotes": ["RN-FF-5.0.3-04", "RN-FF-5.1.2-01"]
+    },
+    {
+      "code": "FF-INVIO-CODA", "products": ["FF"], "modes": ["OnPrem"], "versionFrom": null, "versionTo": null,
+      "category": "invio", "priority": "High", "errorCode": "FF-E2001", "weight": 3,
+      "subjects": ["Fatture ferme in coda", "Invio bloccato", "Non parte niente"],
+      "symptoms": [
+        "le fatture restano \"In coda\" e non partono, nessun errore.",
+        "da ieri pomeriggio nessuna fattura viene inviata, sono tutte in coda.",
+        "il cruscotto mostra {codice}, coda di invio ferma.",
+        "abbiamo 60 fatture in coda da stamattina, non si muove nulla.",
+        "dopo il riavvio del server le fatture non escono più: stanno ferme in attesa di invio."
+      ],
+      "details": ["Il server è stato riavviato nel fine settimana.", "Abbiamo cambiato la password dell'utente amministratore del dominio.", "Le fatture si creano normalmente."],
+      "questions": ["Il servizio FattureFlow Sender risulta avviato nei Servizi di Windows?"],
+      "followUps": ["Era fermo, l'ho avviato ma si ferma dopo pochi secondi.", "Risultava arrestato."],
+      "cause": "Servizio FattureFlow Sender fermo (avvio manuale dopo il riavvio o password dell'account di servizio cambiata).",
+      "solutions": [
+        "Avviato il servizio FattureFlow Sender e impostato il ripristino automatico; le fatture in coda sono state inviate.",
+        "Aggiornata la password dell'account di servizio nelle proprietà di FattureFlow Sender; il servizio è ripartito e ha smaltito la coda."
+      ],
+      "replies": [
+        "le fatture restano in coda quando il servizio FattureFlow Sender è fermo. Sul server apra Servizi di Windows e lo avvii; se si ferma subito, nel log in C:\\ProgramData\\FattureFlow\\logs troverà il motivo, spesso la password dell'account di servizio cambiata. Le consigliamo di impostare il ripristino automatico del servizio. Al riavvio le fatture partono in ordine.",
+        "verifichi lo stato del servizio FattureFlow Sender: è il servizio che invia la coda. Se la password dell'account con cui gira è cambiata, va aggiornata nelle proprietà del servizio."
+      ],
+      "kb": ["KB-FF-0014"], "releaseNotes": ["RN-FF-5.2.0-06"]
+    },
+    {
+      "code": "FF-SEZIONALI-CONFIG", "products": ["FF"], "modes": ["OnPrem", "Saas"], "versionFrom": "5.2.0", "versionTo": null,
+      "category": "configurazione", "priority": "Low", "errorCode": null, "weight": 2,
+      "subjects": ["Come creare un nuovo sezionale", "Nuova numerazione separata", "Domanda sezionali"],
+      "symptoms": [
+        "vorremmo una numerazione separata per le fatture della nuova filiale, come si crea un sezionale?",
+        "ci serve un secondo sezionale con suffisso /B per le note di credito. Come si fa?",
+        "il commercialista ci chiede di numerare a parte le fatture del negozio online, si può fare?",
+        "possiamo avere due numerazioni diverse nello stesso anno?"
+      ],
+      "details": ["Vorremmo partire dal primo del mese prossimo.", "Siamo sulla {versione}."],
+      "questions": [],
+      "followUps": [],
+      "cause": "Richiesta di configurazione: creazione di un nuovo sezionale di numerazione.",
+      "solutions": [
+        "Spiegata la creazione del sezionale da Impostazioni > Numerazione > Nuovo sezionale e la scelta nel modello di fattura."
+      ],
+      "replies": [
+        "dalla 5.2.0 si possono avere più sezionali nello stesso anno. Vada in Impostazioni > Numerazione > Nuovo sezionale, indichi prefisso o suffisso (per esempio /B), anno e numero iniziale. Il sezionale si sceglie nel modello di fattura oppure al momento della creazione della fattura.",
+        "può creare il sezionale da Impostazioni > Numerazione > Nuovo sezionale; per usarlo sempre per un certo tipo di fatture lo imposti nel relativo modello."
+      ],
+      "kb": ["KB-FF-0013"], "releaseNotes": ["RN-FF-5.2.0-04"]
+    }
+  ]
+}

@@ -18,21 +18,28 @@ public static class TicketDatabaseInitializer
         new SqlConnectionStringBuilder(LocalConnectionString) { InitialCatalog = database }.ConnectionString;
 
     /// <summary>
-    /// Cancella il database se esiste e lo ricrea con i tre schemi, le tabelle e le righe delle lookup; con <paramref name="seed"/>
-    /// scrive anche prodotti, versioni e clienti del catalogo demo. <c>rag.EmbeddingInfo</c> resta vuota: la scrive <c>Cli embed</c>.
+    /// Cancella il database se esiste e lo ricrea con i tre schemi, le tabelle e le righe delle lookup. Con <paramref name="seed"/>
+    /// scrive il catalogo demo e il contenuto di <c>data/</c> (clienti, KB, note di rilascio, ticket generati), cercando la cartella
+    /// da quella dell'eseguibile in su. <c>rag</c> e <c>agent</c> restano vuoti: li riempiono <c>Cli embed</c> e l'Agent.
     /// </summary>
-    public static async Task RecreateAsync(
+    /// <returns>I dati caricati, <c>null</c> senza seed.</returns>
+    public static async Task<SeedData?> RecreateAsync(
         string connectionString, int embeddingDimensions, bool seed = true, CancellationToken cancellationToken = default)
     {
+        SeedData? data = seed ? LoadSeedData() : null;
+
         await using TicketDbContext db = Create(connectionString, embeddingDimensions);
 
         await db.Database.EnsureDeletedAsync(cancellationToken);
         await db.Database.EnsureCreatedAsync(cancellationToken);
 
-        if (seed)
+        if (data is not null)
         {
             await DemoCatalogSeeder.SeedAsync(db, cancellationToken);
+            await SeedDataImporter.ImportAsync(db, data, cancellationToken);
         }
+
+        return data;
     }
 
     /// <summary>Cancella il database se esiste.</summary>
@@ -46,4 +53,18 @@ public static class TicketDatabaseInitializer
 
     public static TicketDbContext Create(string connectionString, int embeddingDimensions) =>
         new(new DbContextOptionsBuilder<TicketDbContext>().UseSqlServer(connectionString).Options, new TicketDbContextOptions(embeddingDimensions));
+
+    /// <summary><c>data/</c> del repository, dalla cartella corrente o da quella dell'eseguibile in su.</summary>
+    public static SeedData LoadSeedData()
+    {
+        string directory = SeedData.FindDataDirectory(Directory.GetCurrentDirectory())
+            ?? SeedData.FindDataDirectory(AppContext.BaseDirectory)
+            ?? throw new DirectoryNotFoundException("Cartella data/ del repository non trovata: lanciare DbInit dalla root del repository.");
+
+        SeedData data = SeedData.Load(directory);
+
+        return data.Tickets is not null
+            ? data
+            : throw new FileNotFoundException($"{SeedData.TicketsFileName} mancante in {directory}: generarlo con tools/Dusiburg.AI.Ticket.DataGen.");
+    }
 }

@@ -40,6 +40,8 @@ internal sealed class MessageAuthorConfiguration() : EnumLookupConfiguration<Mes
 
 internal sealed class ReleaseNoteTypeConfiguration() : EnumLookupConfiguration<ReleaseNoteType>(TicketDbContext.SupportSchema);
 
+internal sealed class TrapKindConfiguration() : EnumLookupConfiguration<TrapKind>(TicketDbContext.SupportSchema);
+
 internal sealed class ChunkSourceConfiguration() : EnumLookupConfiguration<ChunkSource>(TicketDbContext.RagSchema);
 
 internal sealed class RunTriggerConfiguration() : EnumLookupConfiguration<RunTrigger>(TicketDbContext.AgentSchema);
@@ -61,6 +63,7 @@ public static class ColumnSizes
     public const int CustomerName = 200;
     public const int TicketNumber = 20;
     public const int Category = 50;
+    public const int CaseCode = 40;
     public const int Subject = 200;
     public const int Cause = 2000;
     public const int KbCode = 20;

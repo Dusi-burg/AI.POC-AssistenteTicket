@@ -1,0 +1,65 @@
+{
+  "_comment": "Articoli comuni ai due prodotti: {P} diventa FF o DA nel codice dell'articolo e nei codici errore, {prodotto} il nome del prodotto.",
+  "articles": [
+    {
+      "code": "KB-{P}-0101", "products": ["FF", "DA"], "mode": null, "versionFrom": null, "versionTo": null, "updatedOn": "2026-03-16",
+      "title": "Accesso SSO con Microsoft Entra ID non riuscito",
+      "sections": [
+        { "title": "Sintomo", "body": "Gli utenti non riescono più ad accedere con l'account aziendale: dopo il login su Microsoft tornano alla pagina di {prodotto} con l'errore {P}-E0105 \"Risposta SAML non valida: firma non verificata\". Gli amministratori con account locale entrano normalmente." },
+        { "title": "Causa", "body": "Il certificato di firma SAML dell'applicazione aziendale in Microsoft Entra ID è stato rinnovato (scade di norma ogni tre anni) e {prodotto} conserva ancora il vecchio." },
+        { "title": "Soluzione", "body": "1. In Entra ID, applicazione aziendale > Single sign-on, scaricare il file \"XML dei metadati della federazione\".\n2. In {prodotto}, Impostazioni > Sicurezza > SSO, caricare il nuovo file dei metadati con un account amministratore locale.\n3. Salvare: l'accesso SSO torna disponibile subito.\nPer evitarlo, impostare in {prodotto} l'URL dei metadati invece del file: la configurazione si aggiorna da sola ogni 24 ore." }
+      ]
+    },
+    {
+      "code": "KB-{P}-0102", "products": ["FF", "DA"], "mode": null, "versionFrom": null, "versionTo": null, "updatedOn": "2026-07-20",
+      "title": "Licenza scaduta o numero di utenti superato",
+      "sections": [
+        { "title": "Sintomo", "body": "All'accesso compare {P}-E0201 \"Licenza non valida: scaduta o numero di utenti superato\"; gli utenti oltre il limite non possono entrare." },
+        { "title": "On-premise", "body": "La licenza è un file .lic installato sul server. Dopo il rinnovo l'ufficio commerciale invia il nuovo file: si carica in Impostazioni > Licenza > Aggiorna e non serve riavviare. Se il problema è il numero di utenti, disattivare gli utenti non più in servizio (in FattureFlow dalla 5.2.1 non vengono più conteggiati) o richiedere utenti aggiuntivi." },
+        { "title": "SaaS", "body": "Nella versione SaaS il rinnovo è automatico con l'abbonamento. Se il numero di utenti è superato, l'amministratore può acquistare utenti aggiuntivi dall'area clienti > Abbonamento: sono attivi subito. Una licenza scaduta indica di solito un pagamento non andato a buon fine: contattare l'amministrazione." }
+      ]
+    },
+    {
+      "code": "KB-{P}-0103", "products": ["FF", "DA"], "mode": "OnPrem", "versionFrom": null, "versionTo": null, "updatedOn": "2026-04-13",
+      "title": "Aggiornare {prodotto} on-premise",
+      "sections": [
+        { "title": "Prima di iniziare", "body": "Eseguire un backup completo del database e della cartella dei dati. Verificare che l'utente con cui gira il programma di aggiornamento abbia sul database i permessi db_owner (o almeno db_ddladmin, db_datareader e db_datawriter): servono per modificare lo schema." },
+        { "title": "Errore {P}-E0310 durante la migrazione", "body": "Se l'aggiornamento si ferma con {P}-E0310 \"Migrazione del database non riuscita\", nel log di installazione (setup.log) compare quasi sempre \"CREATE TABLE permission denied\" o \"ALTER permission denied\". Il programma ripristina la versione precedente: assegnare i permessi all'utente del database e rilanciare l'aggiornamento. Se il log riporta un timeout, ripetere fuori orario o aumentare il timeout con il parametro /dbtimeout=1800." },
+        { "title": "Dopo l'aggiornamento", "body": "Svuotare la cache del browser degli utenti e verificare nella pagina Informazioni la nuova versione. Per {prodotto} le note di rilascio della versione indicano eventuali passi aggiuntivi." }
+      ]
+    },
+    {
+      "code": "KB-{P}-0104", "products": ["FF", "DA"], "mode": "OnPrem", "versionFrom": null, "versionTo": null, "updatedOn": "2025-10-06",
+      "title": "Requisiti per l'installazione on-premise",
+      "sections": [
+        { "title": "Requisiti", "body": "Windows Server 2019 o successivo, runtime .NET e ASP.NET Core Hosting Bundle della versione indicata nelle note di rilascio, SQL Server 2019 o successivo (anche Express per installazioni fino a dieci utenti), 4 core e 16 GB di RAM consigliati." },
+        { "title": "Errore {P}-E0301", "body": "Il programma di installazione si ferma con {P}-E0301 \"Prerequisito mancante\" e indica il componente: di solito l'ASP.NET Core Hosting Bundle o il ruolo IIS. Installare il componente, riavviare il server e rilanciare l'installazione. Se il server non ha accesso a internet scaricare i pacchetti offline dall'area clienti." }
+      ]
+    },
+    {
+      "code": "KB-{P}-0105", "products": ["FF", "DA"], "mode": null, "versionFrom": null, "versionTo": null, "updatedOn": "2026-05-11",
+      "title": "{prodotto} lento: verifiche",
+      "sections": [
+        { "title": "On-premise: server e database", "body": "Verificare CPU e memoria del server negli orari di lentezza. Le cause più frequenti sono il database senza manutenzione (indici frammentati, statistiche non aggiornate) e SQL Server Express arrivato al limite di memoria. Pianificare il piano di manutenzione settimanale (ricostruzione degli indici e aggiornamento delle statistiche) e, oltre i dieci utenti, passare a un'edizione Standard." },
+        { "title": "SaaS: rete e browser", "body": "Nella versione SaaS le prestazioni del servizio sono monitorate da Dusiburg. Se la lentezza riguarda un solo ufficio, controllare la connessione e il proxy aziendale; se riguarda un solo utente, svuotare la cache del browser e disattivare le estensioni. Prima di aprire un ticket controllare la pagina di stato della piattaforma." },
+        { "title": "Cosa inviare al supporto", "body": "Orario della lentezza, pagine coinvolte, numero di utenti collegati e, per l'on-premise, il report generato da Aiuto > Diagnostica." }
+      ]
+    },
+    {
+      "code": "KB-{P}-0106", "products": ["FF", "DA"], "mode": null, "versionFrom": null, "versionTo": null, "updatedOn": "2026-02-23",
+      "title": "Backup e ripristino",
+      "sections": [
+        { "title": "On-premise", "body": "Il backup è responsabilità del cliente: servono il backup del database SQL Server e quello della cartella dei dati (allegati, repository, certificati). Per il ripristino: fermare i servizi di {prodotto}, ripristinare il database e la cartella dalla stessa data, avviare i servizi. Ripristinare solo il database lascia riferimenti a file mancanti." },
+        { "title": "SaaS", "body": "Nella versione SaaS i backup sono giornalieri e conservati per 30 giorni. Il ripristino di dati cancellati per errore si richiede con un ticket indicando cosa ripristinare e la data; il ripristino avviene in un ambiente separato da cui si recuperano i dati, senza sovrascrivere il lavoro fatto nel frattempo." }
+      ]
+    },
+    {
+      "code": "KB-{P}-0107", "products": ["FF", "DA"], "mode": null, "versionFrom": null, "versionTo": null, "updatedOn": "2025-10-06",
+      "title": "Utente bloccato e reimpostazione della password",
+      "sections": [
+        { "title": "Sintomo", "body": "L'utente non riesce ad accedere e vede {P}-E0110 \"Utente bloccato per troppi tentativi errati\"." },
+        { "title": "Soluzione", "body": "Dopo cinque tentativi errati l'utente resta bloccato per 30 minuti. Un amministratore può sbloccarlo subito da Impostazioni > Utenti > (utente) > Sblocca, e inviare il collegamento per reimpostare la password. Gli utenti che accedono con SSO non hanno una password di {prodotto}: in quel caso il problema è sull'account aziendale." }
+      ]
+    }
+  ]
+}

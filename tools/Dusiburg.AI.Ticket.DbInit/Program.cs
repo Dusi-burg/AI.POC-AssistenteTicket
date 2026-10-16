@@ -5,6 +5,7 @@ using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Configuration;
 
 // Uso: dotnet run --project tools/Dusiburg.AI.Ticket.DbInit [-- "<connection string>"] [--no-seed] [--allow-non-local]
+// Con il seed carica il catalogo demo e i file di data/ (tickets.json compreso, prodotto da tools/Dusiburg.AI.Ticket.DataGen).
 // Senza connection string usa ConnectionStrings__sql dall'ambiente o, in mancanza, (localdb)\localdev database Ticket.
 // La dimensione della colonna VECTOR viene da EMBEDDING_DIMENSIONS (default 768): deve coincidere con il modello di embedding.
 const string AllowNonLocal = "--allow-non-local";
@@ -43,7 +44,16 @@ var seed = !args.Contains(NoSeed);
 
 Console.WriteLine($"Ricreo il database '{target.InitialCatalog}' su '{target.DataSource}' (VECTOR({embeddingDimensions}))...");
 
-await TicketDatabaseInitializer.RecreateAsync(connectionString, embeddingDimensions, seed);
+try
+{
+    await TicketDatabaseInitializer.RecreateAsync(connectionString, embeddingDimensions, seed);
+}
+catch (IOException ex)
+{
+    // data/ o tickets.json mancanti: il database non è stato toccato.
+    Console.Error.WriteLine(ex.Message);
+    return 1;
+}
 
 await using (TicketDbContext db = TicketDatabaseInitializer.Create(connectionString, embeddingDimensions))
 {
@@ -52,7 +62,7 @@ await using (TicketDbContext db = TicketDatabaseInitializer.Create(connectionStr
 
 Console.WriteLine();
 Console.WriteLine(seed
-    ? "Fatto: schemi support, rag e agent creati, lookup popolate dagli enum, catalogo demo inserito. Storico, KB e note di rilascio arrivano con i dati simulati (Fase 3)."
+    ? "Fatto: schemi support, rag e agent creati, lookup popolate dagli enum, catalogo demo e dati simulati di data/ inseriti. Gli embedding si calcolano con Cli embed (Fase 5)."
     : "Fatto: schemi support, rag e agent creati, lookup popolate dagli enum, nessun dato demo.");
 
 return 0;
