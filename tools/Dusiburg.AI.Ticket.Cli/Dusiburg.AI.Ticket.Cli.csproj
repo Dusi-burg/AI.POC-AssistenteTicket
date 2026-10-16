@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <!-- Riga di comando del POC: Zammad (bootstrap, seed), ticket demo; dalle fasi successive embed, search, eval. -->
+  <!-- Riga di comando del POC: Zammad (bootstrap, seed), ticket demo, indice (embed, search, eval retrieval); dalle fasi successive bench e le altre valutazioni. -->
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -16,6 +16,7 @@
     <ProjectReference Include="..\..\src\Dusiburg.AI.Ticket.ServiceDefaults\Dusiburg.AI.Ticket.ServiceDefaults.csproj" />
     <ProjectReference Include="..\..\src\Dusiburg.AI.Ticket.Data\Dusiburg.AI.Ticket.Data.csproj" />
     <ProjectReference Include="..\..\src\Dusiburg.AI.Ticket.Ai\Dusiburg.AI.Ticket.Ai.csproj" />
+    <ProjectReference Include="..\..\src\Dusiburg.AI.Ticket.Rag\Dusiburg.AI.Ticket.Rag.csproj" />
     <ProjectReference Include="..\..\src\Dusiburg.AI.Ticket.Zammad\Dusiburg.AI.Ticket.Zammad.csproj" />
   </ItemGroup>
 

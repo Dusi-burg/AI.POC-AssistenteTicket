@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Indicizzazione e retrieval (Fase 5): pulizia, anonimizzazione, chunking, embedding, BM25 in memoria, ricerca vettoriale con Dapper, RRF, valutazione. -->
+
+  <ItemGroup>
+    <PackageReference Include="Dapper" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Dusiburg.AI.Ticket.Data\Dusiburg.AI.Ticket.Data.csproj" />
+    <ProjectReference Include="..\Dusiburg.AI.Ticket.Ai\Dusiburg.AI.Ticket.Ai.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Dusiburg.AI.Ticket.Rag.Tests" />
+  </ItemGroup>
+
+</Project>

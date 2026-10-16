@@ -10,5 +10,6 @@ public static class TicketTelemetry
         public const string Chat = "Dusiburg.AI.Ticket.Ai.Chat";
         public const string Embedding = "Dusiburg.AI.Ticket.Ai.Embedding";
         public const string Zammad = "Dusiburg.AI.Ticket.Zammad";
+        public const string Retrieval = "Dusiburg.AI.Ticket.Rag.Retrieval";
     }
 }

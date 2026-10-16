@@ -17,6 +17,7 @@ builder.Services.AddTicketZammad(builder.Configuration);
 
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton<IHealthProbe, SqlHealthProbe>();
+builder.Services.AddSingleton<IHealthProbe, RagIndexHealthProbe>();
 builder.Services.AddSingleton<HealthService>();
 builder.Services.AddSingleton<HealthReportCache>();
 builder.Services.AddHealthChecks().AddCheck<TicketHealthCheck>(TicketHealthCheck.Name);

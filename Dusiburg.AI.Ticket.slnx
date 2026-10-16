@@ -7,6 +7,7 @@
     <Project Path="src/Dusiburg.AI.Ticket.Ai/Dusiburg.AI.Ticket.Ai.csproj" />
     <Project Path="src/Dusiburg.AI.Ticket.AppHost/Dusiburg.AI.Ticket.AppHost.csproj" />
     <Project Path="src/Dusiburg.AI.Ticket.Data/Dusiburg.AI.Ticket.Data.csproj" />
+    <Project Path="src/Dusiburg.AI.Ticket.Rag/Dusiburg.AI.Ticket.Rag.csproj" />
     <Project Path="src/Dusiburg.AI.Ticket.ServiceDefaults/Dusiburg.AI.Ticket.ServiceDefaults.csproj" />
     <Project Path="src/Dusiburg.AI.Ticket.Shared/Dusiburg.AI.Ticket.Shared.csproj" />
     <Project Path="src/Dusiburg.AI.Ticket.Web/Dusiburg.AI.Ticket.Web.csproj" />
@@ -17,6 +18,7 @@
     <Project Path="tests/Dusiburg.AI.Ticket.Ai.Tests/Dusiburg.AI.Ticket.Ai.Tests.csproj" />
     <Project Path="tests/Dusiburg.AI.Ticket.Cli.Tests/Dusiburg.AI.Ticket.Cli.Tests.csproj" />
     <Project Path="tests/Dusiburg.AI.Ticket.Data.Tests/Dusiburg.AI.Ticket.Data.Tests.csproj" />
+    <Project Path="tests/Dusiburg.AI.Ticket.Rag.Tests/Dusiburg.AI.Ticket.Rag.Tests.csproj" />
     <Project Path="tests/Dusiburg.AI.Ticket.Web.Tests/Dusiburg.AI.Ticket.Web.Tests.csproj" />
     <Project Path="tests/Dusiburg.AI.Ticket.Zammad.Tests/Dusiburg.AI.Ticket.Zammad.Tests.csproj" />
   </Folder>

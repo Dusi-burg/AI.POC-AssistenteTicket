@@ -1,4 +1,5 @@
 using Dusiburg.AI.Ticket.Ai;
+using Dusiburg.AI.Ticket.Rag.Retrieval;
 using Dusiburg.AI.Ticket.Zammad;
 using Microsoft.Extensions.Configuration;
 
@@ -35,7 +36,7 @@ internal static class CliConfiguration
         AddIfMissing(ZammadOptions.Keys.ApiToken,
             configuration[AdminTokenVariable] ?? secrets.Get(UserSecretsStore.AdminTokenKey) ?? secrets.Get(UserSecretsStore.ApiTokenKey));
 
-        foreach (string key in AiOptions.Keys.All.Append(ZammadOptions.Keys.BaseUrl).Append(ZammadOptions.Keys.WebhookTarget))
+        foreach (string key in AiOptions.Keys.All.Concat(RetrievalOptions.Keys.All).Append(ZammadOptions.Keys.BaseUrl).Append(ZammadOptions.Keys.WebhookTarget))
         {
             AddIfMissing(key, secrets.Get(key));
         }

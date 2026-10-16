@@ -8,9 +8,11 @@ namespace Dusiburg.AI.Ticket.Data.Configurations;
 
 /// <summary>
 /// La dimensione del vettore viene dalla configurazione (<c>EMBEDDING_DIMENSIONS</c>), mai fissa nel codice: per questo la
-/// configurazione ha un parametro e il contesto la applica a mano (la scansione dell'assembly salta i tipi senza costruttore vuoto).
+/// configurazione ha un parametro e il contesto la applica a mano. Non implementa <see cref="IEntityTypeConfiguration{TEntity}"/>:
+/// la scansione dell'assembly di EF Core 10 segnala con un avviso ogni configurazione senza costruttore vuoto, anche se esclusa
+/// dal filtro.
 /// </summary>
-internal sealed class ChunkConfiguration(int embeddingDimensions) : IEntityTypeConfiguration<Chunk>
+internal sealed class ChunkConfiguration(int embeddingDimensions)
 {
     public void Configure(EntityTypeBuilder<Chunk> builder)
     {

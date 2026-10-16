@@ -70,7 +70,8 @@ internal static class ZammadCommands
 
             Console.WriteLine();
             Console.WriteLine($"Fatto: organizzazioni {report.OrganizationsCreated} create ({report.OrganizationsPresent} già presenti), " +
-                $"referenti {report.CustomersCreated} creati, ticket {report.TicketsCreated} importati ({report.TicketsPresent} già presenti).");
+                $"referenti {report.CustomersCreated} creati, ticket {report.TicketsCreated} importati ({report.TicketsPresent} già presenti, " +
+                $"{report.TitlesUpdated} titoli riallineati).");
 
             return 0;
         });

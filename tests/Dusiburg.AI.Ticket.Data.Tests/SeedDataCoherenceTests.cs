@@ -56,6 +56,20 @@ public partial class SeedDataCoherenceTests
     }
 
     [Test]
+    public void Tickets_NoPlaceholderLeftUnexpanded()
+    {
+        //SUT
+        List<string> unexpanded = [.. Tickets
+            .Where(t => new[] { t.Subject, t.Description, t.Resolution?.Cause ?? "", t.Resolution?.Solution ?? "" }
+                .Concat(t.Messages.Select(m => m.Body))
+                .Any(text => PlaceholderPattern().IsMatch(text)))
+            .Select(t => $"{t.Number}: {t.Subject}")];
+
+        // Fase 5: 260 oggetti avevano ancora "{codice}" perché il generatore non espandeva l'oggetto.
+        Assert.That(unexpanded, Is.Empty);
+    }
+
+    [Test]
     public void ErrorCodes_EveryCodeCitedIsDocumentedInKbOrReleaseNotes()
     {
         //SETUP
@@ -243,6 +257,10 @@ public partial class SeedDataCoherenceTests
 
     [GeneratedRegex(@"\b(?:FF|DA)-E\d{4}\b")]
     private static partial Regex ErrorCodePattern();
+
+    /// <summary>Segnaposto dei testi di data/ (<c>{codice}</c>, <c>{versione}</c>, <c>{P}</c>, <c>{nome}</c>…).</summary>
+    [GeneratedRegex(@"\{[A-Za-z]+\}")]
+    private static partial Regex PlaceholderPattern();
 
     [GeneratedRegex(@"Corretto nella (\d+\.\d+\.\d+)")]
     private static partial Regex FixedInPattern();

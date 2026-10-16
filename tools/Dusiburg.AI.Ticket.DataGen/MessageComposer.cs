@@ -13,7 +13,8 @@ internal sealed record TicketVoice(CustomerDefinition Customer, string VatNumber
 /// </summary>
 internal sealed class MessageComposer(NoiseFile noise, Random random)
 {
-    public string Subject(TicketVoice voice, DateOnly date) => Decorate(PickValid(voice.Case.Definition.Subjects, voice, date));
+    public string Subject(TicketVoice voice, DateOnly date) =>
+        Decorate(voice.Case.Expand(PickValid(voice.Case.Definition.Subjects, voice, date), voice.Version));
 
     public string FirstCustomerMessage(TicketVoice voice, string symptom, DateOnly date)
     {

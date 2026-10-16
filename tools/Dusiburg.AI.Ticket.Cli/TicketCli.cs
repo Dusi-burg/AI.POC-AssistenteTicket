@@ -4,8 +4,8 @@ using Dusiburg.AI.Ticket.Cli.Commands;
 namespace Dusiburg.AI.Ticket.Cli;
 
 /// <summary>
-/// Riga di comando del POC. Exit code 0 esito positivo, 1 errore (configurazione, Zammad, database). I comandi successivi
-/// (<c>embed</c>, <c>search</c>, <c>eval</c>, <c>bench</c>) si aggiungono qui fase per fase.
+/// Riga di comando del POC. Exit code 0 esito positivo, 1 errore (configurazione, Zammad, database, modelli). I comandi successivi
+/// (<c>bench</c>, le altre valutazioni di <c>eval</c>) si aggiungono qui fase per fase.
 /// </summary>
 internal static class TicketCli
 {
@@ -22,7 +22,10 @@ internal static class TicketCli
         {
             verbose,
             ZammadCommands.Create(services),
-            DemoCommand.Create(services)
+            DemoCommand.Create(services),
+            EmbedCommand.Create(services),
+            SearchCommand.Create(services),
+            EvalCommand.Create(services)
         };
 
         // Le eccezioni arrivano a Program.cs, che stampa solo il messaggio (senza lo stack trace del gestore predefinito).

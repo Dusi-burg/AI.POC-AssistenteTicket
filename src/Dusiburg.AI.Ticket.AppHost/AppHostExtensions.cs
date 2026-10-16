@@ -25,6 +25,12 @@ internal static class ModelSettings
     ];
 }
 
+/// <summary>Manopole del retrieval, copiate da <c>RetrievalOptions.Keys</c> (Fase 5).</summary>
+internal static class RetrievalSettings
+{
+    public static readonly string[] All = ["RETRIEVAL_TOP_K", "PROMPT_SOURCES_MAX", "RRF_K", "RETRIEVAL_VERSION_PENALTY"];
+}
+
 internal static class ZammadSettings
 {
     public const string BaseUrlKey = "ZAMMAD_URL";

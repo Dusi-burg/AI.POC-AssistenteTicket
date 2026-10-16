@@ -6,12 +6,14 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Dusiburg.AI.Ticket.Cli.Zammad;
 
-internal sealed record ZammadSeedReport(int OrganizationsCreated, int OrganizationsPresent, int CustomersCreated, int TicketsCreated, int TicketsPresent);
+internal sealed record ZammadSeedReport(
+    int OrganizationsCreated, int OrganizationsPresent, int CustomersCreated, int TicketsCreated, int TicketsPresent, int TitlesUpdated);
 
 /// <summary>
 /// <c>zammad seed</c> (fase-4.md §3): organizzazioni, referenti e i ticket storici più recenti dal database <c>Ticket</c>, per il
 /// realismo dell'interfaccia. I ticket si creano in <c>import_mode</c> (date originali, nessun trigger: il webhook non parte),
-/// che viene sempre rispento. Idempotente sul campo <c>rif_storico</c>.
+/// che viene sempre rispento. Idempotente sul campo <c>rif_storico</c>; ai ticket già presenti riallinea il titolo all'oggetto
+/// del database (Fase 5: gli oggetti con il segnaposto <c>{codice}</c> non espanso, corretti nei dati).
 /// </summary>
 internal sealed class ZammadSeeder(ZammadClient zammad, TicketDbContext db, IReadOnlyList<string> operators, TextWriter output)
 {
@@ -38,21 +40,31 @@ internal sealed class ZammadSeeder(ZammadClient zammad, TicketDbContext db, IRea
             .AsSplitQuery()
             .ToListAsync(cancellationToken);
 
-        Dictionary<string, long> imported = (await zammad.ListAllAsync<ZammadTicket>(ZammadResources.Tickets, cancellationToken))
-            .Where(t => !string.IsNullOrEmpty(t.RifStorico)).ToDictionary(t => t.RifStorico!, t => t.Id);
+        Dictionary<string, ZammadTicket> present = (await zammad.ListAllAsync<ZammadTicket>(ZammadResources.Tickets, cancellationToken))
+            .Where(t => !string.IsNullOrEmpty(t.RifStorico)).ToDictionary(t => t.RifStorico!);
 
         int customersBefore = users.CustomersCreated;
-        int created = await ImportTicketsAsync([.. tickets.Where(t => !imported.ContainsKey(t.Number))], groups, users, cancellationToken);
+        int created = await ImportTicketsAsync([.. tickets.Where(t => !present.ContainsKey(t.Number))], groups, users, cancellationToken);
+        int titlesUpdated = 0;
 
-        // Anche i ticket già presenti ritrovano il loro id (dopo un DbInit il database riparte senza).
-        foreach (HistoricalTicket ticket in tickets.Where(t => imported.ContainsKey(t.Number)))
+        // Anche i ticket già presenti ritrovano il loro id (dopo un DbInit il database riparte senza) e il titolo dell'oggetto.
+        foreach (HistoricalTicket ticket in tickets.Where(t => present.ContainsKey(t.Number)))
         {
-            ticket.ZammadTicketId = (int)imported[ticket.Number];
+            ZammadTicket existing = present[ticket.Number];
+            ticket.ZammadTicketId = (int)existing.Id;
+
+            if (existing.Title != ticket.Subject)
+            {
+                await zammad.UpdateAsync<ZammadTicket>(ZammadResources.Tickets, existing.Id, new Dictionary<string, object?> { ["title"] = ticket.Subject }, cancellationToken);
+                output.WriteLine($"  ~ {ticket.Number} → titolo del ticket {existing.Id} riallineato");
+                titlesUpdated++;
+            }
         }
 
         await db.SaveChangesAsync(cancellationToken);
 
-        return new ZammadSeedReport(organizationsCreated, organizationsPresent, users.CustomersCreated - customersBefore, created, tickets.Count - created);
+        return new ZammadSeedReport(
+            organizationsCreated, organizationsPresent, users.CustomersCreated - customersBefore, created, tickets.Count - created, titlesUpdated);
     }
 
     private async Task<(int Created, int Present)> SeedOrganizationsAsync(CancellationToken cancellationToken)

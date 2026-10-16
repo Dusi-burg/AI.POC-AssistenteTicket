@@ -17,6 +17,7 @@ public static class AiServiceCollectionExtensions
         services.AddSingleton(_ => AiOptions.FromConfiguration(configuration));
         services.AddSingleton<IChatClientFactory, ChatClientFactory>();
         services.AddSingleton<EmbeddingGeneratorFactory>();
+        services.AddSingleton<IEmbeddingService, EmbeddingService>();
         services.AddSingleton<IHealthProbe, OllamaHealthProbe>();
         services.AddSingleton<IHealthProbe, AnthropicKeyHealthProbe>();
 

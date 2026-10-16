@@ -83,9 +83,30 @@ public class ZammadSeederTests
         //SUT
         ZammadSeedReport second = await Seeder(services, db).RunAsync(Count, CancellationToken);
 
-        Assert.That((second.OrganizationsCreated, second.CustomersCreated, second.TicketsCreated, second.TicketsPresent), Is.EqualTo((0, 0, 0, Count)));
+        Assert.That((second.OrganizationsCreated, second.CustomersCreated, second.TicketsCreated, second.TicketsPresent, second.TitlesUpdated),
+            Is.EqualTo((0, 0, 0, Count, 0)));
         Assert.That(zammad.Resource("tickets"), Has.Count.EqualTo(ticketsAfterFirstRun));
         Assert.That(zammad.ImportModeChanges, Has.Count.EqualTo(2), "nessun nuovo giro in import_mode");
+    }
+
+    [Test]
+    public async Task Seed_TicketPresentWithAnOldTitle_GetsTheSubjectOfTheDatabase()
+    {
+        //SETUP
+        var zammad = new FakeZammadServer();
+        using ServiceProvider services = await BootstrappedAsync(zammad);
+        await using TicketDbContext db = Open();
+        await Seeder(services, db).RunAsync(Count, CancellationToken);
+        JsonObject stale = zammad.Resource("tickets")[0];
+        string number = (string)stale["rif_storico"]!;
+        stale["title"] = "Errore {codice} nell'invio";
+
+        //SUT
+        ZammadSeedReport report = await Seeder(services, db).RunAsync(Count, CancellationToken);
+
+        string subject = await db.HistoricalTickets.Where(t => t.Number == number).Select(t => t.Subject).SingleAsync(CancellationToken);
+        Assert.That(report.TitlesUpdated, Is.EqualTo(1));
+        Assert.That((string?)stale["title"], Is.EqualTo(subject));
     }
 
     [Test]

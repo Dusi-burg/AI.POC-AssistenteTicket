@@ -51,15 +51,16 @@ non esiste.
 | `Dusiburg.AI.Ticket.ServiceDefaults` | OpenTelemetry, health check, resilienza, service discovery, `ApiProblems` |
 | `Dusiburg.AI.Ticket.Shared` | enum del dominio, `DemoCatalog`, probe e report di salute, telemetria, JSON, codici d'errore |
 | `Dusiburg.AI.Ticket.Data` | EF Core: `TicketDbContext` con gli schemi `support`, `rag`, `agent`, seed del catalogo demo |
-| `Dusiburg.AI.Ticket.Ai` | fabbrica dei client di chat per compito, embedding su CPU, `EmbeddingProfile`, cattura dei prompt |
+| `Dusiburg.AI.Ticket.Ai` | fabbrica dei client di chat per compito, embedding su CPU, `EmbeddingProfile`, `EmbeddingService` (prefissi, batch, retry), cattura dei prompt |
+| `Dusiburg.AI.Ticket.Rag` | pulizia e anonimizzazione, chunking, indicizzazione, retrieval ibrido (vettoriale in SQL + BM25 in memoria, RRF), valutazione |
 | `Dusiburg.AI.Ticket.Zammad` | client tipizzato dell'API di Zammad, modelli dell'API, probe |
-| `Dusiburg.AI.Ticket.Agent` | Minimal API: `/api/health`; dalle prossime fasi event source, coda e pipeline |
+| `Dusiburg.AI.Ticket.Agent` | Minimal API: `/api/health` (compreso l'indice RAG); dalle prossime fasi event source, coda e pipeline |
 | `Dusiburg.AI.Ticket.Web` | console Razor Pages: stato dei servizi |
 | `tools/Dusiburg.AI.Ticket.DbInit` | ricrea il database dal modello e carica catalogo demo e dati simulati di `data/` |
 | `tools/Dusiburg.AI.Ticket.DataGen` | genera `data/tickets.json` dai testi di `data/`, con seed fisso |
-| `tools/Dusiburg.AI.Ticket.Cli` | riga di comando: `zammad bootstrap`, `zammad seed`, `demo <n>` (dalle fasi successive `embed`, `search`, `eval`) |
+| `tools/Dusiburg.AI.Ticket.Cli` | riga di comando: `zammad bootstrap`, `zammad seed`, `demo <n>`, `embed`, `search`, `eval retrieval` |
 
-Arrivano con le loro fasi: `Rag` (Fase 5), `Core` (Fase 6).
+Arriva con la sua fase: `Core` (Fase 6).
 
 Regole di confine: l'Agent è l'unico proprietario del database; la Web parla solo con l'Agent via HTTP; solo `Ai` conosce i
 provider dei modelli e solo `Zammad` conosce l'API di Zammad.
@@ -123,6 +124,46 @@ sono quelle dello stesso caso (ticket storici, articoli e note che il caso cita)
 codici errore documentati, fonti citate, bug noti con la nota di correzione, test set disgiunto dall'indice, assenza di
 anacronismi e che `tickets.json` coincida con una rigenerazione.
 
+### Indicizzazione e retrieval (Fase 5)
+
+Lo stesso testo pulito e anonimizzato entra nell'indice e nella query (`SourceText`).
+
+- **Pulizia** (`MessageCleaner`, per paragrafi): via citazioni del messaggio precedente, disclaimer, firma (da `--`, dal nome del
+  referente, da un paragrafo di sole righe brevi o recapiti), saluti e frasi di cortesia.
+- **Anonimizzazione** (`Anonymizer`): `[EMAIL]`, `[SITO]`, `[IBAN]`, `[TOKEN]`, `[CF]`, `[PIVA]`, `[TELEFONO]`, nomi del
+  referente e del cliente → `[NOME]`, `[CLIENTE]`; codici errore e versioni restano. Un test controlla tutti i chunk di `data/`.
+- **Chunk**: uno per ticket risolto con soluzione propria (oggetto, primo messaggio, risposte del cliente alle domande, causa,
+  soluzione; niente test set, aperti, senza soluzione, duplicati), uno per sezione di articolo KB, uno per nota di rilascio.
+  Applicabilità: KB con il suo intervallo; note `KnownIssue`/`Feature` dalla versione in poi, `Fix` fino alla versione
+  precedente; **ticket senza intervallo** (la versione su cui si è visto il problema non dice fin dove vale la soluzione).
+- **Ricerca** (`HybridRetriever`): vettoriale in SQL (`VECTOR_DISTANCE` coseno, Dapper) e BM25 in memoria (stopword italiane,
+  suffissi flessivi, codici errore interi e a pezzi) sugli stessi filtri: prodotto, modalità uguale o nulla. Fusione RRF
+  (`RRF_K`), penalità per i chunk fuori dalla versione del cliente, raggruppamento per fonte. Le fonti del prompt
+  (`PROMPT_SOURCES_MAX`) sono le prime, ma con almeno un articolo o una nota se ce n'è uno nel top-K: senza, i ticket simili
+  occupano tutti i posti. Catalogo dei chunk e indice BM25 in memoria, ricaricati quando cambia l'indice.
+
+```powershell
+dotnet run --project tools/Dusiburg.AI.Ticket.Cli -- embed [--solo-mancanti]      # ~40 s per 845 chunk su CPU
+dotnet run --project tools/Dusiburg.AI.Ticket.Cli -- search --demo 4             # o: search "testo" --prodotto FF --modalita OnPrem --versione 5.1.2
+dotnet run --project tools/Dusiburg.AI.Ticket.Cli -- eval retrieval              # report in eval/retrieval-<data>.md e .json
+```
+
+`embed` completo ricostruisce i chunk (le fonti citate dalle bozze restano leggibili: `AgentDraftSource.SourceKey`);
+`--solo-mancanti` aggiunge solo chunk e vettori mancanti ed è rifiutato se i vettori salvati sono di un altro modello.
+
+Valutazione sul test set (`eval/retrieval-2026-10-16.md`), configurazione di default:
+
+| Query | hit@5 | MRR@10 | Precisione delle fonti del prompt | KB/nota nel prompt |
+|---|---|---|---|---|
+| completa (oggetto e primo messaggio) | 100,0% | 1,000 | 96,9% | 97,0% |
+| solo la variante di sintomo riservata al test set | 97,0% | 0,965 | 82,8% | 88,7% |
+
+La query completa satura perché i ticket simulati dello stesso caso condividono oggetti e dettagli (limite dei dati sintetici);
+la query "solo sintomo" è una parafrasi vera e distingue le varianti. Sulla parafrasi la sola ricerca vettoriale rende un po'
+meglio dell'ibrida (precisione 87,8% contro 83,7%): il confronto si ripete in Fase 8. Per la confidenza della Fase 6 il
+punteggio RRF non distingue i ticket senza storico (dipende solo dalle posizioni); la distanza coseno sì (0,44–0,52 contro
+0,13–0,34).
+
 ## 4. Modelli
 
 | Compito | Default | Manopola |
@@ -150,6 +191,8 @@ default del codice.
 | `ANTHROPIC_MODEL` | `claude-haiku-5-5` |
 | `EMBEDDING_MODEL`, `EMBEDDING_DIMENSIONS` | `embeddinggemma`, `768` |
 | `TICKET_PROMPT_CAPTURE_DIR` | — (cattura dei prompt su file, per la diagnostica) |
+| `RETRIEVAL_TOP_K`, `PROMPT_SOURCES_MAX`, `RRF_K` | `20`, `4`, `60` |
+| `RETRIEVAL_VERSION_PENALTY` | `0.5` (moltiplicatore per i chunk fuori dalla versione del cliente; `1` = nessuna penalità) |
 | `ZAMMAD_URL` | `http://127.0.0.1:8080` |
 | `Zammad:Managed` | `true` (l'AppHost avvia lo stack) |
 | `Zammad:StopOnExit` | `true` (alla chiusura i container si fermano) |
@@ -185,6 +228,7 @@ Segreti (user-secrets dell'AppHost, mai stampati):
 | 10 | Posizionamento modelli | informativo: chat in GPU, embedding fuori dalla VRAM |
 | 11 | Zammad raggiungibile | la pagina iniziale di `ZAMMAD_URL` risponde 200 (502 mentre il railsserver riparte) |
 | 12 | Token Zammad | `GET /api/v1/users/me` riconosce il token di `ai-assistant` (scritto da `zammad bootstrap`); avviso se è di un amministratore |
+| 13 | Indice RAG | chunk presenti, tutti con il vettore, calcolati con `EMBEDDING_MODEL` e `EMBEDDING_DIMENSIONS` (avviso altrimenti, con il comando `Cli embed` da lanciare) |
 
 ## 6. Zammad in WSL
 
