@@ -8,12 +8,16 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Dusiburg.AI.Ticket.Cli.Commands;
 
-/// <summary><c>eval retrieval</c>: hit@k e MRR sul test set, report in <c>eval/</c> (fase-5.md §6). La valutazione completa è della Fase 8.</summary>
+/// <summary>
+/// <c>eval retrieval</c>: hit@k e MRR sul test set, report in <c>eval/</c> (fase-5.md §6); <c>eval drafts</c>: le bozze della
+/// pipeline sul test set (fase-8.md §2).
+/// </summary>
 internal static class EvalCommand
 {
     public static Command Create(IServiceProvider services) => new("eval", "Valutazione offline del POC.")
     {
-        Retrieval(services)
+        Retrieval(services),
+        EvalDraftsCommand.Create(services)
     };
 
     private static Command Retrieval(IServiceProvider services)

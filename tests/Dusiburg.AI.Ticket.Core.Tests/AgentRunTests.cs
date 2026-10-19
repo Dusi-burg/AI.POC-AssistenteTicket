@@ -3,7 +3,10 @@ using Dusiburg.AI.Ticket.Ai;
 using Dusiburg.AI.Ticket.Core.Composition;
 using Dusiburg.AI.Ticket.Core.Context;
 using Dusiburg.AI.Ticket.Core.Drafting;
+using Dusiburg.AI.Ticket.Core.Evaluation;
 using Dusiburg.AI.Ticket.Core.Feedback;
+using Dusiburg.AI.Ticket.Data.Seed;
+using Dusiburg.AI.Ticket.Rag.Evaluation;
 using Dusiburg.AI.Ticket.Core.Pipeline;
 using Dusiburg.AI.Ticket.Core.Publishing;
 using Dusiburg.AI.Ticket.Core.Tests.Support;
@@ -185,6 +188,37 @@ public class AgentRunTests
         Assert.That(zammad.Writes.Count(w => w.Path == "/api/v1/ticket_articles") - notesBefore, Is.EqualTo(1), "nota interna sulla dicitura tolta");
     }
 
+    [Test]
+    public async Task Evaluate_TestSetTickets_DraftsBuiltFromTheDatabaseWithRelevantSources()
+    {
+        //SETUP
+        await using TicketDbContext db = Open();
+        var embeddings = new HashingEmbeddingService(Dimensions);
+        var retriever = new HybridRetriever(db, embeddings, new ChunkCatalogCache(), RetrievalOptions.Default);
+        var evaluator = new DraftEvaluator(db, new RetrievalEvaluator(db, retriever, embeddings, TestAiOptions(), TimeProvider.System));
+        IReadOnlyList<EvalCase> selected = await evaluator.SelectCasesAsync(SeedData.Load(SeedData.FindDataDirectory(TestContext.CurrentContext.TestDirectory)!), 2, CancellationToken);
+        EvalCase[] cases = [.. selected.Where(c => c.Trap is null), selected.First(c => c.Trap == TrapKind.Vague)];
+        TicketPipeline pipeline = Pipeline(db, new FakeZammad(), new CitingFirstSourceFactory(Classification));
+
+        //SUT
+        IReadOnlyList<DraftCaseRecord> records = await evaluator.RunAsync(cases, pipeline, null, CancellationToken);
+
+        Assert.That(selected.Count(c => c.Trap is not null), Is.EqualTo(15), "tutti i trabocchetti del test set");
+        Assert.That(records, Has.Count.EqualTo(3).And.All.Matches<DraftCaseRecord>(r => r.Succeeded));
+        Assert.That(records.Select(r => r.TicketNumber), Is.EqualTo(cases.Select(c => c.TicketNumber)));
+
+        DraftCaseRecord normal = records[0];
+        Assert.That(normal.CustomerMessage, Is.Not.Empty);
+        Assert.That(normal.DraftText, Does.EndWith(DraftComposer.AiDisclosure));
+        Assert.That(normal.PromptSources, Is.Not.Empty);
+        Assert.That(normal.RelevantPromptSources, Is.SubsetOf(normal.PromptSources));
+        Assert.That(normal.Citations.Single().IsVerified, Is.True, "il modello finto cita la prima fonte ammessa");
+        Assert.That((normal.InputTokens, normal.OutputTokens), Is.EqualTo(((long?)null, (long?)null)), "il modello finto non restituisce token");
+    }
+
+    private static AiOptions TestAiOptions() => AiOptions.FromConfiguration(new ConfigurationBuilder()
+        .AddInMemoryCollection(new Dictionary<string, string?> { [AiOptions.Keys.EmbeddingDimensions] = "4" }).Build());
+
     private DraftOutcomeService Outcomes(TicketDbContext db, FakeZammad zammad) =>
         new(db, zammad.Client(), new ZammadPublisher(zammad.Client()), AgentOptions.Default, TimeProvider.System, NullLogger<DraftOutcomeService>.Instance);
 
@@ -208,10 +242,14 @@ public class AgentRunTests
 
     private TicketDbContext Open() => TicketDatabaseInitializer.Create(_connectionString, Dimensions);
 
-    private static AgentRunService Service(TicketDbContext db, FakeZammad zammad, IChatClientFactory factory)
+    private static AgentRunService Service(TicketDbContext db, FakeZammad zammad, IChatClientFactory factory) =>
+        new(db, Pipeline(db, zammad, factory), TimeProvider.System, NullLogger<AgentRunService>.Instance);
+
+    private static TicketPipeline Pipeline(TicketDbContext db, FakeZammad zammad, IChatClientFactory factory)
     {
         var client = zammad.Client();
-        var pipeline = new TicketPipeline(
+
+        return new TicketPipeline(
             new TicketContextLoader(client, db),
             new TicketLanguageModel(factory),
             new HybridRetriever(db, new HashingEmbeddingService(Dimensions), new ChunkCatalogCache(), RetrievalOptions.Default),
@@ -219,8 +257,6 @@ public class AgentRunTests
             db,
             AgentOptions.Default,
             new ZammadOptions(new Uri("http://zammad.test:8080/"), "token"));
-
-        return new AgentRunService(db, pipeline, TimeProvider.System, NullLogger<AgentRunService>.Instance);
     }
 
     /// <summary>Un ticket dello scenario 1 (FF on-premise 5.1.2) con il suo cliente, e le scritture della pubblicazione.</summary>

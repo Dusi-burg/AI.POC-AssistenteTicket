@@ -1,6 +1,7 @@
 # Assistente ticket — architettura
 
-> Stato: **Fase 7 (feedback e console)**. Il documento cresce fase per fase: la valutazione (Fase 8) arriva con la sua fase.
+> Stato: **Fase 8 (valutazione, documentazione e demo)**. Per chi non sviluppa: [il progetto in breve](il-progetto-in-breve.md);
+> per presentarlo: [la demo](demo.md); le misure: [`eval/`](../eval).
 
 ## 1. Che cos'è
 
@@ -58,7 +59,7 @@ non esiste.
 | `Dusiburg.AI.Ticket.Web` | console Razor Pages: Stato, Elaborazioni (con dettaglio), Esiti, Dati demo |
 | `tools/Dusiburg.AI.Ticket.DbInit` | ricrea il database dal modello e carica catalogo demo e dati simulati di `data/` |
 | `tools/Dusiburg.AI.Ticket.DataGen` | genera `data/tickets.json` dai testi di `data/`, con seed fisso |
-| `tools/Dusiburg.AI.Ticket.Cli` | riga di comando: `zammad bootstrap`, `zammad seed`, `zammad trigger on` e `off`, `demo <n>`, `embed`, `search`, `eval retrieval`, `draft <ticket>`, `reply <ticket>`, `close <ticket>` |
+| `tools/Dusiburg.AI.Ticket.Cli` | riga di comando: `zammad bootstrap`, `zammad seed`, `zammad trigger on` e `off`, `demo <n>`, `embed`, `search`, `eval retrieval`, `eval drafts`, `draft <ticket>`, `reply <ticket>`, `close <ticket>` |
 
 Regole di confine: l'Agent è l'unico proprietario del database; la Web parla solo con l'Agent via HTTP; solo `Ai` conosce i
 provider dei modelli e solo `Zammad` conosce l'API di Zammad.
@@ -260,6 +261,27 @@ Invoke-RestMethod -Method Post http://localhost:5401/api/outcomes/check -Content
 | Esiti | bozze per tipo ed esito, quota di bozze utili, distanza media, **avvisi delle diciture tolte** | `/api/outcomes` |
 | Dati demo | prodotti e versioni, clienti, articoli KB e note di rilascio | `/api/catalog` |
 
+### Valutazione (Fase 8)
+
+Due comandi della Cli, report in `eval/`. La verità di riferimento viene dal metodo dei dati simulati: per un ticket del test set
+(escluso dall'indice) sono rilevanti i ticket indicizzati dello stesso caso della matrice e gli articoli e le note che il caso cita.
+
+| Comando | Che cosa misura | Uscite |
+|---|---|---|
+| `eval retrieval` | hit@1/3/5, MRR@10, precisione delle fonti del prompt sui ~135 ticket del test set, per variante (vettoriale, BM25, ibrida, con e senza penalità di versione) e per tipo di query (completa, solo sintomo); trabocchetti a parte | `retrieval-<data>.md` e `.json` |
+| `eval drafts [--provider ollama\|anthropic] [--casi 15]` | la pipeline dell'Agent **a secco** su 30 casi (15 trabocchetti + 15 normali stratificati per prodotto e modalità): decisione, citazioni valide e del caso, termini tecnici non supportati, atteso automatico dei trabocchetti (vago → chiarimenti, senza storico → nessuna soluzione, iniezione → manipolazione segnalata), effetto della verifica a valle, tempi, token e costo | `drafts-<data>-<modello>.md`, `.json` (letture), `griglia-<data>-<modello>.json` |
+| `eval drafts --replay <letture> --griglia <griglia>` | lo stesso report senza richiamare il modello, con i giudizi della griglia manuale (corretta / utile con modifiche / da scartare, affermazioni non supportate, nota, autore) | `drafts-….md` |
+
+- Il ticket del test set si costruisce dal database (oggetto, primo messaggio del cliente pulito come in Zammad, contesto dal
+  cliente e dal ticket) e passa da `TicketPipeline.ProposeForAsync`, la stessa pipeline dell'Agent senza il caricamento da
+  Zammad e senza pubblicazione.
+- **Bozza utile** (PLAN §1): giudizio "corretta" o "utile con modifiche" sulla griglia. Nella console (pagina Esiti) la stessa
+  misura viene dal comportamento dell'operatore: inviata com'era o con distanza ≤ 0,3.
+- `--provider anthropic` sostituisce il provider di entrambi i compiti con `claude-haiku-5-5` (G10); il costo viene dai token
+  restituiti e dal listino (`ModelPrices`, 0,10 $ / 0,50 $ per milione di token in ingresso / uscita al 2026-10-19).
+- La prima misura ha trovato due **falsi positivi** del verificatore (le parole dopo un percorso di menu o dopo l'ultima opzione
+  di un comando entravano nel termine): corretti in `DraftVerifier`, con i test.
+
 ## 4. Modelli
 
 | Compito | Default | Manopola |
@@ -268,8 +290,9 @@ Invoke-RestMethod -Method Post http://localhost:5401/api/outcomes/check -Content
 | Bozza di risposta | `ollama` · `qwen3.5:9b` | `MODEL_DRAFT_PROVIDER` |
 | Embedding | `embeddinggemma` su CPU, 768 dimensioni, prefissi query/documento | `EMBEDDING_MODEL`, `EMBEDDING_DIMENSIONS` |
 
-Il cloud (`anthropic`, `claude-haiku-5-5`) serve solo al confronto su comando della Fase 8: senza una manopola che lo chieda
-nessun dato esce dalla macchina, anche se la chiave è configurata.
+Il cloud (`anthropic`, `claude-haiku-5-5`) serve solo al confronto su comando della Fase 8 (`eval drafts --provider anthropic`,
+chiave in `Parameters:anthropic-api-key`): senza una manopola o un comando che lo chieda nessun dato esce dalla macchina, anche
+se la chiave è configurata.
 
 Chat con `think: false`, `num_ctx` 8192 e `num_gpu` 99: con Ollama 0.40 il modello sta tutto in GPU (~49 token/s in
 generazione). L'embedding usa `num_gpu: 0` e non toglie VRAM alla chat.

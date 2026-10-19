@@ -24,6 +24,9 @@ internal sealed class UserSecretsStore(string path)
 
     public const string WebhookSecretKey = "Parameters:zammad-webhook-secret";
 
+    /// <summary>Chiave Anthropic, facoltativa: solo per il confronto con il cloud della Fase 8.</summary>
+    public const string AnthropicApiKeyKey = "Parameters:anthropic-api-key";
+
     public string Path { get; } = path;
 
     public static UserSecretsStore ForAppHost() => new(PathHelper.GetSecretsPathFromSecretsId(AppHostUserSecretsId));

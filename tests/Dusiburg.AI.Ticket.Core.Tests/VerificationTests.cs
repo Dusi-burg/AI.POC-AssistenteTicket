@@ -46,6 +46,19 @@ public class VerificationTests
         Assert.That(terms, Is.EqualTo(new[] { "Impostazioni > Firma remota" }));
     }
 
+    [TestCase("1. Verificare in Amministrazione > Calendari che il calendario non sia vuoto;", "Amministrazione > Calendari")]
+    [TestCase("Aprire Impostazioni > Firma remota per il rinnovo.", "Impostazioni > Firma remota")]
+    [TestCase("3. Eseguire il comando ffadmin receive --now per scaricare le fatture arretrate.", "ffadmin receive --now")]
+    [TestCase("Verificare con ffadmin truststore verify --channel che restituisca OK.", "ffadmin truststore verify --channel")]
+    [TestCase("Lanciare ffadmin truststore import <file .p7b> come amministratore.", "ffadmin truststore import <file .p7b>")]
+    public void TechnicalTerms_TermsStopBeforeTheWordsThatFollow(string text, string expected)
+    {
+        //SUT
+        string[] terms = [.. DraftVerifier.TechnicalTerms(text)];
+
+        Assert.That(terms, Is.EqualTo(new[] { expected }), "falsi positivi della Fase 8: le parole dopo il termine non ne fanno parte");
+    }
+
     [TestCase("Gentile Giorgio,\n\ntesto.\n\nCordiali saluti,\nSupporto Tecnico Dusiburg", "Gentile Giorgio,\n\ntesto.\n\nCordiali saluti,", true)]
     [TestCase("Gentile Giorgio,\n\ntesto.\n\nCordiali saluti,\nMarta Ferrari\nAssistenza clienti", "Gentile Giorgio,\n\ntesto.\n\nCordiali saluti,", true)]
     [TestCase("Gentile Giorgio,\n\ntesto.\n\nIl team di supporto Dusiburg", "Gentile Giorgio,\n\ntesto.", true)]

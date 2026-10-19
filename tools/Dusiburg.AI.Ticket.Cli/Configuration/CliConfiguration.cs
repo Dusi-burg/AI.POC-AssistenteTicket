@@ -37,6 +37,9 @@ internal static class CliConfiguration
         AddIfMissing(ZammadOptions.Keys.ApiToken,
             configuration[AdminTokenVariable] ?? secrets.Get(UserSecretsStore.AdminTokenKey) ?? secrets.Get(UserSecretsStore.ApiTokenKey));
 
+        // Chiave del modello cloud, per il confronto della Fase 8 (eval drafts --provider anthropic).
+        AddIfMissing(AiOptions.Keys.AnthropicApiKey, secrets.Get(UserSecretsStore.AnthropicApiKeyKey));
+
         foreach (string key in AiOptions.Keys.All.Concat(RetrievalOptions.Keys.All).Concat(AgentOptions.Keys.All).Append(ZammadOptions.Keys.BaseUrl).Append(ZammadOptions.Keys.WebhookTarget))
         {
             AddIfMissing(key, secrets.Get(key));

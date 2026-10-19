@@ -10,12 +10,14 @@ articles and release notes, and proposes a **reply draft with its sources** to t
 nothing is ever sent automatically. Everything runs locally: models on Ollama, data on SQL Server LocalDB, Zammad in Docker
 inside WSL.
 
-> **Status: Phase 7 — feedback and console.** A new customer message in Zammad (webhook, polling or manual start) gets, within
-> ~10–20 s, a shared draft in the reply editor with the AI disclosure, an internal note with sources and confidence, and the
-> `ai-bozza` tag: an answer, a request for clarification or an escalation, decided by code. When the agent sends the reply, the
-> Agent service compares it with the draft, records the outcome (sent as is, edited, discarded) and tags the ticket
-> `ai-generata` or `ai-generata-in-parte`; it flags replies whose AI disclosure was removed. The console shows runs, outcomes
-> and demo data. Evaluation arrives in the next phase. All data is synthetic and fictitious.
+> **Status: Phase 8 — evaluation, documentation and demo.** A new customer message in Zammad (webhook, polling or manual start)
+> gets, within ~10–20 s, a shared draft in the reply editor with the AI disclosure, an internal note with sources and confidence,
+> and the `ai-bozza` tag: an answer, a request for clarification or an escalation, decided by code. When the agent sends the
+> reply, the Agent service compares it with the draft, records the outcome and tags the ticket `ai-generata` or
+> `ai-generata-in-parte`; it flags replies whose AI disclosure was removed. The console shows runs, outcomes and demo data. All
+> data is synthetic and fictitious.
+>
+> For non-developers: [the project in brief](docs/il-progetto-in-breve.md) (Italian). To present it: [the demo](docs/demo.md) (Italian).
 
 What it adds to the other POCs of the series (Order-to-Cash, Claims assistant, Digital transport):
 
@@ -23,6 +25,53 @@ What it adds to the other POCs of the series (Order-to-Cash, Claims assistant, D
 2. human in the loop inside the agent's own tool: no new UI to learn;
 3. hybrid retrieval (lexical BM25 + vector, Reciprocal Rank Fusion) with version applicability filters;
 4. usefulness measured from the agent's actual behaviour (distance between draft and sent text).
+
+## Results
+
+Measured on 2026-10-19 on test-set tickets kept out of the index, with `qwen3.5:9b` running locally (reports in [eval/](eval)):
+
+| Criterion (PLAN §1) | Result | Threshold |
+|---|---|---|
+| Retrieval: a source of the same case in the top 5 (hit@5) | **100%** of 135 tickets (97% on the symptom paraphrase alone), MRR@10 1.000 | ≥ 80% |
+| Useful drafts (send as is or with small edits), manual grid on 30 cases | **26 of 30 (86.7%)** — grades proposed by Claude, to be reviewed | ≥ 60% |
+| Technical terms not supported by the sources in proposed drafts | **0 of 35** | < 5% |
+| Latency from the customer message to the draft in Zammad | **9–20 s** live (6 scenarios); dry-run pipeline mean 9.9 s, p95 13.0 s | < 45 s |
+| Repeatable demo with the scenarios | 6 of 6 with the expected outcome, from `DbInit` onwards | yes |
+
+The 30 graded cases are the 15 traps of the test set (vague, no history, malicious instructions, wrong mode or version,
+ambiguous product) plus 15 regular cases stratified by product and mode; the 4 drafts to discard are all traps.
+
+**Cloud comparison** (same 30 cases, same pipeline, same grid proposed by Claude; synthetic data):
+
+| | `qwen3.5:9b` local | `claude-haiku-5-5` |
+|---|---|---|
+| Useful drafts | 26 of 30 (86.7%): 18 correct, 8 with edits, 4 to discard | **28 of 30 (93.3%)**: 19 correct, 9 with edits, 2 to discard |
+| Traps meeting the automatic expectation | 6 of 7 (one vague ticket answered) | **7 of 7** |
+| Decisions: answer / clarification / escalation | 26 / 2 / 2 | 21 / 8 / 1 |
+| Unsupported technical terms | 0 of 35 | 0 of 35 |
+| Mean pipeline time (p95) | **9.9 s** (13.0 s) | 12.7 s (16.7 s) |
+| Cost for 30 cases | 0 (local) | $0.046 (155K input tokens, 62K output) |
+
+The cloud model asks for clarification more often before proposing a fix: it avoids wrong answers on the traps, but in two
+regular cases it asks when the answer was already in the sources. The local model answers more and sometimes slips into "voi".
+
+```powershell
+dotnet run --project tools/Dusiburg.AI.Ticket.Cli -- eval retrieval                       # hit@k and MRR, retrieval variants
+dotnet run --project tools/Dusiburg.AI.Ticket.Cli -- eval drafts                          # drafts on the 30 cases (~5 min), report, readings and empty grid
+dotnet run --project tools/Dusiburg.AI.Ticket.Cli -- eval drafts --replay eval/drafts-<date>-qwen3.5-9b.json --griglia eval/griglia-<date>-qwen3.5-9b.json
+dotnet run --project tools/Dusiburg.AI.Ticket.Cli -- eval drafts --provider anthropic     # cloud comparison (~6 min, ~$0.05): needs Parameters:anthropic-api-key
+```
+
+### Limitations
+
+- **Simulated data**: tidier than real data, and tickets of the same case share subjects and details (the full query saturates
+  retrieval); in the test set the contact name does not always match the signature in the text.
+- **A 9B model on 8 GB of VRAM** is the lower bound of quality. Weak spots: a vague ticket answered instead of questioned,
+  customers quoting a version other than the affected one, occasional slips from the formal "Lei" to "voi".
+- **Manual grid** proposed by the development assistant, to be reviewed by someone who knows the support domain.
+- **Polling source** covered by tests, not live; sending from Zammad's editor tried by hand in Phase 0, then simulated with the Cli.
+- **AI disclosure**: wording and legal scope to be validated by whoever handles compliance.
+- No real authentication or high availability; Zammad in a test configuration.
 
 ## Architecture
 
@@ -85,7 +134,8 @@ administrator from the setup wizard at `http://127.0.0.1:8080`, then create the 
 user `ai-assistant` and writes its token and the webhook secret into the AppHost user-secrets. Closing the AppHost stops the
 Zammad containers (`Zammad:StopOnExit=false` keeps them running).
 
-Model, retrieval and Zammad knobs (`OLLAMA_*`, `MODEL_*_PROVIDER`, `EMBEDDING_*`, `RETRIEVAL_*`, `RRF_K`, `CONFIDENCE_MIN_FOR_DRAFT`, `TICKET_EVENT_SOURCE`, `ZAMMAD_URL`, `Zammad:*`) are listed in
+After a `DbInit`, run `zammad seed` again (it relinks organizations and historical tickets to the new database without creating anything).
+Model, retrieval and Zammad knobs (`OLLAMA_*`, `MODEL_*_PROVIDER`, `EMBEDDING_*`, `RETRIEVAL_*`, `RRF_K`, `CONFIDENCE_MIN_FOR_DRAFT`, `TICKET_EVENT_SOURCE`, `FEEDBACK_MAX_EDIT_DISTANCE`, `ZAMMAD_URL`, `Zammad:*`) are listed in
 [docs/architettura.md](docs/architettura.md#manopole).
 
 ### Build and test
@@ -102,12 +152,13 @@ database created by `DbInit` and dropped afterwards. The CI (GitHub Actions, Win
 ## Layout
 
 ```text
-src/       AppHost, ServiceDefaults, Shared, Data, Ai, Zammad, Agent, Web
-tools/     DbInit: recreates the database · DataGen: generates data/tickets.json · Cli: Zammad bootstrap/seed, demo tickets
+src/       AppHost, ServiceDefaults, Shared, Data, Ai, Rag, Zammad, Core, Agent, Web
+tools/     DbInit: recreates the database · DataGen: generates data/tickets.json · Cli: Zammad, demo tickets, index, evaluation, simulated agent
 tests/     one NUnit project per area
 data/      synthetic data: hand-written cases, KB, release notes, customers; generated tickets (Italian)
+eval/      evaluation reports (retrieval, drafts) with readings and grid (Italian)
 infra/     zammad/: stack configuration (zammad.env) and start script for WSL
-docs/      architecture (Italian)
+docs/      architecture, demo, project in brief (Italian)
 ```
 
 ## License

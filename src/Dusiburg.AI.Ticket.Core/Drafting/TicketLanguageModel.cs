@@ -5,8 +5,11 @@ using Microsoft.Extensions.AI;
 
 namespace Dusiburg.AI.Ticket.Core.Drafting;
 
-/// <summary>Risposta strutturata del modello con ciò che serve a registrarla: modello, hash del prompt, tentativi.</summary>
-public sealed record ModelCall<T>(T Value, string ModelId, string PromptHash, int Attempts);
+/// <summary>
+/// Risposta strutturata del modello con ciò che serve a registrarla: modello, hash del prompt, tentativi, token (sommati sui
+/// tentativi; nulli se il provider non li restituisce).
+/// </summary>
+public sealed record ModelCall<T>(T Value, string ModelId, string PromptHash, int Attempts, long? InputTokens = null, long? OutputTokens = null);
 
 /// <summary>Il modello ha risposto due volte con un JSON non valido (PLAN §7.2): l'elaborazione finisce in errore, nessuna bozza.</summary>
 public sealed class InvalidModelOutputException(string task, string error) : Exception($"{task}: JSON non valido due volte ({error}).")
@@ -38,10 +41,11 @@ public sealed class TicketLanguageModel(IChatClientFactory factory)
         List<ChatMessage> conversation = [.. messages];
         ChatResponse response = await model.ChatClient.GetResponseAsync(conversation, options, cancellationToken);
         ParseResult<T> parsed = ModelJson.Parse<T>(response.Text);
+        UsageDetails? first = response.Usage;
 
         if (parsed.Succeeded)
         {
-            return new ModelCall<T>(parsed.Value!, model.ModelId, hash, 1);
+            return new ModelCall<T>(parsed.Value!, model.ModelId, hash, 1, first?.InputTokenCount, first?.OutputTokenCount);
         }
 
         conversation.Add(new ChatMessage(ChatRole.Assistant, response.Text));
@@ -53,9 +57,13 @@ public sealed class TicketLanguageModel(IChatClientFactory factory)
         parsed = ModelJson.Parse<T>(response.Text);
 
         return parsed.Succeeded
-            ? new ModelCall<T>(parsed.Value!, model.ModelId, hash, 2)
+            ? new ModelCall<T>(parsed.Value!, model.ModelId, hash, 2,
+                Sum(first?.InputTokenCount, response.Usage?.InputTokenCount), Sum(first?.OutputTokenCount, response.Usage?.OutputTokenCount))
             : throw new InvalidModelOutputException(task.ToString(), $"{firstError}; {parsed.Error}");
     }
+
+    /// <summary>Somma dei token dei due tentativi; nulla se uno dei due non li ha.</summary>
+    private static long? Sum(long? first, long? second) => first is { } a && second is { } b ? a + b : null;
 
     /// <summary>SHA-256 dei messaggi (ruolo e testo): due bozze con lo stesso hash hanno avuto lo stesso prompt.</summary>
     internal static string PromptHash(IEnumerable<ChatMessage> messages)

@@ -32,12 +32,24 @@ public sealed class TicketPipeline(
 
     public AgentOptions Options => options;
 
+    /// <summary>La stessa pipeline con un altro modello: il confronto con il cloud della Fase 8 (G10).</summary>
+    public TicketPipeline WithModel(TicketLanguageModel other) => new(loader, other, retriever, publisher, db, options, zammadOptions);
+
     /// <summary>Passi fino alla bozza composta, senza scrivere né in Zammad né nel database.</summary>
     public async Task<DraftProposal> ProposeAsync(long ticketId, long? articleId, CancellationToken cancellationToken)
     {
-        long start = Stopwatch.GetTimestamp();
-
         (IncomingTicket ticket, TimeSpan contextTime) = await StepAsync("contesto", () => loader.LoadAsync(ticketId, articleId, cancellationToken));
+
+        return await ProposeForAsync(ticket, contextTime, cancellationToken);
+    }
+
+    /// <summary>
+    /// I passi dopo il contesto, su un ticket già caricato: lo usa anche la valutazione della Fase 8, che costruisce il ticket del
+    /// test set dal database invece che da Zammad.
+    /// </summary>
+    public async Task<DraftProposal> ProposeForAsync(IncomingTicket ticket, TimeSpan contextTime, CancellationToken cancellationToken)
+    {
+        long start = Stopwatch.GetTimestamp();
 
         (ModelCall<ModelClassification> classification, TimeSpan classificationTime) = await StepAsync("classificazione", () =>
             model.ClassifyAsync(PromptBuilder.Classification(ticket), cancellationToken));
@@ -70,7 +82,7 @@ public sealed class TicketPipeline(
         TimeSpan verificationTime = Stopwatch.GetElapsedTime(verificationStart);
         IReadOnlyDictionary<string, long> zammadTickets = await ZammadTicketsOfSourcesAsync(sources, cancellationToken);
         var timings = new PipelineTimings(contextTime, classificationTime, retrievalTime, generationTime, verificationTime, TimeSpan.Zero,
-            Stopwatch.GetElapsedTime(start));
+            contextTime + Stopwatch.GetElapsedTime(start));
 
         return new DraftProposal(ticket, classification, retrieval, draft, verification, confidence, composed, zammadTickets, timings);
     }

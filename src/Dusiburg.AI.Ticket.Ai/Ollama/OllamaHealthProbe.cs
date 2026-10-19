@@ -101,6 +101,15 @@ public sealed class OllamaHealthProbe(AiOptions options, EmbeddingGeneratorFacto
         return (embeddingInVram || chatOffGpu ? ProbeStatus.Warning : ProbeStatus.Info, detail);
     }
 
+    /// <summary>I modelli caricati in Ollama con memoria e posizionamento (<c>/api/ps</c>), per i report della valutazione.</summary>
+    public static async Task<IReadOnlyList<string>> DescribeLoadedModelsAsync(AiOptions options, CancellationToken cancellationToken)
+    {
+        using OllamaApiClient ollama = OllamaClients.Create(options.OllamaEndpoint, OllamaClients.ProbeTimeout);
+
+        return [.. (await ollama.ListRunningModelsAsync(cancellationToken))
+            .Select(m => $"{m.Name}: {m.Size / 1_000_000_000.0:0.0} GB, {Placement(m)}")];
+    }
+
     private static string Placement(RunningModel model)
     {
         if (model.Size <= 0 || model.SizeVram <= 0)

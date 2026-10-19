@@ -47,8 +47,15 @@ public static partial class DraftVerifier
         ErrorCode().Matches(text).Select(m => m.Value)
             .Concat(Version().Matches(text).Select(m => m.Value))
             .Concat(MenuPath().Matches(text).Select(m => m.Value.Trim()))
-            .Concat(Command().Matches(text).Select(m => m.Value.Trim()))
+            .Concat(Command().Matches(text).Select(m => CommandTerm(m.Value.Trim())))
             .Distinct(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Un comando finisce con la sua ultima opzione o segnaposto: "ffadmin receive --now per scaricare" è "ffadmin receive --now"
+    /// (falso positivo della Fase 8). Senza opzioni restano le parole catturate.
+    /// </summary>
+    internal static string CommandTerm(string match) =>
+        CommandArgument().Matches(match).LastOrDefault() is { } last ? match[..(last.Index + last.Length)] : match;
 
     /// <summary>
     /// Dopo l'ultima formula di chiusura non resta nulla: nome, ruolo, "Supporto tecnico Dusiburg". Senza formula si tolgono le
@@ -85,14 +92,23 @@ public static partial class DraftVerifier
 
     /// <summary>
     /// Due o più voci separate da <c>&gt;</c>: ogni voce comincia con una maiuscola ed è seguita al più da due parole minuscole
-    /// (<c>Impostazioni &gt; Firma remota</c>), così il verbo che precede ("Accedere a ...") resta fuori.
+    /// (<c>Impostazioni &gt; Firma remota</c>), così il verbo che precede ("Accedere a ...") resta fuori. Le parole minuscole non
+    /// possono essere congiunzioni, articoli o preposizioni: "Amministrazione &gt; Calendari che il calendario…" si ferma a
+    /// "Calendari" (falso positivo della Fase 8).
     /// </summary>
-    [GeneratedRegex(@"\b[A-ZÀ-Ú][\wà-ù'’]*(?: [a-zà-ù][\wà-ù'’]*){0,2}(?: > [A-ZÀ-Ú][\wà-ù'’]*(?: [a-zà-ù][\wà-ù'’]*){0,2})+")]
+    [GeneratedRegex(@"\b[A-ZÀ-Ú][\wà-ù'’]*(?: (?!(?:" + FunctionWords + @")\b)[a-zà-ù][\wà-ù'’]*){0,2}(?: > [A-ZÀ-Ú][\wà-ù'’]*(?: (?!(?:" + FunctionWords + @")\b)[a-zà-ù][\wà-ù'’]*){0,2})+")]
     private static partial Regex MenuPath();
+
+    private const string FunctionWords =
+        "che|e|ed|o|di|da|in|a|con|su|per|tra|fra|il|lo|la|i|gli|le|un|uno|una|del|della|dei|delle|al|alla|ai|nel|nella|nei|sul|sulla|se|non|è";
 
     /// <summary>Il comando e fino a quattro argomenti: opzioni (<c>--now</c>), parole di almeno due lettere, segnaposto (<c>&lt;file&gt;</c>).</summary>
     [GeneratedRegex(@"\b(?:ffadmin|daadmin)(?: (?:--?[\w-]+|[a-z][\w.-]*\w|<[^>]+>)){1,4}")]
     private static partial Regex Command();
+
+    /// <summary>Opzione o segnaposto di un comando.</summary>
+    [GeneratedRegex(@"--?[\w-]+|<[^>]+>")]
+    private static partial Regex CommandArgument();
 
     [GeneratedRegex(@"^(?:cordiali saluti|distinti saluti|un cordiale saluto|un saluto|saluti|a presto)[,.!]?$", RegexOptions.IgnoreCase)]
     private static partial Regex Closing();

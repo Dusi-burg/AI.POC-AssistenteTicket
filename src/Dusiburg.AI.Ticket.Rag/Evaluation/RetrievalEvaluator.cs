@@ -104,8 +104,11 @@ public sealed class RetrievalEvaluator(
             kind, variant, MetricSummary.Of(results), groups, EvalMetrics.Mean(latencies), EvalMetrics.Percentile(latencies, 95), results);
     }
 
-    /// <summary>I ticket del test set con la query costruita come in produzione e le fonti rilevanti del loro caso.</summary>
-    internal async Task<(IReadOnlyList<EvalCase> Cases, IReadOnlyDictionary<string, string?> CaseOfTicket)> LoadCasesAsync(
+    /// <summary>
+    /// I ticket del test set con la query costruita come in produzione e le fonti rilevanti del loro caso. Li usa anche la
+    /// valutazione delle bozze (Fase 8), con la stessa verità di riferimento.
+    /// </summary>
+    public async Task<(IReadOnlyList<EvalCase> Cases, IReadOnlyDictionary<string, string?> CaseOfTicket)> LoadCasesAsync(
         SeedData seed, CancellationToken cancellationToken)
     {
         Dictionary<short, string> products = await db.Products.AsNoTracking().ToDictionaryAsync(p => p.Id, p => p.Code, cancellationToken);

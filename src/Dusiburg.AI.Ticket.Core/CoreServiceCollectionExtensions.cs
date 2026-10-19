@@ -23,6 +23,7 @@ public static class CoreServiceCollectionExtensions
         services.AddScoped<TicketPipeline>();
         services.AddScoped<AgentRunService>();
         services.AddScoped<DraftOutcomeService>();
+        services.AddScoped<Evaluation.DraftEvaluator>();
 
         return services;
     }

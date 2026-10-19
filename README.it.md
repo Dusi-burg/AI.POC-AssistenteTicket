@@ -10,12 +10,13 @@ knowledge base e note di rilascio, e propone all'operatore una **bozza di rispos
 Zammad: nulla parte in automatico. Tutto gira in locale: modelli su Ollama, dati su SQL Server LocalDB, Zammad in Docker dentro
 WSL.
 
-> **Stato: Fase 7 — feedback e console.** A un nuovo messaggio del cliente in Zammad (webhook, polling o avvio manuale)
-> seguono, in ~10–20 s, una bozza condivisa nell'editor di risposta con la dicitura AI, una nota interna con fonti e confidenza
-> e il tag `ai-bozza`: risposta, richiesta di chiarimenti o escalation, decise dal codice. Quando l'operatore invia, l'Agent
-> confronta il testo con la bozza, registra l'esito (inviata com'era, modificata, scartata) e marca il ticket `ai-generata` o
-> `ai-generata-in-parte`; segnala se la dicitura AI è stata tolta. La console mostra elaborazioni, esiti e dati demo. La
-> valutazione arriva nella prossima fase. Tutti i dati sono sintetici e fittizi.
+> **Stato: Fase 8 — valutazione, documentazione e demo.** A un nuovo messaggio del cliente in Zammad (webhook, polling o avvio
+> manuale) seguono, in ~10–20 s, una bozza condivisa nell'editor di risposta con la dicitura AI, una nota interna con fonti e
+> confidenza e il tag `ai-bozza`: risposta, richiesta di chiarimenti o escalation, decise dal codice. Quando l'operatore invia,
+> l'Agent confronta il testo con la bozza, registra l'esito e marca il ticket `ai-generata` o `ai-generata-in-parte`; segnala se
+> la dicitura AI è stata tolta. La console mostra elaborazioni, esiti e dati demo. Tutti i dati sono sintetici e fittizi.
+>
+> Per chi non sviluppa: [il progetto in breve](docs/il-progetto-in-breve.md). Per presentarlo: [la demo](docs/demo.md).
 
 Che cosa aggiunge agli altri POC della serie (Order-to-Cash, Assistente sinistri, Trasporto digitale):
 
@@ -23,6 +24,55 @@ Che cosa aggiunge agli altri POC della serie (Order-to-Cash, Assistente sinistri
 2. l'operatore resta nel suo strumento: nessuna interfaccia nuova da imparare;
 3. ricerca ibrida (BM25 lessicale + vettoriale, Reciprocal Rank Fusion) con filtri di applicabilità per versione;
 4. utilità misurata dal comportamento reale dell'operatore (distanza fra bozza e testo inviato).
+
+## Risultati
+
+Misure del 2026-10-19 sui ticket del test set, esclusi dall'indice, con `qwen3.5:9b` in locale (report in [eval/](eval)):
+
+| Criterio (PLAN §1) | Risultato | Soglia |
+|---|---|---|
+| Retrieval: fonte del caso fra le prime 5 (hit@5) | **100%** su 135 ticket (97% sulla sola parafrasi del sintomo), MRR@10 1,000 | ≥ 80% |
+| Bozze utili (invio diretto o piccole modifiche), griglia manuale su 30 casi | **26 su 30 (86,7%)** — giudizi proposti da Claude, da rivedere | ≥ 60% |
+| Termini tecnici non supportati dalle fonti nelle bozze proposte | **0 su 35** | < 5% |
+| Latenza dal messaggio alla bozza in Zammad | **9–20 s** dal vivo (6 scenari); pipeline a secco media 9,9 s, p95 13,0 s | < 45 s |
+| Demo ripetibile con gli scenari | 6 su 6 con l'esito atteso, da `DbInit` in poi | sì |
+
+I 30 casi della griglia sono i 15 trabocchetti del test set (vaghi, senza storico, istruzioni malevole, modalità o versione
+sbagliate, prodotto ambiguo) e 15 casi normali stratificati per prodotto e modalità; le 4 bozze da scartare sono tutte
+trabocchetti.
+
+**Confronto con il cloud** (stessi 30 casi, stessa pipeline, stessa griglia proposta da Claude; dati sintetici):
+
+| | `qwen3.5:9b` in locale | `claude-haiku-5-5` |
+|---|---|---|
+| Bozze utili | 26 su 30 (86,7%): 18 corrette, 8 con modifiche, 4 da scartare | **28 su 30 (93,3%)**: 19 corrette, 9 con modifiche, 2 da scartare |
+| Trabocchetti con l'atteso automatico | 6 su 7 (un ticket vago risposto) | **7 su 7** |
+| Decisioni: risposta / chiarimenti / escalation | 26 / 2 / 2 | 21 / 8 / 1 |
+| Termini tecnici non supportati | 0 su 35 | 0 su 35 |
+| Tempo medio della pipeline (p95) | **9,9 s** (13,0 s) | 12,7 s (16,7 s) |
+| Costo per 30 casi | 0 (in locale) | 0,046 $ (155K token in ingresso, 62K in uscita) |
+
+Il modello cloud chiede più spesso chiarimenti prima di proporre una soluzione: evita le risposte sbagliate sui trabocchetti, ma
+in due casi normali chiede quando la risposta era già nelle fonti. Il locale risponde di più e ricade a volte nel "voi".
+
+```powershell
+dotnet run --project tools/Dusiburg.AI.Ticket.Cli -- eval retrieval                       # hit@k e MRR, varianti del retrieval
+dotnet run --project tools/Dusiburg.AI.Ticket.Cli -- eval drafts                          # bozze sui 30 casi (~5 min), report, letture e griglia vuota
+dotnet run --project tools/Dusiburg.AI.Ticket.Cli -- eval drafts --replay eval/drafts-<data>-qwen3.5-9b.json --griglia eval/griglia-<data>-qwen3.5-9b.json
+dotnet run --project tools/Dusiburg.AI.Ticket.Cli -- eval drafts --provider anthropic     # confronto con il cloud (~6 min, ~0,05 $): serve Parameters:anthropic-api-key
+```
+
+### Limiti
+
+- **Dati simulati**: più ordinati di quelli veri, e i ticket dello stesso caso condividono oggetti e dettagli (la query completa
+  satura il retrieval); nel test set il nome del referente non sempre coincide con la firma nel testo.
+- **Modello da 9B su 8 GB di VRAM**: è il limite inferiore della qualità. Casi deboli: un ticket vago a cui risponde invece di
+  chiedere, versioni citate dal cliente diverse da quella del problema, qualche ricaduta nel "voi" invece del Lei.
+- **Griglia manuale** proposta dall'assistente di sviluppo, da rivedere da chi conosce l'assistenza.
+- **Sorgente polling** provata con i test, non dal vivo; l'invio dall'editor di Zammad provato a mano in Fase 0, poi simulato
+  con la Cli.
+- **Dicitura AI**: testo e perimetro normativo da validare con chi segue la compliance.
+- Nessuna autenticazione reale né alta disponibilità; Zammad in configurazione di prova.
 
 ## Architettura
 
@@ -85,7 +135,8 @@ crea con la procedura guidata su `http://127.0.0.1:8080`, poi si crea il token. 
 `ai-assistant` e scrive il suo token e il segreto del webhook negli user-secrets dell'AppHost. Chiudendo l'AppHost i container
 di Zammad si fermano (`Zammad:StopOnExit=false` li lascia accesi).
 
-Le manopole dei modelli, del retrieval e di Zammad (`OLLAMA_*`, `MODEL_*_PROVIDER`, `EMBEDDING_*`, `RETRIEVAL_*`, `RRF_K`, `CONFIDENCE_MIN_FOR_DRAFT`, `TICKET_EVENT_SOURCE`, `ZAMMAD_URL`, `Zammad:*`) sono in
+Dopo un `DbInit` va rieseguito `zammad seed` (ricollega organizzazioni e ticket storici al nuovo database, senza creare nulla).
+Le manopole dei modelli, del retrieval e di Zammad (`OLLAMA_*`, `MODEL_*_PROVIDER`, `EMBEDDING_*`, `RETRIEVAL_*`, `RRF_K`, `CONFIDENCE_MIN_FOR_DRAFT`, `TICKET_EVENT_SOURCE`, `FEEDBACK_MAX_EDIT_DISTANCE`, `ZAMMAD_URL`, `Zammad:*`) sono in
 [docs/architettura.md](docs/architettura.md#manopole).
 
 ### Build e test
@@ -102,12 +153,13 @@ LocalDB non ha il tipo `VECTOR` salta quelli della categoria `RequiresSql2025`.
 ## Struttura
 
 ```text
-src/       AppHost, ServiceDefaults, Shared, Data, Ai, Zammad, Agent, Web
-tools/     DbInit: ricrea il database · DataGen: genera data/tickets.json · Cli: bootstrap e seed di Zammad, ticket demo
+src/       AppHost, ServiceDefaults, Shared, Data, Ai, Rag, Zammad, Core, Agent, Web
+tools/     DbInit: ricrea il database · DataGen: genera data/tickets.json · Cli: Zammad, ticket demo, indice, valutazione, operatore simulato
 tests/     un progetto NUnit per area
 data/      dati simulati: casi, KB, note di rilascio, clienti scritti a mano; ticket generati
+eval/      report di valutazione (retrieval, bozze) con letture e griglia
 infra/     zammad/: configurazione dello stack (zammad.env) e script di avvio in WSL
-docs/      architettura
+docs/      architettura, demo, il progetto in breve
 ```
 
 ## Licenza
