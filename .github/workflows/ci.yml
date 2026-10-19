@@ -30,6 +30,19 @@ jobs:
         with:
           global-json-file: global.json
 
+      # The AppHost uses the Aspire CLI bundle (AspireUseCliBundle): its build resolves DCP and the
+      # dashboard from the bundle and fails with ASPIRE009 when the aspire command is missing, as on a
+      # clean runner. With the CLI on PATH the AppHost build runs 'aspire setup' itself to extract the
+      # bundle. Same version as Aspire.AppHost.Sdk (the tool shim is aspire.cmd, so call it by name).
+      - name: Install Aspire CLI
+        shell: pwsh
+        run: |
+          dotnet tool install --global Aspire.Cli --version 13.6.1
+          $tools = Join-Path $env:USERPROFILE '.dotnet\tools'
+          $tools >> $env:GITHUB_PATH
+          $env:PATH = "$tools;$env:PATH"
+          aspire --version
+
       # The VECTOR type exists only from SQL Server 2025 (LocalDB 17.x). On an
       # older LocalDB the tests that need it are skipped and stay mandatory locally.
       - name: Start SQL Server LocalDB instance 'localdev'

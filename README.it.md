@@ -148,7 +148,9 @@ dotnet test --solution Dusiburg.AI.Ticket.slnx
 
 I test non chiamano mai Ollama né Zammad (handler HTTP finti, probe stub); i test di SQL usano LocalDB `localdev`, con un
 database dedicato per classe creato da `DbInit` e poi cancellato. La CI (GitHub Actions, Windows) esegue gli stessi; se il suo
-LocalDB non ha il tipo `VECTOR` salta quelli della categoria `RequiresSql2025`.
+LocalDB non ha il tipo `VECTOR` salta quelli della categoria `RequiresSql2025`. L'AppHost usa il bundle della Aspire CLI: la CI
+installa `Aspire.Cli` 13.6.1 (stessa versione dell'SDK) prima della build, altrimenti la build dell'AppHost fallisce con
+`ASPIRE009`; in locale serve la Aspire CLI installata (https://get.aspire.dev).
 
 ## Struttura
 
