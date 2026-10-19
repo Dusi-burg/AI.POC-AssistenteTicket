@@ -60,11 +60,13 @@ app.UseExceptionHandler();
 
 app.MapDefaultEndpoints();
 
-app.MapGet("/", () => new { service = "Dusiburg.AI.Ticket.Agent", phase = 6 });
+app.MapGet("/", () => new { service = "Dusiburg.AI.Ticket.Agent", phase = 7 });
 
 app.MapGroup("/api")
     .MapHealthEndpoints()
-    .MapRunEndpoints();
+    .MapRunEndpoints()
+    .MapOutcomeEndpoints()
+    .MapCatalogEndpoints();
 
 app.MapZammadWebhook();
 

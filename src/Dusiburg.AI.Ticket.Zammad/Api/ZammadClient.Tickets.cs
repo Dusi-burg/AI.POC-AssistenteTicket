@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text.Json;
 
 namespace Dusiburg.AI.Ticket.Zammad.Api;
 
@@ -9,9 +10,14 @@ namespace Dusiburg.AI.Ticket.Zammad.Api;
 public sealed partial class ZammadClient
 {
     public const string SenderCustomer = "Customer";
+    public const string SenderAgent = "Agent";
 
+    /// <summary>Nome dello stato chiuso (fra quelli predefiniti di Zammad).</summary>
+    public const string StateClosed = "closed";
+
+    /// <summary>Con <c>expand=true</c>, così lo stato arriva per nome (<see cref="ZammadTicketDetail.State"/>).</summary>
     public async Task<ZammadTicketDetail> GetTicketAsync(long ticketId, CancellationToken cancellationToken) =>
-        await GetAsync<ZammadTicketDetail>($"{ZammadResources.Tickets}/{ticketId}", cancellationToken);
+        await GetAsync<ZammadTicketDetail>($"{ZammadResources.Tickets}/{ticketId}?expand=true", cancellationToken);
 
     /// <summary>Id del ticket con questo numero (quello mostrato in Zammad, es. 71164); <c>null</c> se non esiste.</summary>
     public async Task<long?> FindTicketIdByNumberAsync(string number, CancellationToken cancellationToken)
@@ -41,6 +47,36 @@ public sealed partial class ZammadClient
         await SendAsync(HttpMethod.Put, $"{ZammadResources.Tickets}/{ticketId}/shared_draft",
             new { NewArticle = newArticle, TicketAttributes = new { }, FormId = Guid.NewGuid().ToString() }, onBehalfOf: null, cancellationToken);
 
+    /// <summary>
+    /// HTML della bozza condivisa del ticket, <c>null</c> se non c'è (all'invio Zammad la cancella). La risposta mette la bozza in
+    /// <c>assets.TicketSharedDraftZoom.&lt;id&gt;.new_article</c> (fase-0.md §4 ter).
+    /// </summary>
+    public async Task<string?> GetSharedDraftBodyAsync(long ticketId, CancellationToken cancellationToken)
+    {
+        JsonElement response;
+
+        try
+        {
+            response = await GetAsync<JsonElement>($"{ZammadResources.Tickets}/{ticketId}/shared_draft", cancellationToken);
+        }
+        catch (ZammadApiException exception) when (exception.StatusCode == System.Net.HttpStatusCode.NotFound)
+        {
+            return null;
+        }
+
+        if (!response.TryGetProperty("assets", out JsonElement assets) || !assets.TryGetProperty("TicketSharedDraftZoom", out JsonElement drafts))
+        {
+            return null;
+        }
+
+        return drafts.EnumerateObject()
+            .Select(d => d.Value.TryGetProperty("new_article", out JsonElement article) && article.TryGetProperty("body", out JsonElement body) ? body.GetString() : null)
+            .FirstOrDefault(b => b is not null);
+    }
+
+    public async Task DeleteSharedDraftAsync(long ticketId, CancellationToken cancellationToken) =>
+        await SendAsync(HttpMethod.Delete, $"{ZammadResources.Tickets}/{ticketId}/shared_draft", body: null, onBehalfOf: null, cancellationToken);
+
     /// <summary>Aggiunge un tag al ticket; un tag già presente non dà errore.</summary>
     public async Task AddTicketTagAsync(long ticketId, string tag, CancellationToken cancellationToken) =>
         await SendAsync(HttpMethod.Post, "tags/add", new { Item = tag, Object = "Ticket", OId = ticketId }, onBehalfOf: null, cancellationToken);
@@ -59,8 +95,13 @@ public sealed partial class ZammadClient
     }
 }
 
+/// <param name="State">Nome dello stato (<c>new</c>, <c>open</c>, <c>closed</c>…), presente solo con <c>expand=true</c>.</param>
 public sealed record ZammadTicketDetail(
-    long Id, string Number, string Title, long GroupId, long? CustomerId, long? OrganizationId, DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt);
+    long Id, string Number, string Title, long GroupId, long? CustomerId, long? OrganizationId, DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt,
+    string? State = null)
+{
+    public bool IsClosed => string.Equals(State, ZammadClient.StateClosed, StringComparison.Ordinal);
+}
 
 /// <summary>Articolo con il testo: <see cref="Sender"/> è <c>Customer</c>, <c>Agent</c> o <c>System</c>; <see cref="Type"/> per esempio <c>web</c>, <c>email</c>, <c>note</c>.</summary>
 public sealed record ZammadArticleDetail(
@@ -77,6 +118,9 @@ public sealed record ZammadArticleDetail(
     DateTimeOffset CreatedAt)
 {
     public bool IsFromCustomer => !Internal && string.Equals(Sender, ZammadClient.SenderCustomer, StringComparison.Ordinal);
+
+    /// <summary>Risposta pubblica di un operatore: le note dell'assistente sono interne e restano fuori.</summary>
+    public bool IsAgentReply => !Internal && string.Equals(Sender, ZammadClient.SenderAgent, StringComparison.Ordinal);
 }
 
 /// <summary>Organizzazione con i campi personalizzati creati da <c>zammad bootstrap</c> (prodotto, versione, modalità, SLA).</summary>

@@ -21,7 +21,7 @@ public class ZammadIntegrationTests
         ComposedDraft draft = DraftComposer.Compose(DraftKind.Clarification, "", ["Quale versione?"], [], "Paola");
 
         //SUT
-        IReadOnlyList<string> tags = await new ZammadPublisher(zammad.Client()).PublishAsync(170, draft, "<p>nota</p>", CancellationToken.None);
+        PublicationResult publication = await new ZammadPublisher(zammad.Client()).PublishAsync(170, draft, "<p>nota</p>", CancellationToken.None);
 
         var writes = zammad.Writes.ToList();
         Assert.That(writes.Select(w => (w.Method, w.Path)), Is.EqualTo(new[]
@@ -36,7 +36,8 @@ public class ZammadIntegrationTests
 
         using JsonDocument note = JsonDocument.Parse(writes[1].Body!);
         Assert.That(note.RootElement.GetProperty("internal").GetBoolean(), Is.True);
-        Assert.That(tags, Is.EqualTo(new[] { ZammadPublisher.DraftTag, ZammadPublisher.LowConfidenceTag }));
+        Assert.That(publication.Tags, Is.EqualTo(new[] { ZammadPublisher.DraftTag, ZammadPublisher.LowConfidenceTag }));
+        Assert.That(publication.NoteArticleId, Is.EqualTo(431), "riferimento per l'esito della Fase 7");
         Assert.That(writes[2].Body, Does.Contain("\"item\":\"ai-bozza\"").And.Contain("\"o_id\":170"));
     }
 

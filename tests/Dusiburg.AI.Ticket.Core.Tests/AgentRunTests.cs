@@ -1,7 +1,9 @@
+using System.Text.Json;
 using Dusiburg.AI.Ticket.Ai;
 using Dusiburg.AI.Ticket.Core.Composition;
 using Dusiburg.AI.Ticket.Core.Context;
 using Dusiburg.AI.Ticket.Core.Drafting;
+using Dusiburg.AI.Ticket.Core.Feedback;
 using Dusiburg.AI.Ticket.Core.Pipeline;
 using Dusiburg.AI.Ticket.Core.Publishing;
 using Dusiburg.AI.Ticket.Core.Tests.Support;
@@ -130,6 +132,79 @@ public class AgentRunTests
         Assert.That(draft.Kind, Is.Not.EqualTo(DraftKind.Answer));
         Assert.That(draft.Body, Does.StartWith("Gentile Giorgio,").And.EndWith(DraftComposer.AiDisclosure));
     }
+
+    [Test]
+    public async Task CheckOutcome_DraftSentAsPublished_SentUnchangedTaggedAndRegisteredOnce()
+    {
+        //SETUP
+        await using TicketDbContext db = Open();
+        FakeZammad zammad = Zammad(ticketId: 173, articleId: 460);
+        AgentRunService service = Service(db, zammad, new CitingFirstSourceFactory(Classification));
+        int runId = (await service.TryCreateAsync(173, 460, RunTrigger.Webhook, CancellationToken))!.Value;
+        await service.ProcessAsync(runId, null, CancellationToken);
+        ReplyWith(zammad, ticketId: 173, customerArticleId: 460, SharedDraftBody(zammad, 173));
+        DraftOutcomeService outcomes = Outcomes(db, zammad);
+
+        //SUT
+        IReadOnlyList<ResolvedOutcome> first = await outcomes.CheckTicketAsync(173, CancellationToken);
+        IReadOnlyList<ResolvedOutcome> second = await outcomes.CheckTicketAsync(173, CancellationToken);
+
+        AgentRun run = await db.AgentRuns.AsNoTracking().Include(r => r.Draft).SingleAsync(r => r.Id == runId, CancellationToken);
+        AgentDraft draft = run.Draft!;
+        Assert.That(first.Select(r => (r.RunId, r.Outcome)), Is.EqualTo(new[] { (runId, DraftOutcome.SentUnchanged) }));
+        Assert.That(first.Single().Tags, Is.EqualTo(new[] { ZammadPublisher.GeneratedTag }));
+        Assert.That(second, Is.Empty, "un secondo evento non cambia nulla");
+        Assert.That((draft.Outcome, draft.ReplyArticleId, draft.EditDistance, draft.DisclosureKept), Is.EqualTo((DraftOutcome.SentUnchanged, (int?)1000, (double?)0, (bool?)true)));
+        Assert.That(draft.FinalText, Does.Contain("verifichi il certificato").And.Contain(DraftComposer.AiDisclosure));
+        Assert.That((draft.NoteArticleId, run.TicketNumber, run.TicketTitle), Is.EqualTo((999, "7173", "Fatture non trasmesse: errore FF-E2041")));
+        Assert.That(draft.GenerationMs + draft.PublicationMs, Is.GreaterThanOrEqualTo(0));
+        Assert.That(zammad.Writes.Count(w => w.Path == "/api/v1/tags/add" && w.Body!.Contains("\"ai-generata\"")), Is.EqualTo(1));
+    }
+
+    [Test]
+    public async Task CheckOutcome_EditedWithoutDisclosure_SentEditedWithTheRemovalTagAndNote()
+    {
+        //SETUP
+        await using TicketDbContext db = Open();
+        FakeZammad zammad = Zammad(ticketId: 174, articleId: 470);
+        AgentRunService service = Service(db, zammad, new CitingFirstSourceFactory(Classification));
+        int runId = (await service.TryCreateAsync(174, 470, RunTrigger.Webhook, CancellationToken))!.Value;
+        await service.ProcessAsync(runId, null, CancellationToken);
+        string published = SharedDraftBody(zammad, 174);
+        string sent = published[..published.IndexOf("<p><em>", StringComparison.Ordinal)].Replace("<p>Cordiali saluti,</p>", "<p>Resto a disposizione.</p><p>Cordiali saluti,</p>");
+        ReplyWith(zammad, ticketId: 174, customerArticleId: 470, sent);
+        int notesBefore = zammad.Writes.Count(w => w.Path == "/api/v1/ticket_articles");
+
+        //SUT
+        ResolvedOutcome resolved = (await Outcomes(db, zammad).CheckTicketAsync(174, CancellationToken)).Single();
+
+        Assert.That(resolved.Outcome, Is.EqualTo(DraftOutcome.SentEdited));
+        Assert.That(resolved.EditDistance, Is.GreaterThan(0).And.LessThanOrEqualTo(AgentOptions.DefaultFeedbackMaxEditDistance));
+        Assert.That(resolved.Tags, Is.EqualTo(new[] { ZammadPublisher.PartlyGeneratedTag, ZammadPublisher.DisclosureRemovedTag }));
+        Assert.That(resolved.DisclosureKept, Is.False);
+        Assert.That(zammad.Writes.Count(w => w.Path == "/api/v1/ticket_articles") - notesBefore, Is.EqualTo(1), "nota interna sulla dicitura tolta");
+    }
+
+    private DraftOutcomeService Outcomes(TicketDbContext db, FakeZammad zammad) =>
+        new(db, zammad.Client(), new ZammadPublisher(zammad.Client()), AgentOptions.Default, TimeProvider.System, NullLogger<DraftOutcomeService>.Instance);
+
+    /// <summary>L'HTML della bozza condivisa pubblicata dall'elaborazione: quello che l'operatore trova nell'editor.</summary>
+    private static string SharedDraftBody(FakeZammad zammad, long ticketId)
+    {
+        using JsonDocument shared = JsonDocument.Parse(zammad.Writes.Last(w => w.Path == $"/api/v1/tickets/{ticketId}/shared_draft").Body!);
+
+        return shared.RootElement.GetProperty("new_article").GetProperty("body").GetString()!;
+    }
+
+    /// <summary>Gli articoli dopo l'invio: messaggio del cliente, nota dell'assistente (999), risposta dell'operatore (1000).</summary>
+    private static void ReplyWith(FakeZammad zammad, long ticketId, long customerArticleId, string replyHtml) =>
+        zammad.On("GET", $"/api/v1/ticket_articles/by_ticket/{ticketId}", $$"""
+            [
+              {"id":{{customerArticleId}},"ticket_id":{{ticketId}},"sender":"Customer","type":"web","internal":false,"body":"Errore FF-E2041.","content_type":"text/plain","created_at":"2026-10-19T09:00:00Z"},
+              {"id":999,"ticket_id":{{ticketId}},"sender":"Agent","type":"note","internal":true,"body":"<p>nota</p>","content_type":"text/html","created_at":"2026-10-19T09:01:00Z"},
+              {"id":1000,"ticket_id":{{ticketId}},"sender":"Agent","type":"note","internal":false,"body":{{JsonSerializer.Serialize(replyHtml)}},"content_type":"text/html","created_at":"2026-10-19T09:05:00Z"}
+            ]
+            """);
 
     private TicketDbContext Open() => TicketDatabaseInitializer.Create(_connectionString, Dimensions);
 

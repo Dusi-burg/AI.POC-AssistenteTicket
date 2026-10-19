@@ -31,10 +31,10 @@ internal static class RetrievalSettings
     public static readonly string[] All = ["RETRIEVAL_TOP_K", "PROMPT_SOURCES_MAX", "RRF_K", "RETRIEVAL_VERSION_PENALTY"];
 }
 
-/// <summary>Manopole della pipeline, copiate da <c>AgentOptions.Keys</c> (Fase 6).</summary>
+/// <summary>Manopole della pipeline e del feedback, copiate da <c>AgentOptions.Keys</c> (Fasi 6 e 7).</summary>
 internal static class PipelineSettings
 {
-    public static readonly string[] All = ["CONFIDENCE_MIN_FOR_DRAFT", "TICKET_EVENT_SOURCE", "POLLING_INTERVAL_SECONDS"];
+    public static readonly string[] All = ["CONFIDENCE_MIN_FOR_DRAFT", "TICKET_EVENT_SOURCE", "POLLING_INTERVAL_SECONDS", "FEEDBACK_MAX_EDIT_DISTANCE"];
 }
 
 internal static class ZammadSettings

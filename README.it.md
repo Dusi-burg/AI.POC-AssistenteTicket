@@ -10,10 +10,12 @@ knowledge base e note di rilascio, e propone all'operatore una **bozza di rispos
 Zammad: nulla parte in automatico. Tutto gira in locale: modelli su Ollama, dati su SQL Server LocalDB, Zammad in Docker dentro
 WSL.
 
-> **Stato: Fase 6 — pipeline dell'agente.** A un nuovo messaggio del cliente in Zammad (webhook, polling o avvio manuale)
+> **Stato: Fase 7 — feedback e console.** A un nuovo messaggio del cliente in Zammad (webhook, polling o avvio manuale)
 > seguono, in ~10–20 s, una bozza condivisa nell'editor di risposta con la dicitura AI, una nota interna con fonti e confidenza
-> e il tag `ai-bozza`: risposta, richiesta di chiarimenti o escalation, decise dal codice. Feedback e console arrivano nella
-> prossima fase. Tutti i dati sono sintetici e fittizi.
+> e il tag `ai-bozza`: risposta, richiesta di chiarimenti o escalation, decise dal codice. Quando l'operatore invia, l'Agent
+> confronta il testo con la bozza, registra l'esito (inviata com'era, modificata, scartata) e marca il ticket `ai-generata` o
+> `ai-generata-in-parte`; segnala se la dicitura AI è stata tolta. La console mostra elaborazioni, esiti e dati demo. La
+> valutazione arriva nella prossima fase. Tutti i dati sono sintetici e fittizi.
 
 Che cosa aggiunge agli altri POC della serie (Order-to-Cash, Assistente sinistri, Trasporto digitale):
 
@@ -25,7 +27,7 @@ Che cosa aggiunge agli altri POC della serie (Order-to-Cash, Assistente sinistri
 ## Architettura
 
 .NET 10 + Aspire. Il servizio `Agent` è proprietario del database, ospita i client dei modelli e parla con Zammad; la console
-`Web` mostra lo stato dei servizi. Zammad gira dallo stack ufficiale `zammad-docker-compose` dentro WSL, avviato e fermato
+`Web` mostra stato dei servizi, elaborazioni, esiti delle bozze e dati demo. Zammad gira dallo stack ufficiale `zammad-docker-compose` dentro WSL, avviato e fermato
 dall'AppHost. Dettagli in [docs/architettura.md](docs/architettura.md).
 
 | Componente | Indirizzo |
@@ -71,6 +73,11 @@ dotnet run --project tools/Dusiburg.AI.Ticket.Cli -- demo 1
 # Facoltativo: la pipeline a secco su un ticket (niente scritture in Zammad), o un'elaborazione manuale pubblicata dall'Agent
 dotnet run --project tools/Dusiburg.AI.Ticket.Cli -- draft 71164
 Invoke-RestMethod -Method Post http://localhost:5401/api/runs -ContentType application/json -Body '{"ticketId":170}'
+
+# 8. L'operatore invia la bozza dall'editor di Zammad (o la Cli fa la sua parte): l'esito e i tag ai-generata /
+#    ai-generata-in-parte arrivano in pochi secondi; la console http://localhost:5402 li mostra in Elaborazioni ed Esiti
+dotnet run --project tools/Dusiburg.AI.Ticket.Cli -- reply 71171 [--modifica] [--riscrivi] [--senza-dicitura]
+dotnet run --project tools/Dusiburg.AI.Ticket.Cli -- close 71171
 ```
 
 Al primo avvio l'AppHost clona lo stack di Zammad dentro WSL e Docker scarica ~5 GB di immagini; l'amministratore di Zammad si

@@ -1,0 +1,125 @@
+@page
+@model Dusiburg.AI.Ticket.Web.Pages.Outcomes.IndexModel
+@{
+    ViewData["Title"] = "Esiti";
+}
+
+<h1 class="h3">Esiti</h1>
+<p class="text-muted">
+    Che cosa hanno fatto gli operatori delle bozze, misurato dal testo inviato in Zammad: inviata com'era, modificata (con la
+    distanza a parole fra bozza e testo inviato) o scartata. Dopo l'invio il ticket riceve il tag <code>ai-generata</code> o
+    <code>ai-generata-in-parte</code> (P8).
+</p>
+
+@if (Model.Error is { } error)
+{
+    <div class="alert alert-warning" role="alert" id="agent-error">@error</div>
+}
+
+@if (Model.Summary is { } summary)
+{
+    @if (summary.DisclosureRemovals.Count > 0)
+    {
+        <div class="alert alert-danger" id="disclosure-removals">
+            <strong>Dicitura AI tolta prima dell'invio</strong> (P8): queste risposte nascono da una bozza dell'assistente ma il cliente le
+            ha ricevute senza la dicitura. Un articolo inviato non si può correggere.
+            <ul class="mb-0 mt-2">
+                @foreach (var removal in summary.DisclosureRemovals)
+                {
+                    <li>
+                        Ticket
+                        @if (Model.Links.Ticket(removal.ZammadTicketId) is { } ticketUrl)
+                        {
+                            <a href="@ticketUrl" target="_blank" rel="noopener">@(removal.TicketNumber ?? $"id {removal.ZammadTicketId}")</a>
+                        }
+                        else
+                        {
+                            @(removal.TicketNumber ?? $"id {removal.ZammadTicketId}")
+                        }
+                        , articolo @(removal.ReplyArticleId?.ToString() ?? "—"), @RunPresentation.Time(removal.OutcomeAt) —
+                        <a asp-page="/Runs/Details" asp-route-id="@removal.RunId">elaborazione @removal.RunId</a>
+                    </li>
+                }
+            </ul>
+        </div>
+    }
+
+    <div class="row g-3 mb-3" id="totals">
+        <div class="col-6 col-lg-3">
+            <div class="card h-100"><div class="card-body">
+                <div class="small text-muted">Bozze pubblicate</div>
+                <div class="fs-3">@summary.Drafts</div>
+                <div class="small text-muted">@summary.Pending in attesa di risposta</div>
+            </div></div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="card h-100"><div class="card-body">
+                <div class="small text-muted">Bozze utili</div>
+                <div class="fs-3" id="useful">@RunPresentation.Percent(summary.Useful, summary.Decided)</div>
+                <div class="small text-muted">@summary.Useful su @summary.Decided con un esito: inviate com'erano o con distanza ≤ @RunPresentation.Number(summary.UsefulMaxEditDistance) (obiettivo ≥ 60%)</div>
+            </div></div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="card h-100"><div class="card-body">
+                <div class="small text-muted">Distanza media</div>
+                <div class="fs-3">@RunPresentation.Number(summary.AverageEditDistance)</div>
+                <div class="small text-muted">sulle bozze inviate (0 = invariata, 1 = tutta diversa)</div>
+            </div></div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="card h-100"><div class="card-body">
+                <div class="small text-muted">Dicitura AI tolta</div>
+                <div class="fs-3">@summary.DisclosureRemovals.Count</div>
+                <div class="small text-muted">risposte marcate <code>ai-dicitura-rimossa</code></div>
+            </div></div>
+        </div>
+    </div>
+
+    <h2 class="h5">Per tipo di bozza</h2>
+    <div class="table-responsive">
+        <table class="table table-sm align-middle" id="counts">
+            <thead>
+                <tr>
+                    <th>Tipo</th>
+                    @foreach (var outcome in Enum.GetValues<DraftOutcome>())
+                    {
+                        <th class="text-end"><span class="badge @RunPresentation.BadgeClass(outcome)">@RunPresentation.Label(outcome)</span></th>
+                    }
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var kind in Enum.GetValues<DraftKind>())
+                {
+                    <tr>
+                        <td>@RunPresentation.Label(kind)</td>
+                        @foreach (var outcome in Enum.GetValues<DraftOutcome>())
+                        {
+                            <td class="text-end">
+                                @if (Model.Count(kind, outcome) is var count && count > 0)
+                                {
+                                    <a asp-page="/Runs/Index" asp-route-kind="@kind" asp-route-outcome="@outcome">@count</a>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">0</span>
+                                }
+                            </td>
+                        }
+                    </tr>
+                }
+                <tr class="fw-semibold">
+                    <td>Totale</td>
+                    @foreach (var outcome in Enum.GetValues<DraftOutcome>())
+                    {
+                        <td class="text-end">@Model.Count(outcome)</td>
+                    }
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    <p class="small text-muted">
+        Una risposta con distanza oltre @RunPresentation.Number(summary.FeedbackMaxEditDistance) (<code>FEEDBACK_MAX_EDIT_DISTANCE</code>)
+        conta come bozza scartata: l'operatore ha scritto un'altra risposta. Scartata anche la bozza superata da una più recente o
+        rimasta senza risposta alla chiusura del ticket.
+    </p>
+}

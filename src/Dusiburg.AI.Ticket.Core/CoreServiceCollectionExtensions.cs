@@ -1,5 +1,6 @@
 using Dusiburg.AI.Ticket.Core.Context;
 using Dusiburg.AI.Ticket.Core.Drafting;
+using Dusiburg.AI.Ticket.Core.Feedback;
 using Dusiburg.AI.Ticket.Core.Pipeline;
 using Dusiburg.AI.Ticket.Core.Publishing;
 using Microsoft.Extensions.Configuration;
@@ -10,7 +11,7 @@ namespace Dusiburg.AI.Ticket.Core;
 public static class CoreServiceCollectionExtensions
 {
     /// <summary>
-    /// Pipeline dell'agente: manopole, contesto, modello, pubblicazione, elaborazioni. Scoped come il contesto EF. Richiede
+    /// Pipeline dell'agente: manopole, contesto, modello, pubblicazione, elaborazioni, esiti. Scoped come il contesto EF. Richiede
     /// <c>AddTicketAi</c>, <c>AddTicketRag</c>, <c>AddTicketZammad</c>, il <c>TicketDbContext</c> e un <see cref="TimeProvider"/>.
     /// </summary>
     public static IServiceCollection AddTicketCore(this IServiceCollection services, IConfiguration configuration)
@@ -21,6 +22,7 @@ public static class CoreServiceCollectionExtensions
         services.AddScoped<ZammadPublisher>();
         services.AddScoped<TicketPipeline>();
         services.AddScoped<AgentRunService>();
+        services.AddScoped<DraftOutcomeService>();
 
         return services;
     }

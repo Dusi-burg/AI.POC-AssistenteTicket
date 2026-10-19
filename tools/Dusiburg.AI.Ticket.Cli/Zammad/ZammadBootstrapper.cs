@@ -237,7 +237,10 @@ internal sealed class ZammadBootstrapper(ZammadClient zammad, UserSecretsStore s
         }
     }
 
-    /// <summary>Webhook firmato verso l'Agent e trigger sugli articoli del cliente, creato disattivo (lo attiva la Fase 6).</summary>
+    /// <summary>
+    /// Webhook firmato verso l'Agent e i suoi trigger: articoli del cliente (Fase 6), risposte dell'operatore e chiusura (Fase 7).
+    /// Il primo nasce disattivo (lo attiva <c>zammad trigger on</c>); quelli aggiunti dopo prendono il suo stato.
+    /// </summary>
     private async Task EnsureWebhookAsync(IReadOnlyDictionary<string, long> groups, CancellationToken cancellationToken)
     {
         string secret = secrets.Get(UserSecretsStore.WebhookSecretKey) ?? CreateWebhookSecret();
@@ -248,7 +251,7 @@ internal sealed class ZammadBootstrapper(ZammadClient zammad, UserSecretsStore s
         {
             Name = ZammadDirectory.WebhookName, Endpoint = settings.WebhookTarget.ToString(), SignatureToken = secret, SslVerify = false,
             CustomizedPayload = true, CustomPayload = ZammadDirectory.WebhookPayload, Active = true,
-            Note = "Assistente ticket (POC): nuovi articoli del cliente verso l'Agent"
+            Note = "Assistente ticket (POC): articoli del cliente, risposte dell'operatore e chiusure verso l'Agent"
         };
 
         if (webhook is null)
@@ -268,7 +271,14 @@ internal sealed class ZammadBootstrapper(ZammadClient zammad, UserSecretsStore s
             Present($"webhook '{webhook.Name}'");
         }
 
-        await EnsureTriggerAsync(webhook.Id, groups, cancellationToken);
+        List<ZammadTrigger> triggers = await zammad.GetAsync<List<ZammadTrigger>>(ZammadResources.Triggers, cancellationToken);
+        bool active = triggers.SingleOrDefault(t => t.Name == ZammadDirectory.TriggerName)?.Active ?? false;
+        long[] groupIds = [.. groups.Values];
+
+        foreach (TriggerDefinition definition in ZammadDirectory.Triggers(groupIds))
+        {
+            await EnsureTriggerAsync(webhook.Id, definition, triggers.SingleOrDefault(t => t.Name == definition.Name), active, cancellationToken);
+        }
     }
 
     private static bool IsMasked(string? token) => token is { Length: > 0 } && token.All(c => c == '*');
@@ -282,11 +292,9 @@ internal sealed class ZammadBootstrapper(ZammadClient zammad, UserSecretsStore s
         return secret;
     }
 
-    private async Task EnsureTriggerAsync(long webhookId, IReadOnlyDictionary<string, long> groups, CancellationToken cancellationToken)
+    private async Task EnsureTriggerAsync(
+        long webhookId, TriggerDefinition definition, ZammadTrigger? trigger, bool active, CancellationToken cancellationToken)
     {
-        ZammadTrigger? trigger = (await zammad.GetAsync<List<ZammadTrigger>>(ZammadResources.Triggers, cancellationToken))
-            .SingleOrDefault(t => t.Name == ZammadDirectory.TriggerName);
-
         if (trigger is not null && PerformsWebhook(trigger, webhookId))
         {
             Present($"trigger '{trigger.Name}' ({(trigger.Active ? "attivo" : "disattivo")})");
@@ -295,30 +303,25 @@ internal sealed class ZammadBootstrapper(ZammadClient zammad, UserSecretsStore s
 
         var desired = new
         {
-            Name = ZammadDirectory.TriggerName,
+            definition.Name,
             Activator = "action",
             ExecutionConditionMode = "selective",
-            Condition = new Dictionary<string, object>
-            {
-                ["article.action"] = new { Operator = "is", Value = "create" },
-                ["article.sender_id"] = new { Operator = "is", Value = new[] { ZammadDirectory.CustomerSenderId } },
-                ["ticket.group_id"] = new { Operator = "is", Value = groups.Values.ToArray() },
-            },
+            definition.Condition,
             Perform = new Dictionary<string, object> { ["notification.webhook"] = new { WebhookId = webhookId } },
-            // Lo attiva la Fase 6, quando l'Agent pubblica /webhooks/zammad: fino ad allora le consegne fallirebbero.
-            Active = trigger?.Active ?? false,
-            Note = "Assistente ticket (POC): solo articoli del cliente, per evitare cicli con le scritture dell'agente"
+            // Fino a 'zammad trigger on' resta spento: l'Agent potrebbe non ascoltare ancora su /webhooks/zammad.
+            Active = trigger?.Active ?? active,
+            definition.Note
         };
 
         if (trigger is null)
         {
             await zammad.CreateAsync<ZammadTrigger>(ZammadResources.Triggers, desired, cancellationToken);
-            Changed($"trigger '{ZammadDirectory.TriggerName}' creato (disattivo fino alla Fase 6)");
+            Changed($"trigger '{definition.Name}' creato ({(desired.Active ? "attivo" : "disattivo")})");
         }
         else
         {
             await zammad.UpdateAsync<ZammadTrigger>(ZammadResources.Triggers, trigger.Id, desired, cancellationToken);
-            Changed($"trigger '{ZammadDirectory.TriggerName}' aggiornato");
+            Changed($"trigger '{definition.Name}' aggiornato");
         }
     }
 

@@ -1,0 +1,89 @@
+@page
+@model Dusiburg.AI.Ticket.Web.Pages.Data.IndexModel
+@{
+    ViewData["Title"] = "Dati demo";
+}
+
+<h1 class="h3">Dati demo</h1>
+<p class="text-muted">
+    Il "gestionale" simulato da cui l'assistente prende contesto e fonti: prodotti, clienti, knowledge base e note di rilascio.
+    Tutti i dati sono sintetici e fittizi.
+</p>
+
+@if (Model.Error is { } error)
+{
+    <div class="alert alert-warning" role="alert" id="agent-error">@error</div>
+}
+
+@if (Model.Catalog is { } catalog)
+{
+    <h2 class="h5">Prodotti</h2>
+    <div class="row g-3 mb-4" id="products">
+        @foreach (var product in catalog.Products)
+        {
+            <div class="col-md-6">
+                <div class="card h-100">
+                    <div class="card-header"><strong>@product.Name</strong> <code>@product.Code</code></div>
+                    <ul class="list-group list-group-flush small">
+                        @foreach (var version in product.Versions)
+                        {
+                            <li class="list-group-item d-flex justify-content-between">
+                                <span>@version.Version</span>
+                                <span class="text-muted">
+                                    rilasciata il @version.ReleasedOn.ToString("dd/MM/yyyy")@(version.EndOfSupportOn is { } end ? $", supporto fino al {end:dd/MM/yyyy}" : "")
+                                </span>
+                            </li>
+                        }
+                    </ul>
+                </div>
+            </div>
+        }
+    </div>
+
+    <h2 class="h5">Clienti <span class="badge text-bg-secondary">@catalog.Customers.Count</span></h2>
+    <div class="table-responsive mb-4">
+        <table class="table table-sm align-middle small" id="customers">
+            <thead><tr><th>Cliente</th><th>Dominio</th><th>Prodotto</th><th>Versione</th><th>Modalità</th><th>SLA</th><th>In Zammad</th></tr></thead>
+            <tbody>
+                @foreach (var customer in catalog.Customers)
+                {
+                    <tr>
+                        <td>@customer.Name</td>
+                        <td><code>@customer.EmailDomain</code></td>
+                        <td>@customer.ProductCode</td>
+                        <td>@(customer.Version ?? "—")</td>
+                        <td>@RunPresentation.Label(customer.Mode)</td>
+                        <td>@customer.Sla</td>
+                        <td>@(customer.InZammad ? "sì" : "no")</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <h2 class="h5">Knowledge base <span class="badge text-bg-secondary">@catalog.KbArticles.Count</span></h2>
+    <div class="mb-4" id="kb">
+        @foreach (var article in catalog.KbArticles)
+        {
+            <details class="border-bottom py-1 small">
+                <summary>
+                    <code>@article.Code</code> @article.Title
+                    <span class="text-muted">— @article.ProductCode, @RunPresentation.Label(article.Mode),
+                        versioni @(article.VersionFrom ?? "tutte")@(article.VersionTo is { } to ? $"–{to}" : article.VersionFrom is null ? "" : " e successive")</span>
+                </summary>
+                <pre class="text-wrap mt-1 mb-2">@article.Body</pre>
+            </details>
+        }
+    </div>
+
+    <h2 class="h5">Note di rilascio <span class="badge text-bg-secondary">@catalog.ReleaseNotes.Count</span></h2>
+    <div class="mb-4" id="release-notes">
+        @foreach (var note in catalog.ReleaseNotes)
+        {
+            <details class="border-bottom py-1 small">
+                <summary><code>@note.Code</code> @note.Title <span class="text-muted">— @note.ProductCode @note.Version, @note.Type</span></summary>
+                <pre class="text-wrap mt-1 mb-2">@note.Body</pre>
+            </details>
+        }
+    </div>
+}

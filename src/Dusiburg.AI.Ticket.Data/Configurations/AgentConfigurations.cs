@@ -14,6 +14,8 @@ internal sealed class AgentRunConfiguration : IEntityTypeConfiguration<AgentRun>
 
         builder.Property(r => r.Trigger).HasColumnName("RunTriggerId").HasConversion<byte>();
         builder.Property(r => r.State).HasColumnName("AgentRunStateId").HasConversion<byte>();
+        builder.Property(r => r.TicketNumber).HasMaxLength(ColumnSizes.TicketNumber).IsUnicode(false);
+        builder.Property(r => r.TicketTitle).HasMaxLength(ColumnSizes.Title);
         builder.Property(r => r.ErrorCode).HasMaxLength(ColumnSizes.ErrorCode).IsUnicode(false);
         builder.Property(r => r.Error).HasMaxLength(ColumnSizes.Error);
         builder.Property(r => r.TraceId).HasMaxLength(ColumnSizes.TraceId).IsUnicode(false).IsFixedLength();
@@ -47,12 +49,13 @@ internal sealed class AgentDraftConfiguration : IEntityTypeConfiguration<AgentDr
         builder.Property(d => d.Language).HasMaxLength(ColumnSizes.Language).IsUnicode(false);
         builder.Property(d => d.ChatModel).HasMaxLength(ColumnSizes.ModelName).IsUnicode(false);
         builder.Property(d => d.PromptHash).HasMaxLength(ColumnSizes.PromptHash).IsUnicode(false).IsFixedLength();
+        builder.Property(d => d.OutcomeReason).HasMaxLength(ColumnSizes.Reason);
 
         // Liste di stringhe del modello: collezioni primitive, salvate come JSON (nvarchar(max)).
         builder.PrimitiveCollection(d => d.MissingInformation);
         builder.PrimitiveCollection(d => d.Questions);
 
-        // Esiti del feedback (Fase 7).
+        // Esiti del feedback (Fase 7): riepilogo per esito e bozze in attesa.
         builder.HasIndex(d => d.Outcome);
 
         builder.HasOne<EnumLookup<DraftKind>>().WithMany().HasForeignKey(d => d.Kind).OnDelete(DeleteBehavior.Restrict);

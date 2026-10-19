@@ -29,6 +29,11 @@ internal static class TicketCli
             DraftCommand.Create(services)
         };
 
+        foreach (Command command in OperatorCommands.Create(services))
+        {
+            root.Subcommands.Add(command);
+        }
+
         // Le eccezioni arrivano a Program.cs, che stampa solo il messaggio (senza lo stack trace del gestore predefinito).
         return await root.Parse(args).InvokeAsync(new InvocationConfiguration { EnableDefaultExceptionHandler = false });
     }

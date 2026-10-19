@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using Dusiburg.AI.Ticket.Core.Drafting;
+using Dusiburg.AI.Ticket.Core.Publishing;
 using Dusiburg.AI.Ticket.Core.Verification;
 using Dusiburg.AI.Ticket.Data;
 using Dusiburg.AI.Ticket.Data.Configurations;
@@ -77,11 +78,15 @@ public sealed class AgentRunService(TicketDbContext db, TicketPipeline pipeline,
         try
         {
             DraftProposal proposal = await pipeline.ProposeAsync(run.ZammadTicketId, run.ZammadArticleId, cancellationToken);
-            (proposal, IReadOnlyList<string> tags) = await pipeline.PublishAsync(proposal, run.Id, run.TraceId is { } trace ? traceUrl?.Invoke(trace) : null, cancellationToken);
+            run.TicketNumber = Truncate(proposal.Ticket.Number, ColumnSizes.TicketNumber);
+            run.TicketTitle = Truncate(proposal.Ticket.Title, ColumnSizes.Title);
 
-            db.AgentDrafts.Add(ToEntity(run.Id, proposal));
+            (proposal, PublicationResult publication) = await pipeline.PublishAsync(
+                proposal, run.Id, run.TraceId is { } trace ? traceUrl?.Invoke(trace) : null, cancellationToken);
+
+            db.AgentDrafts.Add(ToEntity(run.Id, proposal, publication.NoteArticleId));
             Complete(run, AgentRunState.Completed, null, null);
-            activity?.SetTag("ticket.tags", string.Join(",", tags));
+            activity?.SetTag("ticket.tags", string.Join(",", publication.Tags));
         }
         catch (Exception exception) when (exception is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
@@ -104,11 +109,12 @@ public sealed class AgentRunService(TicketDbContext db, TicketPipeline pipeline,
         await db.SaveChangesAsync(cancellationToken);
     }
 
-    internal static AgentDraft ToEntity(int runId, DraftProposal proposal)
+    internal static AgentDraft ToEntity(int runId, DraftProposal proposal, long noteArticleId)
     {
         ModelClassification classification = proposal.Classification.Value;
         ModelDraft model = proposal.ModelDraft.Value;
         ConfidenceAssessment confidence = proposal.Confidence;
+        PipelineTimings timings = proposal.Timings;
         Dictionary<string, VerifiedCitation> cited = proposal.Verification.Citations.ToDictionary(c => c.Id, StringComparer.OrdinalIgnoreCase);
 
         var draft = new AgentDraft
@@ -129,6 +135,13 @@ public sealed class AgentRunService(TicketDbContext db, TicketPipeline pipeline,
             Questions = [.. proposal.Draft.Questions],
             ChatModel = Truncate(proposal.ModelDraft.ModelId, ColumnSizes.ModelName),
             PromptHash = proposal.ModelDraft.PromptHash,
+            ContextMs = Milliseconds(timings.Context),
+            ClassificationMs = Milliseconds(timings.Classification),
+            RetrievalMs = Milliseconds(timings.Retrieval),
+            GenerationMs = Milliseconds(timings.Generation),
+            VerificationMs = Milliseconds(timings.Verification),
+            PublicationMs = Milliseconds(timings.Publication),
+            NoteArticleId = checked((int)noteArticleId),
             CreatedAt = DateTimeOffset.UtcNow
         };
 
@@ -164,4 +177,6 @@ public sealed class AgentRunService(TicketDbContext db, TicketPipeline pipeline,
     };
 
     private static string Truncate(string value, int length) => value.Length <= length ? value : value[..length];
+
+    private static int Milliseconds(TimeSpan duration) => (int)Math.Round(duration.TotalMilliseconds);
 }

@@ -13,7 +13,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Console;
 
-// Uso: dotnet run --project tools/Dusiburg.AI.Ticket.Cli -- <comando> (zammad bootstrap | zammad seed | demo <n> | embed | search | eval retrieval | draft <ticket>)
+// Uso: dotnet run --project tools/Dusiburg.AI.Ticket.Cli -- <comando> (zammad bootstrap | zammad seed | demo <n> | embed | search | eval retrieval | draft <ticket> | reply <ticket> | close <ticket>)
 // Gli argomenti non vanno alla configurazione: li interpreta System.CommandLine.
 var builder = Host.CreateApplicationBuilder(new HostApplicationBuilderSettings { ContentRootPath = AppContext.BaseDirectory });
 
@@ -44,7 +44,7 @@ await host.StartAsync();
 try
 {
     // Il token serve solo ai comandi che parlano con Zammad: embed, search ed eval lavorano su database e modelli.
-    bool usesZammad = args.FirstOrDefault(a => !a.StartsWith('-')) is "zammad" or "demo" or "draft";
+    bool usesZammad = args.FirstOrDefault(a => !a.StartsWith('-')) is "zammad" or "demo" or "draft" or "reply" or "close";
 
     if (usesZammad && !host.Services.GetRequiredService<ZammadOptions>().HasApiToken)
     {

@@ -10,10 +10,12 @@ articles and release notes, and proposes a **reply draft with its sources** to t
 nothing is ever sent automatically. Everything runs locally: models on Ollama, data on SQL Server LocalDB, Zammad in Docker
 inside WSL.
 
-> **Status: Phase 6 — agent pipeline.** A new customer message in Zammad (webhook, polling or manual start) gets, within ~10–20 s,
-> a shared draft in the reply editor with the AI disclosure, an internal note with sources and confidence, and the `ai-bozza`
-> tag: an answer, a request for clarification or an escalation, decided by code. Feedback and the console arrive in the next
-> phase. All data is synthetic and fictitious.
+> **Status: Phase 7 — feedback and console.** A new customer message in Zammad (webhook, polling or manual start) gets, within
+> ~10–20 s, a shared draft in the reply editor with the AI disclosure, an internal note with sources and confidence, and the
+> `ai-bozza` tag: an answer, a request for clarification or an escalation, decided by code. When the agent sends the reply, the
+> Agent service compares it with the draft, records the outcome (sent as is, edited, discarded) and tags the ticket
+> `ai-generata` or `ai-generata-in-parte`; it flags replies whose AI disclosure was removed. The console shows runs, outcomes
+> and demo data. Evaluation arrives in the next phase. All data is synthetic and fictitious.
 
 What it adds to the other POCs of the series (Order-to-Cash, Claims assistant, Digital transport):
 
@@ -25,7 +27,7 @@ What it adds to the other POCs of the series (Order-to-Cash, Claims assistant, D
 ## Architecture
 
 .NET 10 + Aspire. The `Agent` service owns the database, hosts the model clients and talks to Zammad; the `Web` console shows
-service health. Zammad runs from the official `zammad-docker-compose` stack inside WSL, started and stopped by the AppHost.
+service health, runs, draft outcomes and demo data. Zammad runs from the official `zammad-docker-compose` stack inside WSL, started and stopped by the AppHost.
 Details in [docs/architettura.md](docs/architettura.md) (Italian).
 
 | Component | Address |
@@ -71,6 +73,11 @@ dotnet run --project tools/Dusiburg.AI.Ticket.Cli -- demo 1
 # Optional: the pipeline dry-run on a ticket (no write to Zammad), or a manual run published by the Agent
 dotnet run --project tools/Dusiburg.AI.Ticket.Cli -- draft 71164
 Invoke-RestMethod -Method Post http://localhost:5401/api/runs -ContentType application/json -Body '{"ticketId":170}'
+
+# 8. The agent sends the draft from Zammad's editor (or the Cli plays that part): the outcome and the ai-generata /
+#    ai-generata-in-parte tags follow within seconds; the console at http://localhost:5402 shows them under Runs and Outcomes
+dotnet run --project tools/Dusiburg.AI.Ticket.Cli -- reply 71171 [--modifica] [--riscrivi] [--senza-dicitura]
+dotnet run --project tools/Dusiburg.AI.Ticket.Cli -- close 71171
 ```
 
 On the very first run the AppHost clones the Zammad stack inside WSL and Docker pulls ~5 GB of images; create the Zammad

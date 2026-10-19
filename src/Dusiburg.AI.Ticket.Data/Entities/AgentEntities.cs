@@ -2,7 +2,7 @@ using Dusiburg.AI.Ticket.Shared.Domain;
 
 namespace Dusiburg.AI.Ticket.Data.Entities;
 
-// Schema agent: elaborazioni, bozze, fonti citate ed esito del feedback. Il dettaglio si rifinisce nelle Fasi 6 e 7.
+// Schema agent: elaborazioni, bozze, fonti citate ed esito del feedback (Fasi 6 e 7).
 
 /// <summary>Elaborazione di un articolo del cliente: una sola per (ticket, articolo) di Zammad, è il vincolo di idempotenza (P2).</summary>
 public sealed class AgentRun
@@ -12,6 +12,11 @@ public sealed class AgentRun
     public int ZammadTicketId { get; set; }
 
     public int ZammadArticleId { get; set; }
+
+    /// <summary>Numero e titolo del ticket, letti al passo "contesto": la console li mostra senza chiedere a Zammad.</summary>
+    public string? TicketNumber { get; set; }
+
+    public string? TicketTitle { get; set; }
 
     public RunTrigger Trigger { get; set; }
 
@@ -78,16 +83,45 @@ public sealed class AgentDraft
     /// <summary>SHA-256 esadecimale del prompt inviato al modello.</summary>
     public required string PromptHash { get; set; }
 
+    /// <summary>Durata dei passi della pipeline (gli stessi span del dashboard di Aspire).</summary>
+    public int ContextMs { get; set; }
+
+    public int ClassificationMs { get; set; }
+
+    public int RetrievalMs { get; set; }
+
+    public int GenerationMs { get; set; }
+
+    public int VerificationMs { get; set; }
+
+    public int PublicationMs { get; set; }
+
+    /// <summary>
+    /// Nota interna pubblicata con la bozza: la risposta dell'operatore è il primo articolo pubblico con un id maggiore (Fase 7).
+    /// Gli id degli articoli crescono, gli orologi di Windows e del container no.
+    /// </summary>
+    public int NoteArticleId { get; set; }
+
     public DraftOutcome Outcome { get; set; } = DraftOutcome.Unknown;
 
+    /// <summary>Articolo inviato dall'operatore a partire dalla bozza; <c>null</c> se non ha risposto.</summary>
+    public int? ReplyArticleId { get; set; }
+
+    /// <summary>Testo semplice dell'articolo inviato.</summary>
     public string? FinalText { get; set; }
 
-    /// <summary>Distanza di modifica normalizzata fra bozza e testo inviato (0 = invariato).</summary>
+    /// <summary>Distanza di modifica a parole fra bozza e testo inviato, senza la dicitura (0 = invariato, 1 = tutto diverso).</summary>
     public double? EditDistance { get; set; }
+
+    /// <summary>L'articolo inviato contiene la dicitura AI (P8); <c>null</c> se non c'è risposta.</summary>
+    public bool? DisclosureKept { get; set; }
 
     public DateTimeOffset CreatedAt { get; set; }
 
     public DateTimeOffset? OutcomeAt { get; set; }
+
+    /// <summary>Perché l'esito è quello: distanza oltre la soglia, bozza superata, ticket chiuso senza risposta.</summary>
+    public string? OutcomeReason { get; set; }
 
     public List<AgentDraftSource> Sources { get; } = [];
 }

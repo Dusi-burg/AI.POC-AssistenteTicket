@@ -10,17 +10,20 @@ using Microsoft.AspNetCore.Http.HttpResults;
 namespace Dusiburg.AI.Ticket.Agent.Events;
 
 /// <summary>Esito di una consegna del webhook, restituito a Zammad (che lo mostra nel registro delle consegne).</summary>
-public sealed record WebhookAccepted(string Outcome, int? RunId);
+/// <param name="Resolved">Bozze di cui la consegna ha registrato l'esito (risposta dell'operatore o chiusura).</param>
+public sealed record WebhookAccepted(string Outcome, int? RunId, int Resolved);
 
 /// <summary>
-/// Sorgente webhook (P1): <c>POST /webhooks/zammad</c> dal trigger "articolo del cliente", firmato HMAC-SHA1 nell'header
-/// <c>X-Hub-Signature: sha1=&lt;hex&gt;</c> con <c>ZAMMAD_WEBHOOK_SECRET</c> (fase-0.md §4 ter). Risponde subito <c>202</c>:
-/// l'elaborazione è in coda e Zammad non aspetta il modello (timeout del job di 30 s).
+/// Sorgente webhook (P1): <c>POST /webhooks/zammad</c> dai trigger "articolo del cliente", "risposta dell'operatore" e "ticket
+/// chiuso", firmato HMAC-SHA1 nell'header <c>X-Hub-Signature: sha1=&lt;hex&gt;</c> con <c>ZAMMAD_WEBHOOK_SECRET</c> (fase-0.md
+/// §4 ter). Risponde <c>202</c>: un'elaborazione va in coda e Zammad non aspetta il modello (timeout del job di 30 s); il
+/// controllo dell'esito si fa nella richiesta (~1 s) e un suo errore torna a Zammad, che ripete la consegna.
 /// </summary>
 public static class WebhookEventSource
 {
     public const string SignatureHeader = "X-Hub-Signature";
     public const string DeliveryHeader = "X-Zammad-Delivery";
+    public const string TriggerHeader = "X-Zammad-Trigger";
 
     public static IEndpointRouteBuilder MapZammadWebhook(this IEndpointRouteBuilder endpoints)
     {
@@ -50,14 +53,14 @@ public static class WebhookEventSource
 
         if (!TryParse(body, out TicketEvent? ticketEvent))
         {
-            return ApiProblems.Validation("Payload non riconosciuto: servono ticket_id, article_id, article_sender e article_internal.");
+            return ApiProblems.Validation("Payload non riconosciuto: servono ticket_id e article_id (con article_sender e article_internal) oppure ticket_state.");
         }
 
         IntakeResult result = await intake.AcceptAsync(ticketEvent, cancellationToken);
-        loggers.CreateLogger(typeof(WebhookEventSource)).LogInformation("Consegna {Delivery} del webhook: {Outcome}",
-            request.Headers[DeliveryHeader].ToString(), result.Outcome);
+        loggers.CreateLogger(typeof(WebhookEventSource)).LogInformation("Consegna {Delivery} del webhook ({Trigger}): {Outcome}",
+            request.Headers[DeliveryHeader].ToString(), request.Headers[TriggerHeader].ToString(), result.Outcome);
 
-        return TypedResults.Accepted((string?)null, new WebhookAccepted(result.Outcome.ToString(), result.RunId));
+        return TypedResults.Accepted((string?)null, new WebhookAccepted(result.Outcome.ToString(), result.RunId, result.Resolved?.Count ?? 0));
     }
 
     /// <summary>HMAC-SHA1 del corpo grezzo, confrontato in tempo costante.</summary>
@@ -87,7 +90,8 @@ public static class WebhookEventSource
 
     /// <summary>
     /// Payload minimale di <c>zammad bootstrap</c>. Le variabili di Zammad arrivano col tipo nativo (<c>3</c>, <c>false</c>), ma
-    /// si accettano anche come stringhe.
+    /// si accettano anche come stringhe. Il trigger di chiusura non ha articolo: <c>article_id</c> non è un numero e resta nullo,
+    /// basta <c>ticket_state</c>.
     /// </summary>
     internal static bool TryParse(byte[] body, [System.Diagnostics.CodeAnalysis.NotNullWhen(true)] out TicketEvent? ticketEvent)
     {
@@ -97,17 +101,21 @@ public static class WebhookEventSource
         {
             using JsonDocument document = JsonDocument.Parse(body);
             JsonElement root = document.RootElement;
+            long? articleId = ReadLong(root, "article_id");
+            string? state = root.ValueKind == JsonValueKind.Object && root.TryGetProperty("ticket_state", out JsonElement t) && t.ValueKind == JsonValueKind.String
+                ? t.GetString()
+                : null;
 
-            if (ReadLong(root, "ticket_id") is not { } ticketId || ReadLong(root, "article_id") is not { } articleId)
+            if (ReadLong(root, "ticket_id") is not { } ticketId || (articleId is null && string.IsNullOrWhiteSpace(state)))
             {
                 return false;
             }
 
-            string? sender = root.TryGetProperty("article_sender", out JsonElement s) ? s.ToString() : null;
+            string? sender = articleId is not null && root.TryGetProperty("article_sender", out JsonElement s) ? s.ToString() : null;
             bool isInternal = root.TryGetProperty("article_internal", out JsonElement i)
                 && (i.ValueKind == JsonValueKind.True || (i.ValueKind == JsonValueKind.String && bool.TryParse(i.GetString(), out bool value) && value));
 
-            ticketEvent = new TicketEvent(ticketId, articleId, sender, isInternal, RunTrigger.Webhook);
+            ticketEvent = new TicketEvent(ticketId, articleId, sender, isInternal, RunTrigger.Webhook, state);
 
             return true;
         }

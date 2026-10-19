@@ -75,18 +75,18 @@ public sealed class TicketPipeline(
         return new DraftProposal(ticket, classification, retrieval, draft, verification, confidence, composed, zammadTickets, timings);
     }
 
-    /// <summary>Bozza condivisa, nota interna e tag; restituisce la proposta con il tempo di pubblicazione e i tag scritti.</summary>
-    public async Task<(DraftProposal Proposal, IReadOnlyList<string> Tags)> PublishAsync(
+    /// <summary>Bozza condivisa, nota interna e tag; restituisce la proposta con il tempo di pubblicazione e ciò che è stato scritto.</summary>
+    public async Task<(DraftProposal Proposal, PublicationResult Publication)> PublishAsync(
         DraftProposal proposal, int? runId, string? traceUrl, CancellationToken cancellationToken)
     {
         string note = InternalNoteComposer.Compose(proposal, options.ConfidenceMinForDraft, zammadOptions.BaseUrl, traceUrl, runId);
 
-        (IReadOnlyList<string> tags, TimeSpan publicationTime) = await StepAsync("pubblicazione", () =>
+        (PublicationResult publication, TimeSpan publicationTime) = await StepAsync("pubblicazione", () =>
             publisher.PublishAsync(proposal.Ticket.ZammadTicketId, proposal.Draft, note, cancellationToken));
 
         PipelineTimings timings = proposal.Timings with { Publication = publicationTime, Total = proposal.Timings.Total + publicationTime };
 
-        return (proposal with { Timings = timings }, tags);
+        return (proposal with { Timings = timings }, publication);
     }
 
     /// <summary>Testo della ricerca: titolo e messaggi del cliente, puliti e anonimizzati come l'indice (Fase 5).</summary>

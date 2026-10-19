@@ -1,0 +1,164 @@
+@page "{id:int}"
+@model Dusiburg.AI.Ticket.Web.Pages.Runs.DetailsModel
+@{
+    ViewData["Title"] = "Elaborazione";
+}
+
+<p class="small mb-2"><a asp-page="/Runs/Index">← Elaborazioni</a></p>
+
+@if (Model.Error is { } error)
+{
+    <div class="alert alert-warning" role="alert" id="agent-error">@error</div>
+}
+
+@if (Model.Detail is { } detail)
+{
+    var run = detail.Run;
+    <h1 class="h3">
+        Elaborazione @run.Id
+        <span class="badge @RunPresentation.BadgeClass(run.State) fs-6 align-middle">@RunPresentation.Label(run.State)</span>
+    </h1>
+
+    <p>
+        Ticket <strong>@(run.TicketNumber ?? $"id {run.ZammadTicketId}")</strong> @run.TicketTitle,
+        articolo @run.ZammadArticleId, da @RunPresentation.Label(run.Trigger), ricevuto il @RunPresentation.Time(run.ReceivedAt).
+    </p>
+    <ul class="list-inline" id="links">
+        @if (Model.Links.Ticket(run.ZammadTicketId) is { } ticketUrl)
+        {
+            <li class="list-inline-item"><a class="btn btn-sm btn-outline-primary" href="@ticketUrl" target="_blank" rel="noopener">Apri in Zammad</a></li>
+        }
+        @if (Model.Links.Trace(run.TraceId) is { } traceUrl)
+        {
+            <li class="list-inline-item"><a class="btn btn-sm btn-outline-secondary" href="@traceUrl" target="_blank" rel="noopener">Traccia nel dashboard</a></li>
+        }
+    </ul>
+
+    @if (run.Error is { } runError)
+    {
+        <div class="alert alert-danger" id="run-error"><strong>@run.ErrorCode</strong>: @runError</div>
+    }
+
+    @if (detail.Draft is { } draft)
+    {
+        var outcome = draft.Outcome;
+        <div class="row g-3 mb-3">
+            <div class="col-lg-4">
+                <div class="card h-100" id="decision">
+                    <div class="card-header small">Decisione del codice</div>
+                    <div class="card-body small">
+                        <p>
+                            <span class="badge @RunPresentation.BadgeClass(draft.Kind)">@RunPresentation.Label(draft.Kind)</span>
+                            confidenza <strong>@RunPresentation.Number(draft.Confidence)</strong>
+                        </p>
+                        <dl class="row mb-0">
+                            <dt class="col-7">Retrieval</dt><dd class="col-5 text-end">@RunPresentation.Number(draft.RetrievalScore)</dd>
+                            <dt class="col-7">Citazioni</dt><dd class="col-5 text-end">@RunPresentation.Number(draft.CitationScore)</dd>
+                            <dt class="col-7">Copertura</dt><dd class="col-5 text-end">@RunPresentation.Number(draft.CoverageScore)</dd>
+                            <dt class="col-7">Autovalutazione</dt><dd class="col-5 text-end">@RunPresentation.Number(draft.SelfAssessment)</dd>
+                            <dt class="col-7">Il modello può rispondere</dt><dd class="col-5 text-end">@(draft.CanAnswer ? "sì" : "no")</dd>
+                        </dl>
+                        <hr />
+                        <p class="mb-1">Categoria <strong>@(draft.Category ?? "—")</strong>, priorità @RunPresentation.Label(draft.Priority)</p>
+                        @if (draft.MissingInformation.Count > 0)
+                        {
+                            <p class="mb-1">Informazioni mancanti:</p>
+                            <ul class="mb-0">@foreach (var item in draft.MissingInformation) { <li>@item</li> }</ul>
+                        }
+                        <p class="mt-2 mb-0 text-muted">Modello @draft.ChatModel</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-4">
+                <div class="card h-100" id="timings">
+                    <div class="card-header small">Tempi per passo · totale @RunPresentation.Seconds(draft.Timings.Total)</div>
+                    <div class="card-body small">
+                        @foreach (var (name, ms) in new[] {
+                            ("contesto", draft.Timings.Context), ("classificazione", draft.Timings.Classification), ("retrieval", draft.Timings.Retrieval),
+                            ("generazione", draft.Timings.Generation), ("verifica", draft.Timings.Verification), ("pubblicazione", draft.Timings.Publication) })
+                        {
+                            <div class="d-flex justify-content-between"><span>@name</span><span>@RunPresentation.Seconds(ms)</span></div>
+                            <div class="progress mb-2" role="progressbar" style="height: 6px" aria-label="@name">
+                                <div class="progress-bar" style="width: @(DetailsModel.Share(ms, draft.Timings.Total))%"></div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-4">
+                <div class="card h-100" id="outcome">
+                    <div class="card-header small">Esito dopo l'invio</div>
+                    <div class="card-body small">
+                        <p><span class="badge @RunPresentation.BadgeClass(outcome.Outcome)">@RunPresentation.Label(outcome.Outcome)</span></p>
+                        @if (outcome.Outcome != DraftOutcome.Unknown)
+                        {
+                            <dl class="row mb-0">
+                                <dt class="col-6">Quando</dt><dd class="col-6 text-end">@RunPresentation.Time(outcome.OutcomeAt)</dd>
+                                <dt class="col-6">Distanza</dt><dd class="col-6 text-end">@RunPresentation.Number(outcome.EditDistance)</dd>
+                                <dt class="col-6">Articolo</dt><dd class="col-6 text-end">@(outcome.ReplyArticleId?.ToString() ?? "—")</dd>
+                                <dt class="col-6">Dicitura AI</dt><dd class="col-6 text-end">@(outcome.DisclosureKept switch { true => "presente", false => "TOLTA", null => "—" })</dd>
+                                <dt class="col-6">Tag P8</dt><dd class="col-6 text-end">@(RunPresentation.AiTag(outcome.Outcome) ?? "—")</dd>
+                            </dl>
+                            <p class="mt-2 mb-0 text-muted">@outcome.Reason</p>
+                        }
+                        else
+                        {
+                            <p class="text-muted mb-0">L'operatore non ha ancora inviato la risposta.</p>
+                        }
+                        @if (outcome.DisclosureKept == false && outcome.Outcome is DraftOutcome.SentUnchanged or DraftOutcome.SentEdited)
+                        {
+                            <div class="alert alert-danger mt-2 mb-0 p-2" id="disclosure-removed">Dicitura AI tolta prima dell'invio (P8): ticket marcato <code>ai-dicitura-rimossa</code>.</div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-3 mb-3">
+            <div class="col-lg-6">
+                <h2 class="h6">Bozza proposta</h2>
+                <pre class="border rounded p-2 bg-body-tertiary small text-wrap" id="draft-body">@draft.Body</pre>
+                @if (draft.Questions.Count > 0)
+                {
+                    <p class="small mb-1">Domande per il cliente:</p>
+                    <ul class="small">@foreach (var question in draft.Questions) { <li>@question</li> }</ul>
+                }
+            </div>
+            <div class="col-lg-6">
+                <h2 class="h6">Testo inviato dall'operatore</h2>
+                @if (outcome.FinalText is { } finalText)
+                {
+                    <pre class="border rounded p-2 small text-wrap" id="final-text">@finalText</pre>
+                }
+                else
+                {
+                    <p class="text-muted small">Nessuna risposta inviata a partire da questa bozza.</p>
+                }
+            </div>
+        </div>
+
+        <h2 class="h6">Fonti proposte al modello</h2>
+        <div class="table-responsive">
+            <table class="table table-sm align-middle small" id="sources">
+                <thead><tr><th>#</th><th>Fonte</th><th>Tipo</th><th>Citata</th><th>Verificata</th><th>Motivo del modello</th></tr></thead>
+                <tbody>
+                    @foreach (var source in draft.Sources)
+                    {
+                        <tr>
+                            <td>@source.Rank</td>
+                            <td><code>@source.Key</code></td>
+                            <td>@RunPresentation.Label(source.Source)</td>
+                            <td>@(source.IsCitedByModel ? "sì" : "no")</td>
+                            <td>@(source.IsCitedByModel ? (source.IsVerified ? "sì" : "NO") : "—")</td>
+                            <td>@source.Reason</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+    else if (run.Error is null)
+    {
+        <p class="text-muted">Nessuna bozza registrata per questa elaborazione.</p>
+    }
+}

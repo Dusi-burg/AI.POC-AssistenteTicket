@@ -49,7 +49,9 @@ public class ZammadBootstrapperTests
         Assert.That(zammad.Resource("tag_list").Select(t => (string?)t["name"]), Is.EquivalentTo(ZammadDirectory.Tags));
         Assert.That(zammad.Resource("users").Select(u => (string?)u["login"]),
             Is.SupersetOf(new[] { ZammadDirectory.AssistantLogin, "marta.ferrari@dusiburg-software.example.it", "luca.conti@dusiburg-software.example.it" }));
-        Assert.That(zammad.Resource("triggers").Single()["active"]!.GetValue<bool>(), Is.False, "attivo solo dalla Fase 6");
+        Assert.That(zammad.Resource("triggers").Select(t => (string?)t["name"]), Is.EquivalentTo(ZammadDirectory.TriggerNames));
+        Assert.That(zammad.Resource("triggers").Select(t => t["active"]!.GetValue<bool>()), Has.All.False, "attivi solo con 'zammad trigger on'");
+        Assert.That(zammad.Resource("webhooks").Single()["custom_payload"]!.GetValue<string>(), Does.Contain("\"ticket_state\""));
         Assert.That(report.Changed, Is.Not.Empty);
     }
 

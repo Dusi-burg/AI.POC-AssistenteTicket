@@ -7,6 +7,9 @@ namespace Dusiburg.AI.Ticket.Cli.Zammad;
 /// <summary>Campo personalizzato da creare con il gestore oggetti di Zammad.</summary>
 internal sealed record AttributeDefinition(string Object, string Name, string Display, string DataType, object DataOption, object Screens, int Position);
 
+/// <summary>Trigger che chiama il webhook dell'Agent: condizioni nel formato dell'API di Zammad.</summary>
+internal sealed record TriggerDefinition(string Name, Dictionary<string, object> Condition, string Note);
+
 /// <summary>
 /// Cosa contiene l'helpdesk del POC (fase-4.md §2): gruppi, campi personalizzati, tag, utenti tecnici, webhook e trigger. Un solo
 /// posto per i nomi, che bootstrap, seed e demo usano allo stesso modo.
@@ -39,13 +42,50 @@ internal static class ZammadDirectory
 
     public const string WebhookName = "Assistente ticket";
     public const string TriggerName = "Assistente ticket — articolo del cliente";
+    public const string ReplyTriggerName = "Assistente ticket — risposta dell'operatore";
+    public const string ClosedTriggerName = "Assistente ticket — ticket chiuso";
 
-    /// <summary>Payload minimale (fase-0.md §4 ter): JSON valido prima dell'interpolazione, quindi variabili tra virgolette.</summary>
+    /// <summary>I trigger del webhook: <c>zammad trigger on|off</c> li accende e spegne insieme.</summary>
+    public static IReadOnlyList<string> TriggerNames { get; } = [TriggerName, ReplyTriggerName, ClosedTriggerName];
+
+    /// <summary>
+    /// Payload minimale (fase-0.md §4 ter): JSON valido prima dell'interpolazione, quindi variabili tra virgolette. Con
+    /// <c>ticket_state</c> l'Agent riconosce la chiusura, che non ha articolo (Fase 7).
+    /// </summary>
     public const string WebhookPayload =
-        """{ "ticket_id": "#{ticket.id}", "ticket_number": "#{ticket.number}", "article_id": "#{article.id}", "article_sender": "#{article.sender.name}", "article_internal": "#{article.internal}" }""";
+        """{ "ticket_id": "#{ticket.id}", "ticket_number": "#{ticket.number}", "ticket_state": "#{ticket.state.name}", "article_id": "#{article.id}", "article_sender": "#{article.sender.name}", "article_internal": "#{article.internal}" }""";
 
-    /// <summary>Id fisso del mittente Customer in Zammad.</summary>
+    /// <summary>Id fissi dei mittenti predefiniti di Zammad.</summary>
+    public const int AgentSenderId = 1;
     public const int CustomerSenderId = 2;
+
+    /// <summary>Id fisso dello stato predefinito <c>closed</c>.</summary>
+    public const int ClosedStateId = 4;
+
+    /// <summary>
+    /// Trigger del webhook, tutti sui gruppi del POC. Articolo del cliente: parte l'elaborazione. Articolo dell'operatore (anche le
+    /// note interne dell'assistente: le scarta l'Agent) e chiusura: controllo dell'esito della bozza (Fase 7).
+    /// </summary>
+    public static IReadOnlyList<TriggerDefinition> Triggers(long[] groupIds) =>
+    [
+        new(TriggerName, ArticleCreatedBy(CustomerSenderId, groupIds),
+            "Assistente ticket (POC): articoli del cliente, per evitare cicli con le scritture dell'agente"),
+        new(ReplyTriggerName, ArticleCreatedBy(AgentSenderId, groupIds),
+            "Assistente ticket (POC): risposte dell'operatore, per l'esito della bozza e la marcatura AI"),
+        new(ClosedTriggerName, new Dictionary<string, object>
+            {
+                ["ticket.state_id"] = new { Operator = "is", Value = new[] { ClosedStateId } },
+                ["ticket.group_id"] = new { Operator = "is", Value = groupIds },
+            },
+            "Assistente ticket (POC): ticket chiuso, per le bozze rimaste senza risposta")
+    ];
+
+    private static Dictionary<string, object> ArticleCreatedBy(int senderId, long[] groupIds) => new()
+    {
+        ["article.action"] = new { Operator = "is", Value = "create" },
+        ["article.sender_id"] = new { Operator = "is", Value = new[] { senderId } },
+        ["ticket.group_id"] = new { Operator = "is", Value = groupIds },
+    };
 
     public const string ProductField = "prodotto";
     public const string VersionField = "versione_prodotto";

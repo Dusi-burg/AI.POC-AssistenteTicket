@@ -1,0 +1,118 @@
+@page
+@model Dusiburg.AI.Ticket.Web.Pages.Runs.IndexModel
+@{
+    ViewData["Title"] = "Elaborazioni";
+}
+
+<h1 class="h3">Elaborazioni</h1>
+<p class="text-muted">
+    Ogni messaggio del cliente in Zammad diventa un'elaborazione: bozza decisa dal codice, confidenza, fonti, tempi e, dopo
+    l'invio, che cosa ne ha fatto l'operatore. Le ultime 50, dalla più recente.
+</p>
+
+<form method="get" class="card card-body mb-3" id="filters">
+    <div class="row g-2 align-items-end">
+        <div class="col-md-3">
+            <label asp-for="State" class="form-label small">Stato</label>
+            <select asp-for="State" class="form-select form-select-sm">
+                <option value="">(tutti)</option>
+                @foreach (var state in Enum.GetValues<AgentRunState>())
+                {
+                    <option value="@state">@RunPresentation.Label(state)</option>
+                }
+            </select>
+        </div>
+        <div class="col-md-3">
+            <label asp-for="Kind" class="form-label small">Tipo di bozza</label>
+            <select asp-for="Kind" class="form-select form-select-sm">
+                <option value="">(tutti)</option>
+                @foreach (var kind in Enum.GetValues<DraftKind>())
+                {
+                    <option value="@kind">@RunPresentation.Label(kind)</option>
+                }
+            </select>
+        </div>
+        <div class="col-md-3">
+            <label asp-for="Outcome" class="form-label small">Esito</label>
+            <select asp-for="Outcome" class="form-select form-select-sm">
+                <option value="">(tutti)</option>
+                @foreach (var outcome in Enum.GetValues<DraftOutcome>())
+                {
+                    <option value="@outcome">@RunPresentation.Label(outcome)</option>
+                }
+            </select>
+        </div>
+        <div class="col-md-3 d-flex gap-2 align-items-center">
+            <button type="submit" class="btn btn-primary btn-sm">Filtra</button>
+            <a asp-page="/Runs/Index" class="small">azzera</a>
+        </div>
+    </div>
+</form>
+
+@if (Model.Error is { } error)
+{
+    <div class="alert alert-warning" role="alert" id="agent-error">@error</div>
+}
+
+@if (Model.Runs is { } runs)
+{
+    @if (runs.Count == 0)
+    {
+        <p class="text-muted" id="no-runs">Nessuna elaborazione: crea un ticket con <code>Cli demo &lt;n&gt;</code>.</p>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table table-sm align-middle" id="runs">
+                <thead>
+                    <tr>
+                        <th>#</th><th>Ricevuta</th><th>Ticket</th><th>Origine</th><th>Stato</th><th>Bozza</th>
+                        <th class="text-end">Confidenza</th><th>Esito</th><th class="text-end">Durata</th><th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var run in runs)
+                    {
+                        <tr>
+                            <td><a asp-page="/Runs/Details" asp-route-id="@run.Id">@run.Id</a></td>
+                            <td class="small text-nowrap">@RunPresentation.Time(run.ReceivedAt)</td>
+                            <td class="small">
+                                @if (Model.Links.Ticket(run.ZammadTicketId) is { } ticketUrl)
+                                {
+                                    <a href="@ticketUrl" target="_blank" rel="noopener">@(run.TicketNumber ?? $"id {run.ZammadTicketId}")</a>
+                                }
+                                else
+                                {
+                                    @(run.TicketNumber ?? $"id {run.ZammadTicketId}")
+                                }
+                                <span class="text-muted">@run.TicketTitle</span>
+                            </td>
+                            <td class="small">@RunPresentation.Label(run.Trigger)</td>
+                            <td><span class="badge @RunPresentation.BadgeClass(run.State)" title="@run.Error">@RunPresentation.Label(run.State)</span></td>
+                            <td>
+                                @if (run.DraftKind is { } kind)
+                                {
+                                    <span class="badge @RunPresentation.BadgeClass(kind)">@RunPresentation.Label(kind)</span>
+                                }
+                            </td>
+                            <td class="text-end">@RunPresentation.Number(run.Confidence)</td>
+                            <td>
+                                @if (run.Outcome is { } outcome)
+                                {
+                                    <span class="badge @RunPresentation.BadgeClass(outcome)">@RunPresentation.Label(outcome)</span>
+                                }
+                            </td>
+                            <td class="text-end small">@RunPresentation.Seconds(run.DurationMs)</td>
+                            <td class="small">
+                                @if (Model.Links.Trace(run.TraceId) is { } traceUrl)
+                                {
+                                    <a href="@traceUrl" target="_blank" rel="noopener">traccia</a>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+}

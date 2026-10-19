@@ -14,7 +14,7 @@ using Microsoft.Extensions.Hosting;
 
 namespace Dusiburg.AI.Ticket.Agent.Tests;
 
-/// <summary>Sorgenti degli eventi (P1): firma e payload del webhook, endpoint senza database, filtro del polling.</summary>
+/// <summary>Sorgenti degli eventi (P1): firma e payload del webhook, smistamento, endpoint senza database, filtri del polling.</summary>
 public class EventSourceTests
 {
     private const string Secret = "segreto-di-prova";
@@ -67,7 +67,36 @@ public class EventSourceTests
         Assert.That(ticketEvent, Is.EqualTo(new TicketEvent(ticketId, articleId, sender, isInternal, RunTrigger.Webhook)));
     }
 
+    [TestCase("""{"ticket_id":3,"ticket_state":"closed","article_id":"","article_sender":"","article_internal":""}""")]
+    [TestCase("""{"ticket_id":3,"ticket_state":"closed","article_id":"#{article.id / no such method}"}""")]
+    public void TryParse_ClosureWithoutArticle_IsAClosureEvent(string json)
+    {
+        //SUT
+        bool parsed = WebhookEventSource.TryParse(Encoding.UTF8.GetBytes(json), out TicketEvent? ticketEvent);
+
+        Assert.That(parsed, Is.True);
+        Assert.That(ticketEvent, Is.EqualTo(new TicketEvent(3, null, null, false, RunTrigger.Webhook, "closed")));
+        Assert.That((ticketEvent!.IsClosure, ticketEvent.IsAgentReply, ticketEvent.IsCustomerArticle), Is.EqualTo((true, false, false)));
+    }
+
+    [Test]
+    public void TicketEvent_RoutingBySenderAndVisibility()
+    {
+        //SETUP
+        var customer = new TicketEvent(3, 9, "Customer", false, RunTrigger.Webhook, "open");
+        var reply = new TicketEvent(3, 10, "Agent", false, RunTrigger.Webhook, "open");
+        var note = new TicketEvent(3, 11, "Agent", true, RunTrigger.Webhook, "open");
+        var replyAndClose = new TicketEvent(3, 12, "Agent", false, RunTrigger.Webhook, "closed");
+
+        //SUT
+        Assert.That((customer.IsCustomerArticle, customer.IsAgentReply, customer.IsClosure), Is.EqualTo((true, false, false)));
+        Assert.That((reply.IsCustomerArticle, reply.IsAgentReply, reply.IsClosure), Is.EqualTo((false, true, false)));
+        Assert.That((note.IsCustomerArticle, note.IsAgentReply, note.IsClosure), Is.EqualTo((false, false, false)), "nota interna dell'assistente: ignorata");
+        Assert.That((replyAndClose.IsAgentReply, replyAndClose.IsClosure), Is.EqualTo((true, true)));
+    }
+
     [TestCase("""{"ticket_id":3}""")]
+    [TestCase("""{"ticket_id":3,"ticket_state":""}""")]
     [TestCase("""{"ticket_id":"#{ticket.x / no such method}","article_id":9}""")]
     [TestCase("non è json")]
     public void TryParse_MissingOrInvalidIds_IsRejected(string json)
@@ -141,6 +170,24 @@ public class EventSourceTests
         Assert.That(next, Is.EqualTo(start.AddMinutes(4)));
         Assert.That(unchanged, Is.EqualTo(start.AddMinutes(10)));
         Assert.That(empty, Is.EqualTo(start));
+    }
+
+    [Test]
+    public void Polling_FeedbackOnAgentRepliesAfterTheStartOrOnClosedTickets()
+    {
+        //SETUP
+        var start = new DateTimeOffset(2026, 10, 19, 10, 0, 0, TimeSpan.Zero);
+        ZammadTicketDetail open = Ticket(1, start) with { State = "open" };
+        ZammadTicketDetail closed = Ticket(2, start) with { State = "closed" };
+        ZammadArticleDetail[] oldReply = [Article(1, "Agent", isInternal: false, start.AddMinutes(-5))];
+        ZammadArticleDetail[] newReply = [Article(2, "Agent", isInternal: false, start.AddMinutes(1))];
+        ZammadArticleDetail[] note = [Article(3, "Agent", isInternal: true, start.AddMinutes(1))];
+
+        //SUT
+        Assert.That(PollingEventSource.HasFeedbackEvent(open, newReply, start), Is.True);
+        Assert.That(PollingEventSource.HasFeedbackEvent(open, oldReply, start), Is.False);
+        Assert.That(PollingEventSource.HasFeedbackEvent(open, note, start), Is.False);
+        Assert.That(PollingEventSource.HasFeedbackEvent(closed, [], start), Is.True);
     }
 
     private static async Task<HttpResponseMessage> PostAsync(HttpClient client, string body, string signature)

@@ -23,34 +23,37 @@ internal static class ZammadCommands
     };
 
     /// <summary>
-    /// <c>zammad trigger on|off</c>: il trigger del webhook nasce disattivo (Fase 4); si accende quando l'Agent è pronto a
-    /// ricevere le consegne su <c>/webhooks/zammad</c> (Fase 6). Spento, l'alternativa è <c>TICKET_EVENT_SOURCE=polling</c>.
+    /// <c>zammad trigger on|off</c>: i trigger del webhook nascono disattivi (Fase 4); si accendono quando l'Agent è pronto a
+    /// ricevere le consegne su <c>/webhooks/zammad</c> (Fase 6). Spenti, l'alternativa è <c>TICKET_EVENT_SOURCE=polling</c>.
     /// </summary>
     private static Command Trigger(IServiceProvider services)
     {
         var state = new Argument<string>("stato") { Description = "on oppure off." };
         state.AcceptOnlyFromAmong("on", "off");
-        var command = new Command("trigger", "Attiva o disattiva il trigger che manda all'Agent gli articoli del cliente.") { state };
+        var command = new Command("trigger", "Attiva o disattiva i trigger che mandano all'Agent articoli, risposte e chiusure.") { state };
 
         command.SetAction(async (parse, cancellationToken) =>
         {
             bool active = parse.GetValue(state) == "on";
             ZammadClient zammad = services.GetRequiredService<ZammadClient>();
-            ZammadTrigger? trigger = (await zammad.GetAsync<List<ZammadTrigger>>(ZammadResources.Triggers, cancellationToken))
-                .SingleOrDefault(t => t.Name == ZammadDirectory.TriggerName);
+            List<ZammadTrigger> triggers = await zammad.GetAsync<List<ZammadTrigger>>(ZammadResources.Triggers, cancellationToken);
+            List<string> missing = [.. ZammadDirectory.TriggerNames.Where(name => triggers.All(t => t.Name != name))];
 
-            if (trigger is null)
+            if (missing.Count > 0)
             {
-                Console.Error.WriteLine($"Trigger '{ZammadDirectory.TriggerName}' assente: lanciare prima 'zammad bootstrap'.");
+                Console.Error.WriteLine($"Trigger assenti ({string.Join(", ", missing)}): lanciare prima 'zammad bootstrap'.");
                 return TicketCli.ExitError;
             }
 
-            if (trigger.Active != active)
+            foreach (ZammadTrigger trigger in triggers.Where(t => ZammadDirectory.TriggerNames.Contains(t.Name)))
             {
-                await zammad.UpdateAsync<ZammadTrigger>(ZammadResources.Triggers, trigger.Id, new { Active = active }, cancellationToken);
-            }
+                if (trigger.Active != active)
+                {
+                    await zammad.UpdateAsync<ZammadTrigger>(ZammadResources.Triggers, trigger.Id, new { Active = active }, cancellationToken);
+                }
 
-            Console.WriteLine($"Trigger '{trigger.Name}' {(active ? "attivo" : "disattivo")}{(trigger.Active == active ? " (lo era già)" : "")}.");
+                Console.WriteLine($"Trigger '{trigger.Name}' {(active ? "attivo" : "disattivo")}{(trigger.Active == active ? " (lo era già)" : "")}.");
+            }
 
             return 0;
         });

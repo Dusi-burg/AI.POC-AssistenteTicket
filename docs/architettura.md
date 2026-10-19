@@ -1,7 +1,6 @@
 # Assistente ticket — architettura
 
-> Stato: **Fase 6 (pipeline dell'agente)**. Il documento cresce fase per fase: feedback e console (Fase 7), valutazione (Fase 8)
-> arrivano con le loro fasi.
+> Stato: **Fase 7 (feedback e console)**. Il documento cresce fase per fase: la valutazione (Fase 8) arriva con la sua fase.
 
 ## 1. Che cos'è
 
@@ -19,11 +18,11 @@ flowchart LR
         Z["Zammad 7.2.2 · 127.0.0.1:8080<br/>+ Elasticsearch, PostgreSQL, Redis"]
     end
     OP([Operatore]) -->|vede la bozza, modifica, invia| Z
-    Z -->|webhook su 172.24.176.1:5401| AG["Ticket.Agent · :5401<br/>(tutte le interfacce)"]
+    Z -->|webhook su 172.24.176.1:5401<br/>articolo del cliente, risposta, chiusura| AG["Ticket.Agent · :5401<br/>(tutte le interfacce)"]
     AG -->|API REST, token di ai-assistant| Z
     AG --> DB[("LocalDB localdev<br/>database Ticket")]
     AG --> OL{{"Ollama · 127.0.0.1:11434<br/>qwen3.5:9b GPU · embeddinggemma CPU"}}
-    W["Ticket.Web · :5402<br/>console"] -->|/api/health| AG
+    W["Ticket.Web · :5402<br/>console"] -->|/api/health, runs, outcomes, catalog| AG
     H["AppHost Aspire<br/>dashboard :17579"] -.-> AG
     H -.-> W
     H -.->|zammad-wsl: wsl … zammad-up.sh| Z
@@ -54,12 +53,12 @@ non esiste.
 | `Dusiburg.AI.Ticket.Ai` | fabbrica dei client di chat per compito, embedding su CPU, `EmbeddingProfile`, `EmbeddingService` (prefissi, batch, retry), cattura dei prompt |
 | `Dusiburg.AI.Ticket.Rag` | pulizia e anonimizzazione, chunking, indicizzazione, retrieval ibrido (vettoriale in SQL + BM25 in memoria, RRF), valutazione |
 | `Dusiburg.AI.Ticket.Zammad` | client tipizzato dell'API di Zammad, modelli dell'API, probe |
-| `Dusiburg.AI.Ticket.Core` | pipeline: contesto da Zammad, classificazione, generazione, verifica, confidenza, composizione con la dicitura AI, pubblicazione, elaborazioni registrate |
-| `Dusiburg.AI.Ticket.Agent` | Minimal API: webhook `/webhooks/zammad` e polling, coda con un consumatore, `/api/runs`, `/api/health` |
-| `Dusiburg.AI.Ticket.Web` | console Razor Pages: stato dei servizi |
+| `Dusiburg.AI.Ticket.Core` | pipeline: contesto da Zammad, classificazione, generazione, verifica, confidenza, composizione con la dicitura AI, pubblicazione, elaborazioni registrate; esito della bozza e marcatura AI dopo l'invio |
+| `Dusiburg.AI.Ticket.Agent` | Minimal API: webhook `/webhooks/zammad` e polling, coda con un consumatore, `/api/runs`, `/api/outcomes`, `/api/catalog`, `/api/health` |
+| `Dusiburg.AI.Ticket.Web` | console Razor Pages: Stato, Elaborazioni (con dettaglio), Esiti, Dati demo |
 | `tools/Dusiburg.AI.Ticket.DbInit` | ricrea il database dal modello e carica catalogo demo e dati simulati di `data/` |
 | `tools/Dusiburg.AI.Ticket.DataGen` | genera `data/tickets.json` dai testi di `data/`, con seed fisso |
-| `tools/Dusiburg.AI.Ticket.Cli` | riga di comando: `zammad bootstrap`, `zammad seed`, `zammad trigger on` e `off`, `demo <n>`, `embed`, `search`, `eval retrieval`, `draft <ticket>` |
+| `tools/Dusiburg.AI.Ticket.Cli` | riga di comando: `zammad bootstrap`, `zammad seed`, `zammad trigger on` e `off`, `demo <n>`, `embed`, `search`, `eval retrieval`, `draft <ticket>`, `reply <ticket>`, `close <ticket>` |
 
 Regole di confine: l'Agent è l'unico proprietario del database; la Web parla solo con l'Agent via HTTP; solo `Ai` conosce i
 provider dei modelli e solo `Zammad` conosce l'API di Zammad.
@@ -74,7 +73,7 @@ database dal modello; le query vettoriali (Fase 5) sono Dapper con `SqlVector<fl
 |---|---|---|
 | `support` | `Product`, `ProductVersion` (`Sequence` = ordine di rilascio), `Customer` (chiave `EmailDomain`), `HistoricalTicket` (chiave `Number`, `IsTestSet`, `CaseCode`, `TrapKindId`, `DuplicateOfId`), `TicketMessage`, `Resolution`, `KbArticle` (chiave `Code`), `ReleaseNote` (chiave `Code`) | `DeploymentMode`, `SlaLevel`, `TicketPriority`, `TicketState`, `MessageAuthor`, `ReleaseNoteType`, `TrapKind` |
 | `rag` | `Chunk` (fonte, metadati di applicabilità, testo, `Embedding VECTOR(n)`), `EmbeddingInfo` (riga unica: modello e dimensione dei vettori salvati) | `ChunkSource` |
-| `agent` | `AgentRun` (univoco su ticket + articolo di Zammad: idempotenza), `AgentDraft` (segnali e confidenza, testo, esito del feedback), `AgentDraftSource` | `RunTrigger`, `AgentRunState`, `DraftKind`, `DraftOutcome` |
+| `agent` | `AgentRun` (univoco su ticket + articolo di Zammad: idempotenza; numero e titolo del ticket), `AgentDraft` (segnali e confidenza, testo, tempi per passo, id della nota interna; esito, testo inviato, distanza di modifica, dicitura mantenuta), `AgentDraftSource` | `RunTrigger`, `AgentRunState`, `DraftKind`, `DraftOutcome` |
 
 - Le chiavi di business (`Number`, `Code`) sono gli id con cui il modello cita le fonti, e la verifica a valle li confronta con
   quelli recuperati.
@@ -203,10 +202,63 @@ flowchart LR
 - `Cli draft <ticket>` esegue la pipeline **a secco** (niente Zammad, niente database): serve a tarare il prompt.
 
 ```powershell
-dotnet run --project tools/Dusiburg.AI.Ticket.Cli -- zammad trigger on    # il webhook manda all'Agent gli articoli del cliente
+dotnet run --project tools/Dusiburg.AI.Ticket.Cli -- zammad trigger on    # il webhook manda all'Agent articoli, risposte e chiusure
 dotnet run --project tools/Dusiburg.AI.Ticket.Cli -- draft 71164          # prova a secco su un ticket (numero o id)
 Invoke-RestMethod -Method Post http://localhost:5401/api/runs -ContentType application/json -Body '{"ticketId":170}'
 ```
+
+### Esito della bozza e marcatura AI (Fase 7)
+
+All'invio Zammad cancella la bozza condivisa e crea una nota pubblica dell'operatore con l'HTML dell'editor (Fase 0): il testo
+finale è quindi il primo articolo pubblico con mittente `Agent` successivo alla bozza.
+
+```mermaid
+flowchart LR
+    R["risposta dell'operatore<br/>(trigger)"] --> K
+    X["ticket chiuso<br/>(trigger)"] --> K
+    P["polling / POST /api/outcomes/check"] --> K
+    K["controllo dell'esito<br/>del ticket"] --> D{"risposta dopo la nota<br/>della bozza?"}
+    D -->|"distanza 0"| U["SentUnchanged<br/>tag ai-generata"]
+    D -->|"≤ FEEDBACK_MAX_EDIT_DISTANCE"| E["SentEdited<br/>tag ai-generata-in-parte"]
+    D -->|"oltre"| S["Discarded"]
+    D -->|"no: bozza più recente<br/>o ticket chiuso"| S
+    U --> M{"dicitura AI<br/>nell'articolo?"}
+    E --> M
+    M -->|no| RM["tag ai-dicitura-rimossa<br/>+ nota interna + avviso in Esiti"]
+```
+
+- **Un solo controllo per ticket**, idempotente: ogni evento (risposta, chiusura, polling, comando manuale) lo esegue e risolve
+  le bozze ancora `Unknown`, dalla più vecchia; una bozza con un esito non si tocca più. Un controllo alla volta, così risposta e
+  chiusura contemporanee non scrivono due volte la stessa nota.
+- **Riferimento**: l'id della nota interna pubblicata con la bozza (`AgentDraft.NoteArticleId`); la risposta è il primo articolo
+  pubblico dell'operatore con id maggiore e minore della nota della bozza successiva. Niente orari: gli orologi di Windows e del
+  container possono differire.
+- **Distanza di modifica**: Levenshtein **a parole**, normalizzata sul più lungo dei due testi, sul testo semplice ottenuto da
+  entrambi con la stessa conversione HTML → testo, **senza la dicitura**, che si controlla a parte. Oltre `FEEDBACK_MAX_EDIT_DISTANCE`
+  (0,7) l'operatore ha scritto un'altra risposta: `Discarded`, senza tag P8.
+- **Marcatura P8**: tag e nota si scrivono prima di salvare l'esito; se Zammad non risponde il webhook restituisce un errore e
+  Zammad ripete la consegna (i tag non si duplicano).
+- **Smistamento** in `TicketEventIntake`: articolo pubblico del cliente → elaborazione in coda; risposta pubblica dell'operatore
+  o ticket chiuso → controllo dell'esito subito nella richiesta (~1 s, nessun modello, non aspetta la GPU); note interne → nulla.
+- **Bozza utile** (criterio del PLAN §1): inviata com'era o con distanza ≤ 0,3; la pagina Esiti ne mostra la quota.
+
+```powershell
+dotnet run --project tools/Dusiburg.AI.Ticket.Cli -- reply 71171                       # invia la bozza com'è (come l'operatore)
+dotnet run --project tools/Dusiburg.AI.Ticket.Cli -- reply 71172 --modifica             # aggiunge una frase
+dotnet run --project tools/Dusiburg.AI.Ticket.Cli -- reply 71173 --senza-dicitura       # toglie la dicitura AI
+dotnet run --project tools/Dusiburg.AI.Ticket.Cli -- reply 71174 --riscrivi             # risposta scritta dall'operatore
+dotnet run --project tools/Dusiburg.AI.Ticket.Cli -- close 71175                        # chiude senza rispondere
+Invoke-RestMethod -Method Post http://localhost:5401/api/outcomes/check -ContentType application/json -Body '{"ticketId":171}'
+```
+
+### Console (Fase 7)
+
+| Pagina | Contenuto | API dell'Agent |
+|---|---|---|
+| Stato | controlli di salute, link a Zammad e al dashboard | `/api/health` |
+| Elaborazioni | ultime 50, filtri per stato, tipo di bozza ed esito; dettaglio con decisione e segnali, tempi per passo, fonti citate e verificate, bozza accanto al testo inviato, link a Zammad e alla traccia | `/api/runs`, `/api/runs/{id}` |
+| Esiti | bozze per tipo ed esito, quota di bozze utili, distanza media, **avvisi delle diciture tolte** | `/api/outcomes` |
+| Dati demo | prodotti e versioni, clienti, articoli KB e note di rilascio | `/api/catalog` |
 
 ## 4. Modelli
 
@@ -239,6 +291,7 @@ default del codice.
 | `RETRIEVAL_VERSION_PENALTY` | `0.5` (moltiplicatore per i chunk fuori dalla versione del cliente; `1` = nessuna penalità) |
 | `CONFIDENCE_MIN_FOR_DRAFT` | `0.55` (sotto soglia: chiarimenti o escalation) |
 | `TICKET_EVENT_SOURCE`, `POLLING_INTERVAL_SECONDS` | `webhook`, `5` (`polling` se il webhook non è raggiungibile) |
+| `FEEDBACK_MAX_EDIT_DISTANCE` | `0.7` (oltre: la risposta dell'operatore non nasce dalla bozza, esito `Discarded`) |
 | `ZAMMAD_URL` | `http://127.0.0.1:8080` |
 | `Zammad:Managed` | `true` (l'AppHost avvia lo stack) |
 | `Zammad:StopOnExit` | `true` (alla chiusura i container si fermano) |
@@ -323,7 +376,7 @@ La Cli legge connection string e token dagli user-secrets dell'AppHost e lavora 
 | Tag | `ai-bozza`, `ai-bassa-confidenza`; per P8 `ai-generata`, `ai-generata-in-parte`, `ai-dicitura-rimossa` |
 | Utenti | `ai-assistant` (Agent dei tre gruppi) e i 6 operatori che firmano le risposte dello storico (`*@dusiburg-software.example.it`) |
 | Token | di `ai-assistant` (permesso `ticket.agent`), creato agendo per conto dell'utente (header `From`) e salvato negli user-secrets |
-| Webhook e trigger | webhook firmato verso `ZAMMAD_WEBHOOK_TARGET`; trigger sugli articoli del **cliente** dei tre gruppi, creato **disattivo**: lo accende `zammad trigger on` (Fase 6) |
+| Webhook e trigger | webhook firmato verso `ZAMMAD_WEBHOOK_TARGET` (payload con `ticket_state`); tre trigger sui tre gruppi: articolo del **cliente** (Fase 6), articolo dell'**operatore** e **ticket chiuso** (Fase 7), creati **disattivi**: li accende `zammad trigger on`. Quelli aggiunti dopo prendono lo stato del primo |
 
 `zammad seed` crea le 40 organizzazioni (con dominio e `domain_assignment`, P4) e importa gli 80 ticket storici più recenti in
 `import_mode`, con date originali: il ticket e ogni articolo si creano per conto di chi li ha scritti (cliente o operatore),
@@ -343,6 +396,8 @@ campo `rif_storico` (numero `HT-…`) rende il seed idempotente e collega `Histo
 | Bozza condivisa | `PUT /api/v1/tickets/{id}/shared_draft` con `new_article` (HTML) e `ticket_attributes`; una per ticket; l'interfaccia la mostra con la formattazione; all'invio Zammad la cancella |
 | Webhook | payload personalizzato con `#{ticket.id}`, `#{article.id}` (tipi nativi nel JSON); firma `X-Hub-Signature: sha1=<HMAC-SHA1 del corpo>`; `X-Zammad-Delivery` univoco per consegna |
 | Segreto del webhook | nelle risposte dell'API è mascherato (solo asterischi): non si può rileggere |
+| Trigger di chiusura (Fase 7) | condizione `ticket.state_id is 4` (`closed`); la consegna arriva senza articolo e l'Agent la riconosce da `ticket_state` |
+| Stato del ticket (Fase 7) | `GET /api/v1/tickets/{id}?expand=true` restituisce `state` per nome (`new`, `open`, `closed`…) |
 | Per conto di un altro utente | header `From` (login o email) con un token amministratore; `X-On-Behalf-Of` è deprecato dalla 7 |
 | Autore e date in import | in `import_mode` `created_at` e `close_at` restano quelli passati; `created_by_id` no (vale l'utente della richiesta) |
 | Campi personalizzati | `POST /object_manager_attributes` + `POST /object_manager_attributes_execute_migrations`, che riavvia il railsserver (~11 s) |

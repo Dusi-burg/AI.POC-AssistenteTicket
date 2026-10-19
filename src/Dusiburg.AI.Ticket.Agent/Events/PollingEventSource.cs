@@ -9,6 +9,7 @@ namespace Dusiburg.AI.Ticket.Agent.Events;
 /// ticket aggiornati dal cursore, poi i loro articoli pubblici del cliente creati dopo l'avvio (V9). La ricerca passa da
 /// Elasticsearch con qualche secondo di ritardo, quindi il cursore arretra di <see cref="CursorOverlap"/> e i doppioni li scarta
 /// l'idempotenza su (ticket, articolo). Anche il salvataggio della bozza aggiorna il ticket: non basta l'<c>updated_at</c>.
+/// Sugli stessi ticket, risposte dell'operatore e chiusure fanno il controllo dell'esito (Fase 7), idempotente anche lui.
 /// </summary>
 public sealed class PollingEventSource(
     ZammadClient zammad, TicketEventIntake intake, AgentOptions options, TimeProvider timeProvider, ILogger<PollingEventSource> logger) : BackgroundService
@@ -56,10 +57,19 @@ public sealed class PollingEventSource(
             {
                 await intake.AcceptAsync(new TicketEvent(ticket.Id, article.Id, article.Sender, article.Internal, RunTrigger.Polling), cancellationToken);
             }
+
+            if (HasFeedbackEvent(ticket, articles, notBefore))
+            {
+                await intake.CheckOutcomesAsync(ticket.Id, cancellationToken);
+            }
         }
 
         return NextCursor(cursor, tickets);
     }
+
+    /// <summary>Una risposta pubblica dell'operatore dopo l'avvio o il ticket chiuso: si controlla l'esito delle bozze (Fase 7).</summary>
+    internal static bool HasFeedbackEvent(ZammadTicketDetail ticket, IEnumerable<ZammadArticleDetail> articles, DateTimeOffset notBefore) =>
+        ticket.IsClosed || articles.Any(a => a.IsAgentReply && a.CreatedAt >= notBefore);
 
     /// <summary>Solo gli articoli pubblici del cliente creati dopo l'avvio: quelli precedenti non sono "nuovi".</summary>
     internal static IEnumerable<ZammadArticleDetail> NewCustomerArticles(IEnumerable<ZammadArticleDetail> articles, DateTimeOffset notBefore) =>
