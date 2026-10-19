@@ -10,11 +10,10 @@ articles and release notes, and proposes a **reply draft with its sources** to t
 nothing is ever sent automatically. Everything runs locally: models on Ollama, data on SQL Server LocalDB, Zammad in Docker
 inside WSL.
 
-> **Status: Phase 5 — indexing and retrieval.** Services, health checks, the database with the simulated helpdesk history (950
-> tickets, 46 knowledge base articles, 60 release notes), a ready Zammad (groups, custom fields, technical user `ai-assistant`,
-> 40 organizations, 80 imported tickets, demo tickets on demand) and the anonymized index with hybrid retrieval (hit@5 100% on the
-> test set, 97% on paraphrased symptoms) are in place; the draft pipeline arrives in the next phase. All data is synthetic and
-> fictitious.
+> **Status: Phase 6 — agent pipeline.** A new customer message in Zammad (webhook, polling or manual start) gets, within ~10–20 s,
+> a shared draft in the reply editor with the AI disclosure, an internal note with sources and confidence, and the `ai-bozza`
+> tag: an answer, a request for clarification or an escalation, decided by code. Feedback and the console arrive in the next
+> phase. All data is synthetic and fictitious.
 
 What it adds to the other POCs of the series (Order-to-Cash, Claims assistant, Digital transport):
 
@@ -64,8 +63,14 @@ dotnet run --project tools/Dusiburg.AI.Ticket.Cli -- embed
 dotnet run --project tools/Dusiburg.AI.Ticket.Cli -- search --demo 1          # sources found for a demo scenario
 dotnet run --project tools/Dusiburg.AI.Ticket.Cli -- eval retrieval           # hit@k and MRR on the test set, report in eval/
 
-# 7. Restart the AppHost (the Agent now uses the ai-assistant token), then create the incoming ticket of a demo scenario
+# 7. Restart the AppHost (the Agent now uses the ai-assistant token), switch the webhook trigger on, then create the
+#    incoming ticket of a demo scenario: the draft appears in Zammad within ~20 s
+dotnet run --project tools/Dusiburg.AI.Ticket.Cli -- zammad trigger on
 dotnet run --project tools/Dusiburg.AI.Ticket.Cli -- demo 1
+
+# Optional: the pipeline dry-run on a ticket (no write to Zammad), or a manual run published by the Agent
+dotnet run --project tools/Dusiburg.AI.Ticket.Cli -- draft 71164
+Invoke-RestMethod -Method Post http://localhost:5401/api/runs -ContentType application/json -Body '{"ticketId":170}'
 ```
 
 On the very first run the AppHost clones the Zammad stack inside WSL and Docker pulls ~5 GB of images; create the Zammad
@@ -73,7 +78,7 @@ administrator from the setup wizard at `http://127.0.0.1:8080`, then create the 
 user `ai-assistant` and writes its token and the webhook secret into the AppHost user-secrets. Closing the AppHost stops the
 Zammad containers (`Zammad:StopOnExit=false` keeps them running).
 
-Model, retrieval and Zammad knobs (`OLLAMA_*`, `MODEL_*_PROVIDER`, `EMBEDDING_*`, `RETRIEVAL_*`, `RRF_K`, `ZAMMAD_URL`, `Zammad:*`) are listed in
+Model, retrieval and Zammad knobs (`OLLAMA_*`, `MODEL_*_PROVIDER`, `EMBEDDING_*`, `RETRIEVAL_*`, `RRF_K`, `CONFIDENCE_MIN_FOR_DRAFT`, `TICKET_EVENT_SOURCE`, `ZAMMAD_URL`, `Zammad:*`) are listed in
 [docs/architettura.md](docs/architettura.md#manopole).
 
 ### Build and test

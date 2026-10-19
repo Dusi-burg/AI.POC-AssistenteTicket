@@ -18,8 +18,45 @@ internal static class ZammadCommands
     public static Command Create(IServiceProvider services) => new("zammad", "Prepara l'istanza Zammad del POC.")
     {
         Bootstrap(services),
-        Seed(services)
+        Seed(services),
+        Trigger(services)
     };
+
+    /// <summary>
+    /// <c>zammad trigger on|off</c>: il trigger del webhook nasce disattivo (Fase 4); si accende quando l'Agent è pronto a
+    /// ricevere le consegne su <c>/webhooks/zammad</c> (Fase 6). Spento, l'alternativa è <c>TICKET_EVENT_SOURCE=polling</c>.
+    /// </summary>
+    private static Command Trigger(IServiceProvider services)
+    {
+        var state = new Argument<string>("stato") { Description = "on oppure off." };
+        state.AcceptOnlyFromAmong("on", "off");
+        var command = new Command("trigger", "Attiva o disattiva il trigger che manda all'Agent gli articoli del cliente.") { state };
+
+        command.SetAction(async (parse, cancellationToken) =>
+        {
+            bool active = parse.GetValue(state) == "on";
+            ZammadClient zammad = services.GetRequiredService<ZammadClient>();
+            ZammadTrigger? trigger = (await zammad.GetAsync<List<ZammadTrigger>>(ZammadResources.Triggers, cancellationToken))
+                .SingleOrDefault(t => t.Name == ZammadDirectory.TriggerName);
+
+            if (trigger is null)
+            {
+                Console.Error.WriteLine($"Trigger '{ZammadDirectory.TriggerName}' assente: lanciare prima 'zammad bootstrap'.");
+                return TicketCli.ExitError;
+            }
+
+            if (trigger.Active != active)
+            {
+                await zammad.UpdateAsync<ZammadTrigger>(ZammadResources.Triggers, trigger.Id, new { Active = active }, cancellationToken);
+            }
+
+            Console.WriteLine($"Trigger '{trigger.Name}' {(active ? "attivo" : "disattivo")}{(trigger.Active == active ? " (lo era già)" : "")}.");
+
+            return 0;
+        });
+
+        return command;
+    }
 
     private static Command Bootstrap(IServiceProvider services)
     {

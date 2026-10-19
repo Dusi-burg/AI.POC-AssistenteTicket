@@ -10,10 +10,9 @@ knowledge base e note di rilascio, e propone all'operatore una **bozza di rispos
 Zammad: nulla parte in automatico. Tutto gira in locale: modelli su Ollama, dati su SQL Server LocalDB, Zammad in Docker dentro
 WSL.
 
-> **Stato: Fase 5 — indicizzazione e retrieval.** Servizi, controlli di salute, database con lo storico simulato dell'helpdesk
-> (950 ticket, 46 articoli di knowledge base, 60 note di rilascio), uno Zammad pronto (gruppi, campi personalizzati, utente
-> tecnico `ai-assistant`, 40 organizzazioni, 80 ticket importati, ticket demo su comando) e l'indice anonimizzato con il
-> retrieval ibrido (hit@5 100% sul test set, 97% sui sintomi parafrasati) sono pronti; la pipeline della bozza arriva nella
+> **Stato: Fase 6 — pipeline dell'agente.** A un nuovo messaggio del cliente in Zammad (webhook, polling o avvio manuale)
+> seguono, in ~10–20 s, una bozza condivisa nell'editor di risposta con la dicitura AI, una nota interna con fonti e confidenza
+> e il tag `ai-bozza`: risposta, richiesta di chiarimenti o escalation, decise dal codice. Feedback e console arrivano nella
 > prossima fase. Tutti i dati sono sintetici e fittizi.
 
 Che cosa aggiunge agli altri POC della serie (Order-to-Cash, Assistente sinistri, Trasporto digitale):
@@ -64,8 +63,14 @@ dotnet run --project tools/Dusiburg.AI.Ticket.Cli -- embed
 dotnet run --project tools/Dusiburg.AI.Ticket.Cli -- search --demo 1          # fonti trovate per uno scenario demo
 dotnet run --project tools/Dusiburg.AI.Ticket.Cli -- eval retrieval           # hit@k e MRR sul test set, report in eval/
 
-# 7. Riavvio dell'AppHost (l'Agent usa ora il token di ai-assistant), poi il ticket in arrivo di uno scenario demo
+# 7. Riavvio dell'AppHost (l'Agent usa ora il token di ai-assistant), trigger del webhook acceso, poi il ticket in arrivo di
+#    uno scenario demo: la bozza compare in Zammad in ~20 s
+dotnet run --project tools/Dusiburg.AI.Ticket.Cli -- zammad trigger on
 dotnet run --project tools/Dusiburg.AI.Ticket.Cli -- demo 1
+
+# Facoltativo: la pipeline a secco su un ticket (niente scritture in Zammad), o un'elaborazione manuale pubblicata dall'Agent
+dotnet run --project tools/Dusiburg.AI.Ticket.Cli -- draft 71164
+Invoke-RestMethod -Method Post http://localhost:5401/api/runs -ContentType application/json -Body '{"ticketId":170}'
 ```
 
 Al primo avvio l'AppHost clona lo stack di Zammad dentro WSL e Docker scarica ~5 GB di immagini; l'amministratore di Zammad si
@@ -73,7 +78,7 @@ crea con la procedura guidata su `http://127.0.0.1:8080`, poi si crea il token. 
 `ai-assistant` e scrive il suo token e il segreto del webhook negli user-secrets dell'AppHost. Chiudendo l'AppHost i container
 di Zammad si fermano (`Zammad:StopOnExit=false` li lascia accesi).
 
-Le manopole dei modelli, del retrieval e di Zammad (`OLLAMA_*`, `MODEL_*_PROVIDER`, `EMBEDDING_*`, `RETRIEVAL_*`, `RRF_K`, `ZAMMAD_URL`, `Zammad:*`) sono in
+Le manopole dei modelli, del retrieval e di Zammad (`OLLAMA_*`, `MODEL_*_PROVIDER`, `EMBEDDING_*`, `RETRIEVAL_*`, `RRF_K`, `CONFIDENCE_MIN_FOR_DRAFT`, `TICKET_EVENT_SOURCE`, `ZAMMAD_URL`, `Zammad:*`) sono in
 [docs/architettura.md](docs/architettura.md#manopole).
 
 ### Build e test

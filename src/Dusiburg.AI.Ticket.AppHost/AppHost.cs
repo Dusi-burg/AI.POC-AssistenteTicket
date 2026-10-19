@@ -20,7 +20,7 @@ var agent = builder.AddProject<Projects.Dusiburg_AI_Ticket_Agent>("agent")
 
 // Manopole della demo (PLAN §8): si impostano sull'AppHost — riga di comando, user-secrets o variabili d'ambiente — e
 // arrivano all'Agent; senza valore vale il default del codice (AiOptions, ZammadOptions).
-agent.WithConfigurationEnvironment(builder, [.. ModelSettings.All, .. RetrievalSettings.All, ZammadSettings.BaseUrlKey]);
+agent.WithConfigurationEnvironment(builder, [.. ModelSettings.All, .. RetrievalSettings.All, .. PipelineSettings.All, ZammadSettings.BaseUrlKey]);
 
 // Ollama (G5) non è un container: è quello installato sul PC. Se all'avvio non risponde, l'AppHost lo avvia come propria
 // risorsa ("ollama serve") e lo ferma quando si chiude; se è già in esecuzione non lo tocca.
@@ -73,6 +73,9 @@ var web = builder.AddProject<Projects.Dusiburg_AI_Ticket_Web>("web")
 if (builder.Configuration["ASPNETCORE_URLS"]?.Split(';', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() is { } dashboard)
 {
     web.WithEnvironment("TICKET_DASHBOARD_URL", dashboard);
+
+    // Link alla traccia di ogni elaborazione nella nota interna di Zammad (Fase 6).
+    agent.WithEnvironment("TICKET_DASHBOARD_URL", dashboard);
 }
 
 builder.Build().Run();

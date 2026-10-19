@@ -25,7 +25,8 @@ internal static class TicketCli
             DemoCommand.Create(services),
             EmbedCommand.Create(services),
             SearchCommand.Create(services),
-            EvalCommand.Create(services)
+            EvalCommand.Create(services),
+            DraftCommand.Create(services)
         };
 
         // Le eccezioni arrivano a Program.cs, che stampa solo il messaggio (senza lo stack trace del gestore predefinito).

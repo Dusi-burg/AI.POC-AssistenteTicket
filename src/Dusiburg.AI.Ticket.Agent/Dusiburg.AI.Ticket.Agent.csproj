@@ -11,6 +11,7 @@
     <ProjectReference Include="..\Dusiburg.AI.Ticket.ServiceDefaults\Dusiburg.AI.Ticket.ServiceDefaults.csproj" />
     <ProjectReference Include="..\Dusiburg.AI.Ticket.Ai\Dusiburg.AI.Ticket.Ai.csproj" />
     <ProjectReference Include="..\Dusiburg.AI.Ticket.Zammad\Dusiburg.AI.Ticket.Zammad.csproj" />
+    <ProjectReference Include="..\Dusiburg.AI.Ticket.Core\Dusiburg.AI.Ticket.Core.csproj" />
   </ItemGroup>
 
   <ItemGroup>

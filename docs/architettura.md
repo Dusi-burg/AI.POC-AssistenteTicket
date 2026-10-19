@@ -1,7 +1,7 @@
 # Assistente ticket — architettura
 
-> Stato: **Fase 1 (scaffolding)**. Il documento cresce fase per fase: le sezioni su dati, retrieval e pipeline arrivano con le
-> fasi che li realizzano.
+> Stato: **Fase 6 (pipeline dell'agente)**. Il documento cresce fase per fase: feedback e console (Fase 7), valutazione (Fase 8)
+> arrivano con le loro fasi.
 
 ## 1. Che cos'è
 
@@ -54,13 +54,12 @@ non esiste.
 | `Dusiburg.AI.Ticket.Ai` | fabbrica dei client di chat per compito, embedding su CPU, `EmbeddingProfile`, `EmbeddingService` (prefissi, batch, retry), cattura dei prompt |
 | `Dusiburg.AI.Ticket.Rag` | pulizia e anonimizzazione, chunking, indicizzazione, retrieval ibrido (vettoriale in SQL + BM25 in memoria, RRF), valutazione |
 | `Dusiburg.AI.Ticket.Zammad` | client tipizzato dell'API di Zammad, modelli dell'API, probe |
-| `Dusiburg.AI.Ticket.Agent` | Minimal API: `/api/health` (compreso l'indice RAG); dalle prossime fasi event source, coda e pipeline |
+| `Dusiburg.AI.Ticket.Core` | pipeline: contesto da Zammad, classificazione, generazione, verifica, confidenza, composizione con la dicitura AI, pubblicazione, elaborazioni registrate |
+| `Dusiburg.AI.Ticket.Agent` | Minimal API: webhook `/webhooks/zammad` e polling, coda con un consumatore, `/api/runs`, `/api/health` |
 | `Dusiburg.AI.Ticket.Web` | console Razor Pages: stato dei servizi |
 | `tools/Dusiburg.AI.Ticket.DbInit` | ricrea il database dal modello e carica catalogo demo e dati simulati di `data/` |
 | `tools/Dusiburg.AI.Ticket.DataGen` | genera `data/tickets.json` dai testi di `data/`, con seed fisso |
-| `tools/Dusiburg.AI.Ticket.Cli` | riga di comando: `zammad bootstrap`, `zammad seed`, `demo <n>`, `embed`, `search`, `eval retrieval` |
-
-Arriva con la sua fase: `Core` (Fase 6).
+| `tools/Dusiburg.AI.Ticket.Cli` | riga di comando: `zammad bootstrap`, `zammad seed`, `zammad trigger on` e `off`, `demo <n>`, `embed`, `search`, `eval retrieval`, `draft <ticket>` |
 
 Regole di confine: l'Agent è l'unico proprietario del database; la Web parla solo con l'Agent via HTTP; solo `Ai` conosce i
 provider dei modelli e solo `Zammad` conosce l'API di Zammad.
@@ -164,6 +163,51 @@ meglio dell'ibrida (precisione 87,8% contro 83,7%): il confronto si ripete in Fa
 punteggio RRF non distingue i ticket senza storico (dipende solo dalle posizioni); la distanza coseno sì (0,44–0,52 contro
 0,13–0,34).
 
+### Pipeline dell'agente (Fase 6)
+
+```mermaid
+flowchart LR
+    E["webhook HMAC · polling · POST /api/runs"] --> I["AgentRun (unico su ticket + articolo)"] --> Q[["coda, un consumatore"]]
+    Q --> C["contesto da Zammad (P4)"] --> K["classificazione<br/>(solo ticket)"] --> R["retrieval ibrido<br/>4 fonti"] --> G["bozza JSON<br/>id fonti vincolati"]
+    G --> V["verifica: citazioni,<br/>termini tecnici, firma"] --> F["confidenza P6<br/>→ risposta / chiarimenti / escalation"]
+    F --> T["testo + dicitura AI (P8)"] --> P["shared draft · nota interna · tag"]
+```
+
+- **Sorgenti** (P1): il trigger di Zammad chiama `POST /webhooks/zammad` (firma `X-Hub-Signature: sha1=…` con
+  `ZAMMAD_WEBHOOK_SECRET`, risposta `202` subito); con `TICKET_EVENT_SOURCE=polling` l'Agent cerca i ticket aggiornati ogni
+  `POLLING_INTERVAL_SECONDS`. `POST /api/runs {"ticketId": n}` avvia un'elaborazione a mano. Solo gli articoli pubblici del
+  cliente fanno partire l'agente, quindi le sue note non creano un loop.
+- **Idempotenza** (P2): `agent.AgentRun` è unico su (ticket, articolo): una doppia consegna o il polling che rilegge sono
+  scartati. La coda contiene id di `AgentRun`: all'avvio l'Agent riprende quelle rimaste in coda.
+- **Due chiamate al modello**: la **classificazione** (categoria fra quelle dello storico, priorità, informazioni mancanti,
+  sospetta manipolazione) si fa sul solo ticket, perché in Fase 0 la categoria veniva trascinata dalle fonti; la **bozza** ha uno
+  schema JSON in cui gli id citabili sono **solo quelli delle fonti del prompt** (con Ollama lo schema vincola la generazione).
+  JSON non valido: un retry con l'errore, poi `Failed` (codice `MODEL_OUTPUT_INVALID`).
+- **Verifica**: citazioni fra le fonti fornite; codici errore, versioni, percorsi di menu e comandi della risposta presenti
+  nelle fonti o nel ticket; firma tolta (resta "Cordiali saluti,").
+- **Confidenza** (P6, dal codice): 0,45 × retrieval (distanza coseno della fonte più vicina: 1 a 0,20, 0 a 0,45) + 0,25 ×
+  citazioni + 0,15 × copertura (−0,3 per informazione mancante) + 0,15 × autovalutazione. Sotto `CONFIDENCE_MIN_FOR_DRAFT`:
+  **chiarimenti** (testo fisso con le domande) se mancano informazioni o lo storico è vicino, **escalation** (testo fisso) se il
+  ticket è chiaro ma lo storico non ha nulla di simile. Le soluzioni del modello si pubblicano solo sopra soglia e solo se il
+  modello dichiara di poter rispondere (`puoRispondere`) con un testo non vuoto; altrimenti chiarimenti o escalation con la
+  stessa regola.
+- **Dicitura AI** (P8): "Risposta predisposta con il supporto di un sistema di intelligenza artificiale e verificata da un operatore."
+  in coda a ogni bozza, aggiunta dal codice; il publisher rifiuta una bozza senza. Il testo è unico: la distinzione fra
+  risposta generata in tutto o in parte sta solo nei tag (Fase 7).
+- **Prompt della bozza**: sempre del Lei, mai il voi; le richieste estranee al supporto (sconti, prezzi, condizioni) e le
+  istruzioni rivolte al modello si ignorano senza citarle, e si risponde comunque al problema tecnico.
+- **Pubblicazione** (P3) con `ai-assistant`: `PUT shared_draft` (nota pubblica in HTML, perché non c'è un canale email), nota
+  interna con tipo, confidenza e segnali, fonti con distanza, motivo e link al ticket storico importato, informazioni mancanti,
+  domande, avvisi della verifica, sospetta manipolazione e link alla traccia; tag `ai-bozza` (+ `ai-bassa-confidenza`). Il client
+  di Zammad dell'Agent non ripete i POST (`DisableForUnsafeHttpMethods`), così nota e tag non si duplicano.
+- `Cli draft <ticket>` esegue la pipeline **a secco** (niente Zammad, niente database): serve a tarare il prompt.
+
+```powershell
+dotnet run --project tools/Dusiburg.AI.Ticket.Cli -- zammad trigger on    # il webhook manda all'Agent gli articoli del cliente
+dotnet run --project tools/Dusiburg.AI.Ticket.Cli -- draft 71164          # prova a secco su un ticket (numero o id)
+Invoke-RestMethod -Method Post http://localhost:5401/api/runs -ContentType application/json -Body '{"ticketId":170}'
+```
+
 ## 4. Modelli
 
 | Compito | Default | Manopola |
@@ -193,6 +237,8 @@ default del codice.
 | `TICKET_PROMPT_CAPTURE_DIR` | — (cattura dei prompt su file, per la diagnostica) |
 | `RETRIEVAL_TOP_K`, `PROMPT_SOURCES_MAX`, `RRF_K` | `20`, `4`, `60` |
 | `RETRIEVAL_VERSION_PENALTY` | `0.5` (moltiplicatore per i chunk fuori dalla versione del cliente; `1` = nessuna penalità) |
+| `CONFIDENCE_MIN_FOR_DRAFT` | `0.55` (sotto soglia: chiarimenti o escalation) |
+| `TICKET_EVENT_SOURCE`, `POLLING_INTERVAL_SECONDS` | `webhook`, `5` (`polling` se il webhook non è raggiungibile) |
 | `ZAMMAD_URL` | `http://127.0.0.1:8080` |
 | `Zammad:Managed` | `true` (l'AppHost avvia lo stack) |
 | `Zammad:StopOnExit` | `true` (alla chiusura i container si fermano) |
@@ -277,7 +323,7 @@ La Cli legge connection string e token dagli user-secrets dell'AppHost e lavora 
 | Tag | `ai-bozza`, `ai-bassa-confidenza`; per P8 `ai-generata`, `ai-generata-in-parte`, `ai-dicitura-rimossa` |
 | Utenti | `ai-assistant` (Agent dei tre gruppi) e i 6 operatori che firmano le risposte dello storico (`*@dusiburg-software.example.it`) |
 | Token | di `ai-assistant` (permesso `ticket.agent`), creato agendo per conto dell'utente (header `From`) e salvato negli user-secrets |
-| Webhook e trigger | webhook firmato verso `ZAMMAD_WEBHOOK_TARGET`; trigger sugli articoli del **cliente** dei tre gruppi, **disattivo** fino alla Fase 6 |
+| Webhook e trigger | webhook firmato verso `ZAMMAD_WEBHOOK_TARGET`; trigger sugli articoli del **cliente** dei tre gruppi, creato **disattivo**: lo accende `zammad trigger on` (Fase 6) |
 
 `zammad seed` crea le 40 organizzazioni (con dominio e `domain_assignment`, P4) e importa gli 80 ticket storici più recenti in
 `import_mode`, con date originali: il ticket e ogni articolo si creano per conto di chi li ha scritti (cliente o operatore),

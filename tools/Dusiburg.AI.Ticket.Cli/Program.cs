@@ -1,6 +1,7 @@
 using Dusiburg.AI.Ticket.Ai;
 using Dusiburg.AI.Ticket.Cli;
 using Dusiburg.AI.Ticket.Cli.Configuration;
+using Dusiburg.AI.Ticket.Core;
 using Dusiburg.AI.Ticket.Data;
 using Dusiburg.AI.Ticket.Rag;
 using Dusiburg.AI.Ticket.Zammad;
@@ -12,7 +13,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Console;
 
-// Uso: dotnet run --project tools/Dusiburg.AI.Ticket.Cli -- <comando> (zammad bootstrap | zammad seed | demo <n> | embed | search | eval retrieval)
+// Uso: dotnet run --project tools/Dusiburg.AI.Ticket.Cli -- <comando> (zammad bootstrap | zammad seed | demo <n> | embed | search | eval retrieval | draft <ticket>)
 // Gli argomenti non vanno alla configurazione: li interpreta System.CommandLine.
 var builder = Host.CreateApplicationBuilder(new HostApplicationBuilderSettings { ContentRootPath = AppContext.BaseDirectory });
 
@@ -30,6 +31,7 @@ builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddTicketZammad(builder.Configuration);
 builder.Services.AddTicketAi(builder.Configuration);
 builder.Services.AddTicketRag(builder.Configuration);
+builder.Services.AddTicketCore(builder.Configuration);
 builder.Services.AddSingleton(_ => new TicketDbContextOptions(AiOptions.ReadEmbeddingDimensions(builder.Configuration)));
 builder.Services.AddDbContext<TicketDbContext>(options => options.UseSqlServer(
     builder.Configuration.GetConnectionString("sql")
@@ -42,7 +44,7 @@ await host.StartAsync();
 try
 {
     // Il token serve solo ai comandi che parlano con Zammad: embed, search ed eval lavorano su database e modelli.
-    bool usesZammad = args.FirstOrDefault(a => !a.StartsWith('-')) is "zammad" or "demo";
+    bool usesZammad = args.FirstOrDefault(a => !a.StartsWith('-')) is "zammad" or "demo" or "draft";
 
     if (usesZammad && !host.Services.GetRequiredService<ZammadOptions>().HasApiToken)
     {

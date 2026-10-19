@@ -14,6 +14,12 @@ public sealed class SqlHealthProbe(IConfiguration configuration) : IHealthProbe
 {
     public const string ConnectionStringName = "sql";
 
+    /// <summary>
+    /// Connection string segnaposto quando manca quella vera: l'Agent parte comunque e il controllo 1 lo segnala; le elaborazioni
+    /// falliscono con l'errore di connessione.
+    /// </summary>
+    public const string MissingConnectionString = @"Server=(localdb)\connection-string-mancante;Database=Ticket;Connect Timeout=2";
+
     private const string ConnectionName = "Connessione SQL";
     private const string VersionName = "Versione SQL Server";
     private const string VectorName = "Supporto VECTOR";

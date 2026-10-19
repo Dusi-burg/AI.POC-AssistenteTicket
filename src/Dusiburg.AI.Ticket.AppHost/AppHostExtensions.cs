@@ -31,6 +31,12 @@ internal static class RetrievalSettings
     public static readonly string[] All = ["RETRIEVAL_TOP_K", "PROMPT_SOURCES_MAX", "RRF_K", "RETRIEVAL_VERSION_PENALTY"];
 }
 
+/// <summary>Manopole della pipeline, copiate da <c>AgentOptions.Keys</c> (Fase 6).</summary>
+internal static class PipelineSettings
+{
+    public static readonly string[] All = ["CONFIDENCE_MIN_FOR_DRAFT", "TICKET_EVENT_SOURCE", "POLLING_INTERVAL_SECONDS"];
+}
+
 internal static class ZammadSettings
 {
     public const string BaseUrlKey = "ZAMMAD_URL";

@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Hosting;
 
 namespace Dusiburg.AI.Ticket.Agent.Tests;
 
@@ -29,6 +30,8 @@ public class HealthEndpointTests
 
             builder.ConfigureTestServices(services =>
             {
+                // Niente worker né polling (Fase 6): il database non viene mai aperto.
+                services.RemoveAll<IHostedService>();
                 services.RemoveAll<IHealthProbe>();
                 services.AddSingleton<IHealthProbe>(new StubHealthProbe(
                     new ProbeResult(5, "Ollama raggiungibile", ProbeStatus.Ok, "finto", TimeSpan.FromMilliseconds(12)),

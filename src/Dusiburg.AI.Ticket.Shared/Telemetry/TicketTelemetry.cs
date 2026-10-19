@@ -11,5 +11,6 @@ public static class TicketTelemetry
         public const string Embedding = "Dusiburg.AI.Ticket.Ai.Embedding";
         public const string Zammad = "Dusiburg.AI.Ticket.Zammad";
         public const string Retrieval = "Dusiburg.AI.Ticket.Rag.Retrieval";
+        public const string Pipeline = "Dusiburg.AI.Ticket.Core.Pipeline";
     }
 }

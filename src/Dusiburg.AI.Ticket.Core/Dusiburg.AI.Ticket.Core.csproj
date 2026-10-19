@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Pipeline dell'agente (Fase 6): contesto da Zammad, classificazione, retrieval, generazione, verifica, confidenza, pubblicazione. -->
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Dusiburg.AI.Ticket.Rag\Dusiburg.AI.Ticket.Rag.csproj" />
+    <ProjectReference Include="..\Dusiburg.AI.Ticket.Zammad\Dusiburg.AI.Ticket.Zammad.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Dusiburg.AI.Ticket.Core.Tests" />
+  </ItemGroup>
+
+</Project>
