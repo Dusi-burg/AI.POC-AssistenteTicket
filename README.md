@@ -147,9 +147,7 @@ dotnet test --solution Dusiburg.AI.Ticket.slnx
 
 Tests never call Ollama or Zammad (fake HTTP handlers, stub probes); SQL tests use LocalDB `localdev`, each class on its own
 database created by `DbInit` and dropped afterwards. The CI (GitHub Actions, Windows) runs the same; when its LocalDB has no
-`VECTOR` type it skips the `RequiresSql2025` category. The AppHost uses the Aspire CLI bundle: the CI installs `Aspire.Cli`
-13.6.1 (same version as the SDK) before building, otherwise the AppHost build fails with `ASPIRE009`; locally the Aspire CLI
-must be installed (https://get.aspire.dev).
+`VECTOR` type it skips the `RequiresSql2025` category.
 
 ## Layout
 
