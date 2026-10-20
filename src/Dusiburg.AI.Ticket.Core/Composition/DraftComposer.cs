@@ -31,12 +31,13 @@ public static partial class DraftComposer
 
     public static ComposedDraft Compose(DraftKind kind, string modelAnswer, IReadOnlyList<string> modelQuestions, IReadOnlyList<string> missingInformation, string contactFirstName)
     {
-        List<string> questions = [.. (modelQuestions.Count > 0 ? modelQuestions : missingInformation.Count > 0 ? missingInformation.Select(AsQuestion) : DefaultQuestions)
-            .Select(q => q.Trim()).Where(q => q.Length > 0).Distinct().Take(4)];
+        // In una risposta valgono solo le domande del modello: quelle di ripiego servono a un chiarimento, non a una soluzione.
+        List<string> questions = Clean(kind == DraftKind.Answer || modelQuestions.Count > 0 ? modelQuestions
+            : missingInformation.Count > 0 ? missingInformation.Select(AsQuestion) : DefaultQuestions);
 
         string body = kind switch
         {
-            DraftKind.Answer => modelAnswer.Trim(),
+            DraftKind.Answer => Answer(modelAnswer, questions),
             DraftKind.Clarification => Clarification(contactFirstName, questions),
             DraftKind.Escalation => Escalation(contactFirstName),
             _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, null)
@@ -44,7 +45,31 @@ public static partial class DraftComposer
 
         string text = $"{body}\n\n{AiDisclosure}";
 
-        return new ComposedDraft(kind, text, $"{ToHtml(body)}<p><em>{WebUtility.HtmlEncode(AiDisclosure)}</em></p>", kind == DraftKind.Answer ? [] : questions);
+        return new ComposedDraft(kind, text, $"{ToHtml(body)}<p><em>{WebUtility.HtmlEncode(AiDisclosure)}</em></p>", questions);
+    }
+
+    private static List<string> Clean(IEnumerable<string> questions) =>
+        [.. questions.Select(q => q.Trim()).Where(q => q.Length > 0).Distinct().Take(4)];
+
+    /// <summary>
+    /// Le domande del modello in coda alla risposta, prima dei saluti: il testo può rimandare alle "domande seguenti" (Fase 8,
+    /// HT-2026-0070), che altrimenti mancherebbero.
+    /// </summary>
+    internal static string Answer(string modelAnswer, IReadOnlyList<string> questions)
+    {
+        string answer = modelAnswer.Trim();
+
+        if (questions.Count == 0)
+        {
+            return answer;
+        }
+
+        Match closing = Closing().Match(answer);
+        string list = $"Per completare la verifica Le chiediamo di indicarci:\n{string.Join("\n", questions.Select((q, i) => $"{i + 1}. {q}"))}";
+
+        return closing.Success
+            ? $"{answer[..closing.Index].TrimEnd()}\n\n{list}\n\n{closing.Value.Trim()}"
+            : $"{answer}\n\n{list}";
     }
 
     /// <summary>La bozza contiene la dicitura AI (test P8: nessuna bozza pubblicata senza).</summary>
@@ -144,6 +169,9 @@ public static partial class DraftComposer
     }
 
     private static string Inline(string text) => Bold().Replace(WebUtility.HtmlEncode(text), "<strong>$1</strong>");
+
+    [GeneratedRegex(@"\n\s*Cordiali saluti,?\s*$")]
+    private static partial Regex Closing();
 
     [GeneratedRegex(@"\n[ \t]*\n+")]
     private static partial Regex Blank();

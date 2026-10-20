@@ -117,7 +117,7 @@
         <div class="row g-3 mb-3">
             <div class="col-lg-6">
                 <h2 class="h6">Bozza proposta</h2>
-                <pre class="border rounded p-2 bg-body-tertiary small text-wrap" id="draft-body">@draft.Body</pre>
+                <pre class="border rounded p-2 bg-body-tertiary small text-prewrap" id="draft-body">@draft.Body</pre>
                 @if (draft.Questions.Count > 0)
                 {
                     <p class="small mb-1">Domande per il cliente:</p>
@@ -128,7 +128,7 @@
                 <h2 class="h6">Testo inviato dall'operatore</h2>
                 @if (outcome.FinalText is { } finalText)
                 {
-                    <pre class="border rounded p-2 small text-wrap" id="final-text">@finalText</pre>
+                    <pre class="border rounded p-2 small text-prewrap" id="final-text">@finalText</pre>
                 }
                 else
                 {

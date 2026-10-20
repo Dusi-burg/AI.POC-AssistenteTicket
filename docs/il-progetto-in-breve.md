@@ -36,6 +36,10 @@ di risposta con le fonti**, dentro lo strumento che l'operatore usa già. L'oper
 8. **L'operatore invia** (com'è o modificata) e il sistema misura quanto ha cambiato: il ticket viene marcato "generata da AI" o
    "generata in parte da AI". Se l'operatore toglie la frase sull'AI, il sistema lo segnala.
 
+![La bozza proposta dentro Zammad, con la frase sull'AI in coda](images/01-bozza-editor.png)
+
+*Che cosa vede l'operatore in Zammad: la bozza pronta da applicare e, sotto, la nota interna con le fonti.*
+
 ## Perché non ci si fida ciecamente dell'intelligenza artificiale
 
 - **Nulla parte da solo.** L'assistente scrive solo bozze e note interne; la risposta al cliente la manda sempre una persona.

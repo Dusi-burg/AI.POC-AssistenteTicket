@@ -20,3 +20,8 @@ html {
 body {
   margin-bottom: 60px;
 }
+
+/* Testi di bozze e articoli: a capo come nel testo, righe lunghe spezzate (text-wrap di Bootstrap li unirebbe in un paragrafo). */
+.text-prewrap {
+  white-space: pre-wrap;
+}

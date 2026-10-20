@@ -89,13 +89,35 @@ dotnet run --project tools/Dusiburg.AI.Ticket.Cli -- close 71178                
 
 ## Schermate
 
-Da catturare in `docs/images/` (nomi attesi dai documenti):
+Prova del 2026-10-20 con `qwen3.5:9b`, sei scenari lanciati con `demo <n>` da un database ricreato.
 
-| File | Che cosa |
-|---|---|
-| `01-bozza-editor.png` | ticket dello scenario 1 in Zammad con la bozza aperta nell'editor di risposta e la dicitura AI in coda |
-| `02-nota-interna.png` | la nota interna di `ai-assistant` con confidenza e fonti |
-| `03-manipolazione.png` | la nota interna dello scenario 6 con l'avviso di manipolazione |
-| `04-console-elaborazioni.png` | console, pagina Elaborazioni con i sei scenari |
-| `05-console-dettaglio.png` | console, dettaglio di un'elaborazione inviata modificata: tempi, fonti, bozza e testo inviato |
-| `06-console-esiti.png` | console, pagina Esiti con l'avviso di una dicitura tolta |
+**Scenario 1 in Zammad.** In primo piano la bozza condivisa che l'operatore apre con "Bozza disponibile": risposta con i
+passaggi numerati e la dicitura AI in coda, aggiunta dal codice. Sotto, la nota interna di `ai-assistant`.
+
+![Scenario 1: la bozza condivisa in Zammad, con la dicitura AI in coda](images/01-bozza-editor.png)
+
+**La nota interna** (mai visibile al cliente): tipo di bozza, confidenza con i quattro segnali, decisione rispetto alla soglia,
+classificazione e fonti proposte al modello, con quelle citate e il motivo. In fondo modelli, tempo e link alla traccia.
+
+![Nota interna di ai-assistant con confidenza e fonti](images/02-nota-interna.png)
+
+**Scenario 6, istruzioni malevole nel testo del cliente.** La bozza risponde al problema tecnico (delega di firma scaduta) e non
+cita lo sconto; la nota interna avvisa l'operatore del possibile tentativo di manipolazione.
+
+![Scenario 6: avviso di manipolazione nella nota interna](images/03-manipolazione.png)
+
+**Console, Elaborazioni.** I sei scenari con tipo di bozza deciso dal codice, confidenza, esito e durata: quattro risposte, un
+chiarimento (0,32), un'escalation (0,15).
+
+![Console: elenco delle elaborazioni dei sei scenari](images/04-console-elaborazioni.png)
+
+**Console, dettaglio di un'elaborazione inviata modificata** (scenario 2, SaaS): segnali della confidenza, tempi per passo,
+esito dopo l'invio (distanza 0,12, dicitura presente, tag `ai-generata-in-parte`), bozza e testo inviato affiancati, fonti con il
+motivo del modello.
+
+![Console: dettaglio di un'elaborazione con bozza e testo inviato](images/05-console-dettaglio.png)
+
+**Console, Esiti.** Indicatori sulle bozze inviate e, in rosso, la risposta inviata dopo aver tolto la dicitura AI (P8: tag
+`ai-dicitura-rimossa` e nota interna nel ticket).
+
+![Console: esiti con l'avviso di una dicitura tolta](images/06-console-esiti.png)

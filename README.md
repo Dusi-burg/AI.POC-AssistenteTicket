@@ -26,6 +26,15 @@ What it adds to the other POCs of the series (Order-to-Cash, Claims assistant, D
 3. hybrid retrieval (lexical BM25 + vector, Reciprocal Rank Fusion) with version applicability filters;
 4. usefulness measured from the agent's actual behaviour (distance between draft and sent text).
 
+| | |
+|---|---|
+| ![The shared draft in Zammad, with the AI disclosure at the end](docs/images/01-bozza-editor.png) | ![Internal note with confidence and sources](docs/images/02-nota-interna.png) |
+| *Scenario 1: the draft in the Zammad editor, with the AI disclosure added by the code* | *The internal note for the agent: confidence, decision, cited sources and why* |
+| ![Console: runs of the six scenarios](docs/images/04-console-elaborazioni.png) | ![Console: outcomes with a removed-disclosure warning](docs/images/06-console-esiti.png) |
+| *Console: the six demo scenarios, answer, clarification or escalation decided by the code* | *Console: what the agents did with the drafts, with a warning for a removed AI disclosure* |
+
+More screenshots in the [demo](docs/demo.md#schermate) (Italian). The UI and the data are in Italian.
+
 ## Results
 
 Measured on 2026-10-19 on test-set tickets kept out of the index, with `qwen3.5:9b` running locally (reports in [eval/](eval)):

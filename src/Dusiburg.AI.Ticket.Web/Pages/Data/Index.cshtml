@@ -71,7 +71,7 @@
                     <span class="text-muted">— @article.ProductCode, @RunPresentation.Label(article.Mode),
                         versioni @(article.VersionFrom ?? "tutte")@(article.VersionTo is { } to ? $"–{to}" : article.VersionFrom is null ? "" : " e successive")</span>
                 </summary>
-                <pre class="text-wrap mt-1 mb-2">@article.Body</pre>
+                <pre class="text-prewrap mt-1 mb-2">@article.Body</pre>
             </details>
         }
     </div>
@@ -82,7 +82,7 @@
         {
             <details class="border-bottom py-1 small">
                 <summary><code>@note.Code</code> @note.Title <span class="text-muted">— @note.ProductCode @note.Version, @note.Type</span></summary>
-                <pre class="text-wrap mt-1 mb-2">@note.Body</pre>
+                <pre class="text-prewrap mt-1 mb-2">@note.Body</pre>
             </details>
         }
     </div>

@@ -34,6 +34,35 @@ public class CompositionTests
     }
 
     [Test]
+    public void Compose_Answer_ModelQuestionsAppendedBeforeTheClosing()
+    {
+        //SETUP
+        string answer = "Gentile Fabio,\n\nLe chiediamo di rispondere alle domande seguenti.\n\nCordiali saluti,";
+
+        //SUT
+        ComposedDraft draft = DraftComposer.Compose(DraftKind.Answer, answer, ["Quanti documenti?", " ", "Quale parola cerca?"], ["versione"], "Fabio");
+
+        Assert.That(draft.Text, Is.EqualTo(
+            "Gentile Fabio,\n\nLe chiediamo di rispondere alle domande seguenti.\n\n" +
+            "Per completare la verifica Le chiediamo di indicarci:\n1. Quanti documenti?\n2. Quale parola cerca?\n\n" +
+            $"Cordiali saluti,\n\n{DraftComposer.AiDisclosure}"));
+        Assert.That(draft.Html, Does.Contain("<ol><li>Quanti documenti?</li><li>Quale parola cerca?</li></ol><p>Cordiali saluti,</p>"));
+        Assert.That(draft.Questions, Is.EqualTo(new[] { "Quanti documenti?", "Quale parola cerca?" }));
+    }
+
+    [Test]
+    public void Compose_Answer_WithoutModelQuestionsNoFallbackAndWithoutClosingAppendedAtTheEnd()
+    {
+        //SUT
+        ComposedDraft withoutQuestions = DraftComposer.Compose(DraftKind.Answer, "Gentile Giorgio,\n\nrisposta.\n\nCordiali saluti,", [], ["versione"], "Giorgio");
+        ComposedDraft withoutClosing = DraftComposer.Compose(DraftKind.Answer, "Gentile Giorgio,\n\nrisposta.", ["Da quando?"], [], "Giorgio");
+
+        Assert.That(withoutQuestions.Text, Is.EqualTo($"Gentile Giorgio,\n\nrisposta.\n\nCordiali saluti,\n\n{DraftComposer.AiDisclosure}"));
+        Assert.That(withoutQuestions.Questions, Is.Empty);
+        Assert.That(withoutClosing.Text, Does.StartWith("Gentile Giorgio,\n\nrisposta.\n\nPer completare la verifica Le chiediamo di indicarci:\n1. Da quando?\n\n"));
+    }
+
+    [Test]
     public void Compose_Clarification_FixedTextWithTheModelQuestionsThenMissingInformationThenDefaults()
     {
         //SUT

@@ -25,6 +25,15 @@ Che cosa aggiunge agli altri POC della serie (Order-to-Cash, Assistente sinistri
 3. ricerca ibrida (BM25 lessicale + vettoriale, Reciprocal Rank Fusion) con filtri di applicabilità per versione;
 4. utilità misurata dal comportamento reale dell'operatore (distanza fra bozza e testo inviato).
 
+| | |
+|---|---|
+| ![La bozza condivisa in Zammad, con la dicitura AI in coda](docs/images/01-bozza-editor.png) | ![Nota interna con confidenza e fonti](docs/images/02-nota-interna.png) |
+| *Scenario 1: la bozza nell'editor di Zammad, con la dicitura AI aggiunta dal codice* | *La nota interna per l'operatore: confidenza, decisione, fonti citate e motivo* |
+| ![Console: elaborazioni dei sei scenari](docs/images/04-console-elaborazioni.png) | ![Console: esiti con l'avviso di una dicitura tolta](docs/images/06-console-esiti.png) |
+| *Console: i sei scenari della demo, risposta, chiarimenti o escalation decisi dal codice* | *Console: che cosa ne hanno fatto gli operatori, con l'avviso di una dicitura AI tolta* |
+
+Altre schermate nella [demo](docs/demo.md#schermate).
+
 ## Risultati
 
 Misure del 2026-10-19 sui ticket del test set, esclusi dall'indice, con `qwen3.5:9b` in locale (report in [eval/](eval)):
