@@ -1,0 +1,154 @@
+using System.Globalization;
+using Dusiburg.AI.Ticket.Ai;
+using Dusiburg.AI.Ticket.Shared.Health;
+using Microsoft.Data.SqlClient;
+
+namespace Dusiburg.AI.Ticket.Agent.Health;
+
+/// <summary>
+/// Controlli 1–4 di <c>/api/health</c>: connessione, versione ≥ 17 (SQL Server 2025), tipo <c>VECTOR</c>, database applicativo
+/// con la colonna <c>VECTOR</c> della dimensione configurata.
+/// Server e versione si leggono da <c>master</c>, così il controllo risponde anche prima che <c>DbInit</c> abbia creato il database.
+/// </summary>
+public sealed class SqlHealthProbe(IConfiguration configuration) : IHealthProbe
+{
+    public const string ConnectionStringName = "sql";
+
+    /// <summary>
+    /// Connection string segnaposto quando manca quella vera: l'Agent parte comunque e il controllo 1 lo segnala; le elaborazioni
+    /// falliscono con l'errore di connessione.
+    /// </summary>
+    public const string MissingConnectionString = @"Server=(localdb)\connection-string-mancante;Database=Ticket;Connect Timeout=2";
+
+    private const string ConnectionName = "Connessione SQL";
+    private const string VersionName = "Versione SQL Server";
+    private const string VectorName = "Supporto VECTOR";
+    private const string DatabaseName = "Database applicativo";
+
+    private const int MinimumMajorVersion = 17;
+
+    public async Task<IReadOnlyList<ProbeResult>> RunAsync(CancellationToken cancellationToken)
+    {
+        string? connectionString = configuration.GetConnectionString(ConnectionStringName);
+
+        if (string.IsNullOrWhiteSpace(connectionString))
+        {
+            ProbeResult missing = new(
+                1, ConnectionName, ProbeStatus.Error,
+                $"ConnectionStrings:{ConnectionStringName} non configurata: impostarla negli user-secrets dell'AppHost.", TimeSpan.Zero);
+
+            return [missing, .. SkipAfterConnection("connection string mancante")];
+        }
+
+        var target = new SqlConnectionStringBuilder(connectionString);
+        string database = target.InitialCatalog;
+        target.InitialCatalog = "master";
+
+        await using var connection = new SqlConnection(target.ConnectionString);
+
+        ProbeResult connected = await ProbeResult.MeasureAsync(1, ConnectionName, async () =>
+        {
+            await connection.OpenAsync(cancellationToken);
+
+            return (ProbeStatus.Ok, target.DataSource);
+        });
+
+        if (connected.Status == ProbeStatus.Error)
+        {
+            return [connected, .. SkipAfterConnection("connessione non riuscita")];
+        }
+
+        return
+        [
+            connected,
+            await ProbeResult.MeasureAsync(2, VersionName, () => CheckVersionAsync(connection, cancellationToken)),
+            await ProbeResult.MeasureAsync(3, VectorName, () => CheckVectorAsync(connection, cancellationToken)),
+            await ProbeResult.MeasureAsync(4, DatabaseName, () => CheckDatabaseAsync(connection, database, cancellationToken))
+        ];
+    }
+
+    private static async Task<(ProbeStatus, string)> CheckVersionAsync(SqlConnection connection, CancellationToken cancellationToken)
+    {
+        await using SqlCommand command = connection.CreateCommand();
+        command.CommandText =
+            """
+            SELECT CAST(SERVERPROPERTY('ProductMajorVersion') AS int),
+                   CAST(SERVERPROPERTY('ProductVersion') AS nvarchar(128)),
+                   CAST(SERVERPROPERTY('Edition') AS nvarchar(128))
+            """;
+
+        await using SqlDataReader reader = await command.ExecuteReaderAsync(cancellationToken);
+        await reader.ReadAsync(cancellationToken);
+
+        int major = reader.GetInt32(0);
+        string detail = $"{reader.GetString(1)} ({reader.GetString(2)})";
+
+        return major >= MinimumMajorVersion
+            ? (ProbeStatus.Ok, detail)
+            : (ProbeStatus.Error, $"{detail}: serve SQL Server 2025 (versione {MinimumMajorVersion}.x) per il tipo VECTOR");
+    }
+
+    private static async Task<(ProbeStatus, string)> CheckVectorAsync(SqlConnection connection, CancellationToken cancellationToken)
+    {
+        await using SqlCommand command = connection.CreateCommand();
+        command.CommandText = "SELECT VECTOR_DISTANCE('cosine', CAST('[1,0]' AS VECTOR(2)), CAST('[0,1]' AS VECTOR(2)))";
+
+        double distance = Convert.ToDouble(await command.ExecuteScalarAsync(cancellationToken));
+
+        return (ProbeStatus.Ok, $"VECTOR_DISTANCE disponibile (coseno di vettori ortogonali = {distance:0.###})");
+    }
+
+    private async Task<(ProbeStatus, string)> CheckDatabaseAsync(SqlConnection connection, string database, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(database))
+        {
+            return (ProbeStatus.Error, "la connection string non indica il database (Database=Ticket)");
+        }
+
+        await using SqlCommand command = connection.CreateCommand();
+        command.CommandText = "SELECT DB_ID(@database)";
+        command.Parameters.AddWithValue("@database", database);
+
+        object? databaseId = await command.ExecuteScalarAsync(cancellationToken);
+
+        if (databaseId is null or DBNull)
+        {
+            return (ProbeStatus.Warning, $"il database '{database}' non esiste ancora: lo crea tools/Dusiburg.AI.Ticket.DbInit");
+        }
+
+        return await CheckVectorColumnAsync(connection, database, cancellationToken);
+    }
+
+    /// <summary>La colonna <c>VECTOR</c> deve avere la dimensione del modello di embedding configurato (<c>EMBEDDING_DIMENSIONS</c>).</summary>
+    private async Task<(ProbeStatus, string)> CheckVectorColumnAsync(SqlConnection connection, string database, CancellationToken cancellationToken)
+    {
+        int expected = AiOptions.ReadEmbeddingDimensions(configuration);
+
+        await connection.ChangeDatabaseAsync(database, cancellationToken);
+
+        await using SqlCommand command = connection.CreateCommand();
+        command.CommandText = "SELECT vector_dimensions FROM sys.columns WHERE object_id = OBJECT_ID(N'rag.Chunk') AND name = N'Embedding'";
+
+        object? dimensions = await command.ExecuteScalarAsync(cancellationToken);
+
+        if (dimensions is null or DBNull)
+        {
+            return (ProbeStatus.Warning, $"'{database}' presente ma senza rag.Chunk.Embedding: rieseguire tools/Dusiburg.AI.Ticket.DbInit");
+        }
+
+        int actual = Convert.ToInt32(dimensions, CultureInfo.InvariantCulture);
+
+        return actual == expected
+            ? (ProbeStatus.Ok, $"'{database}' presente, rag.Chunk.Embedding VECTOR({actual})")
+            : (ProbeStatus.Warning,
+                $"'{database}': rag.Chunk.Embedding è VECTOR({actual}) ma {AiOptions.Keys.EmbeddingDimensions} = {expected}: " +
+                "rieseguire tools/Dusiburg.AI.Ticket.DbInit e ricalcolare gli embedding");
+    }
+
+    private static IEnumerable<ProbeResult> SkipAfterConnection(string reason) =>
+    [
+        ProbeResult.Skipped(2, VersionName, reason),
+        ProbeResult.Skipped(3, VectorName, reason),
+        ProbeResult.Skipped(4, DatabaseName, reason)
+    ];
+}

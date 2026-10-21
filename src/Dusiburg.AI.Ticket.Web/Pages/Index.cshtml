@@ -1,0 +1,52 @@
+@page
+@model IndexModel
+@{
+    ViewData["Title"] = "Stato";
+}
+
+<h1 class="h3 mb-3">Stato</h1>
+
+<p class="text-muted">
+    L'operatore lavora in Zammad, dove trova le bozze dell'assistente; questa console mostra lo stato dei servizi, le
+    elaborazioni con fonti, tempi e tracce, gli esiti delle bozze e i dati demo.
+</p>
+
+<ul class="list-inline" id="links">
+    @if (Model.Links.ZammadUrl is { Length: > 0 } zammad)
+    {
+        <li class="list-inline-item"><a class="btn btn-sm btn-outline-primary" href="@zammad" target="_blank" rel="noopener">Apri Zammad</a></li>
+    }
+    @if (Model.Links.DashboardUrl is { Length: > 0 } dashboard)
+    {
+        <li class="list-inline-item"><a class="btn btn-sm btn-outline-secondary" href="@dashboard" target="_blank" rel="noopener">Dashboard di Aspire</a></li>
+    }
+</ul>
+
+@if (Model.Error is { } error)
+{
+    <div class="alert alert-warning" role="alert" id="agent-error">@error</div>
+}
+
+<h2 class="h5">Controlli di salute</h2>
+<p class="text-muted">SQL Server 2025, Ollama, modelli di chat e di embedding, chiave del modello cloud, Zammad e token dell'assistente.</p>
+
+@if (Model.Report is { } report)
+{
+    <div class="table-responsive">
+        <table class="table table-sm align-middle" id="health">
+            <thead><tr><th>#</th><th>Controllo</th><th>Esito</th><th class="text-end">Durata</th><th>Dettaglio</th></tr></thead>
+            <tbody>
+                @foreach (var check in report.Checks)
+                {
+                    <tr>
+                        <td>@check.Number</td>
+                        <td>@check.Name</td>
+                        <td><span class="badge @HealthPresentation.BadgeClass(check.Status)">@HealthPresentation.Label(check.Status)</span></td>
+                        <td class="text-end">@check.Duration.TotalMilliseconds.ToString("0") ms</td>
+                        <td class="small">@check.Detail</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}

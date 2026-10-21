@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Unico progetto che parla con l'API di Zammad: client tipizzato, modelli dell'API, firma dei webhook. -->
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Http" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Dusiburg.AI.Ticket.Shared\Dusiburg.AI.Ticket.Shared.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Dusiburg.AI.Ticket.Zammad.Tests" />
+  </ItemGroup>
+
+</Project>

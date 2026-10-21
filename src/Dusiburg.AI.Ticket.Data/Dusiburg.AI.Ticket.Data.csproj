@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Modello dati del database Ticket (schemi support, rag, agent in un solo DbContext): usato dall'Agent e dal tool DbInit. Nessuna migration (G4). -->
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" />
+    <PackageReference Include="Microsoft.Data.SqlClient" />
+    <PackageReference Include="System.Security.Cryptography.Pkcs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Dusiburg.AI.Ticket.Shared\Dusiburg.AI.Ticket.Shared.csproj" />
+  </ItemGroup>
+
+</Project>

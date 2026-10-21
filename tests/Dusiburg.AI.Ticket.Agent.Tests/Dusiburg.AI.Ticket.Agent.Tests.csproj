@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <!-- Runner NUnit su Microsoft.Testing.Platform, come impostato in global.json -->
+    <EnableNUnitRunner>true</EnableNUnitRunner>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Using Include="NUnit.Framework" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="NUnit" />
+    <PackageReference Include="NUnit3TestAdapter" />
+    <PackageReference Include="NUnit.Analyzers" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.Testing.Extensions.CodeCoverage" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Dusiburg.AI.Ticket.Agent\Dusiburg.AI.Ticket.Agent.csproj" />
+    <!-- Creazione dei database di test dal modello -->
+    <ProjectReference Include="..\..\tools\Dusiburg.AI.Ticket.DbInit\Dusiburg.AI.Ticket.DbInit.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Lo stesso embedding finto dei test della pipeline: indice e ricerca senza Ollama (API di conoscenza, Fase 9b) -->
+    <Compile Include="..\Dusiburg.AI.Ticket.Core.Tests\Support\HashingEmbeddingService.cs" Link="Support\HashingEmbeddingService.cs" />
+  </ItemGroup>
+
+</Project>

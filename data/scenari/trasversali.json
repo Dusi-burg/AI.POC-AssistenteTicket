@@ -1,0 +1,239 @@
+{
+  "_comment": "Casi comuni ai due prodotti: {P} diventa FF o DA nei codici, {prodotto} il nome. versionFrom/versionTo possono essere per prodotto.",
+  "cases": [
+    {
+      "code": "TR-SSO", "products": ["FF", "DA"], "modes": ["OnPrem", "Saas"], "versionFrom": { "FF": "5.1.2", "DA": "3.0.4" }, "versionTo": null,
+      "category": "accesso", "priority": "High", "errorCode": "{P}-E0105", "weight": 3,
+      "subjects": ["Accesso con account aziendale non funziona", "Errore {codice} al login", "SSO non funziona"],
+      "symptoms": [
+        "da stamattina nessuno riesce ad accedere con l'account Microsoft, torna alla pagina di login con l'errore {codice}.",
+        "l'accesso unico con le credenziali aziendali non funziona più per tutti gli utenti.",
+        "dopo il login su Microsoft compare {codice} \"risposta SAML non valida\".",
+        "gli utenti non entrano più in {prodotto} con l'account dell'ufficio, solo l'amministratore con l'utente locale riesce ad accedere.",
+        "il login aziendale tramite Entra ID dà un errore sulla firma della risposta e rimanda alla pagina iniziale."
+      ],
+      "details": ["Il reparto IT ha fatto manutenzione su Entra ID la settimana scorsa.", "Nessuno ha cambiato le impostazioni di {prodotto}.", "Fino a ieri funzionava."],
+      "questions": ["Il certificato SAML dell'applicazione in Entra ID è stato rinnovato di recente?"],
+      "followUps": ["L'IT conferma che il certificato è stato rinnovato venerdì.", "Sì, era in scadenza e l'hanno rinnovato."],
+      "cause": "Certificato di firma SAML rinnovato in Microsoft Entra ID e non aggiornato in {prodotto}.",
+      "solutions": [
+        "Caricato in Impostazioni > Sicurezza > SSO il nuovo file dei metadati della federazione con l'account amministratore locale; accesso SSO ripristinato.",
+        "Configurato l'URL dei metadati invece del file: la configurazione si aggiorna da sola e l'accesso è tornato disponibile."
+      ],
+      "replies": [
+        "l'errore {codice} indica che {prodotto} non riesce a verificare la firma della risposta di Microsoft: succede quando il certificato SAML dell'applicazione aziendale in Entra ID viene rinnovato. In Entra ID scarichi il file \"XML dei metadati della federazione\" e lo carichi in {prodotto} da Impostazioni > Sicurezza > SSO, entrando con un account amministratore locale. Per evitarlo in futuro può configurare l'URL dei metadati invece del file: si aggiorna da solo ogni 24 ore.",
+        "dopo il rinnovo del certificato SAML in Entra ID va aggiornata anche la configurazione SSO di {prodotto}: carichi il nuovo file dei metadati in Impostazioni > Sicurezza > SSO e l'accesso torna subito disponibile."
+      ],
+      "kb": ["KB-{P}-0101"], "releaseNotes": []
+    },
+    {
+      "code": "TR-LICENZA-ONPREM", "products": ["FF", "DA"], "modes": ["OnPrem"], "versionFrom": null, "versionTo": null,
+      "category": "licenze", "priority": "High", "errorCode": "{P}-E0201", "weight": 3,
+      "subjects": ["Licenza scaduta", "Errore {codice}", "Utenti non riescono ad accedere"],
+      "symptoms": [
+        "all'accesso compare {codice}, licenza non valida, e alcuni utenti non entrano.",
+        "ci dice che il numero di utenti della licenza è superato, ma abbiamo disattivato le persone uscite.",
+        "da oggi {prodotto} dice che la licenza è scaduta. Abbiamo rinnovato il contratto il mese scorso.",
+        "il nuovo collega non riesce ad accedere perché abbiamo raggiunto il numero massimo di utenti."
+      ],
+      "details": ["Il rinnovo l'abbiamo pagato a fine mese.", "Abbiamo 25 utenti attivi.", "Ci era arrivata un'e-mail con un file .lic."],
+      "questions": ["Ha ricevuto il nuovo file di licenza dopo il rinnovo?"],
+      "followUps": ["Sì, il file .lic è arrivato via e-mail ma non l'abbiamo installato.", "Non ci risulta di averlo ricevuto."],
+      "cause": "Nuovo file di licenza non installato dopo il rinnovo, oppure numero di utenti attivi oltre il limite.",
+      "solutions": [
+        "Caricato il nuovo file .lic in Impostazioni > Licenza > Aggiorna, senza riavvio; accesso ripristinato.",
+        "Disattivati gli utenti non più in servizio e richiesti utenti aggiuntivi all'ufficio commerciale."
+      ],
+      "replies": [
+        "nell'on-premise la licenza è un file .lic installato sul server: dopo il rinnovo va caricato quello nuovo in Impostazioni > Licenza > Aggiorna, senza bisogno di riavviare. Se invece il problema è il numero di utenti, disattivi chi non è più in servizio oppure richieda utenti aggiuntivi all'ufficio commerciale.",
+        "l'errore {codice} si risolve installando il nuovo file di licenza ricevuto con il rinnovo. Se non lo trova, glielo facciamo inviare di nuovo dall'ufficio commerciale."
+      ],
+      "kb": ["KB-{P}-0102"], "releaseNotes": ["RN-FF-5.2.1-03"]
+    },
+    {
+      "code": "TR-LICENZA-SAAS", "products": ["FF", "DA"], "modes": ["Saas"], "versionFrom": null, "versionTo": null,
+      "category": "licenze", "priority": "High", "errorCode": "{P}-E0201", "weight": 2,
+      "subjects": ["Utenti oltre il limite", "Errore {codice} licenza"],
+      "symptoms": [
+        "un nuovo utente non riesce ad accedere, compare {codice}. Usiamo la versione online.",
+        "ci dice che la licenza è scaduta ma l'abbonamento si rinnova da solo.",
+        "abbiamo superato il numero di utenti, come ne aggiungiamo altri?"
+      ],
+      "details": ["La carta di credito aziendale è stata sostituita.", "Abbiamo assunto due persone."],
+      "questions": [],
+      "followUps": [],
+      "cause": "Utenti oltre l'abbonamento, oppure rinnovo automatico non riuscito per un problema di pagamento.",
+      "solutions": [
+        "L'amministratore ha acquistato utenti aggiuntivi dall'area clienti > Abbonamento, attivi subito.",
+        "Il rinnovo era fallito per la carta scaduta: aggiornato il metodo di pagamento con l'amministrazione, licenza riattivata."
+      ],
+      "replies": [
+        "nella versione SaaS il rinnovo è automatico con l'abbonamento. Per gli utenti oltre il limite, l'amministratore può acquistarne di aggiuntivi dall'area clienti > Abbonamento: sono attivi subito. Se invece la licenza risulta scaduta, di solito il pagamento del rinnovo non è andato a buon fine: la mettiamo in contatto con l'amministrazione."
+      ],
+      "kb": ["KB-{P}-0102"], "releaseNotes": []
+    },
+    {
+      "code": "TR-UPDATE-DB", "products": ["FF", "DA"], "modes": ["OnPrem"], "versionFrom": null, "versionTo": null,
+      "category": "aggiornamento", "priority": "High", "errorCode": "{P}-E0310", "weight": 4,
+      "subjects": ["Aggiornamento non riuscito", "Errore {codice} durante l'aggiornamento", "Setup fallito"],
+      "symptoms": [
+        "l'aggiornamento si è fermato con l'errore {codice}, migrazione del database non riuscita.",
+        "abbiamo provato ad aggiornare {prodotto} ma il setup torna indietro alla versione precedente.",
+        "durante l'aggiornamento compare un errore sul database e l'installazione viene annullata.",
+        "nel setup.log c'è scritto CREATE TABLE permission denied.",
+        "l'installazione della nuova versione non va a termine: alla fase di aggiornamento della base dati si interrompe e ripristina tutto."
+      ],
+      "details": ["Il database è su un server SQL gestito da un'altra società.", "Volevamo passare alla {versione}.", "L'utente del database è stato creato dal nostro consulente."],
+      "questions": ["Nel file setup.log compare un errore di permessi o un timeout?"],
+      "followUps": ["Sì, \"ALTER permission denied\".", "C'è un timeout dopo circa dieci minuti."],
+      "cause": "L'utente del database non ha i permessi per modificare lo schema (oppure timeout su database grandi).",
+      "solutions": [
+        "Assegnato db_owner all'utente del database e rilanciato l'aggiornamento, completato correttamente.",
+        "Rilanciato l'aggiornamento fuori orario con /dbtimeout=1800; la migrazione è terminata."
+      ],
+      "replies": [
+        "l'errore {codice} indica che la migrazione dello schema non è andata a buon fine e il programma ha ripristinato la versione precedente, quindi non ci sono dati persi. Nel setup.log compare quasi sempre un errore di permessi: l'utente del database deve avere db_owner, o almeno db_ddladmin, db_datareader e db_datawriter. Assegnati i permessi rilanci l'aggiornamento. Se nel log c'è un timeout, lo ripeta fuori orario con il parametro /dbtimeout=1800.",
+        "dal log l'utente del database non ha i permessi per modificare le tabelle. Chieda a chi gestisce SQL Server di assegnargli db_owner per la durata dell'aggiornamento e rilanci il setup."
+      ],
+      "kb": ["KB-{P}-0103"], "releaseNotes": ["RN-FF-5.0.3-06"]
+    },
+    {
+      "code": "TR-INSTALL-PREREQ", "products": ["FF", "DA"], "modes": ["OnPrem"], "versionFrom": null, "versionTo": null,
+      "category": "installazione", "priority": "Normal", "errorCode": "{P}-E0301", "weight": 2,
+      "subjects": ["Installazione su nuovo server", "Errore {codice} prerequisito mancante"],
+      "symptoms": [
+        "stiamo installando {prodotto} sul nuovo server e il setup si ferma con {codice}, prerequisito mancante.",
+        "l'installazione non parte, dice che manca un componente.",
+        "quali sono i requisiti per installare {prodotto} su un nuovo server? Il setup ci blocca.",
+        "il setup su Windows Server 2022 si interrompe all'inizio con un messaggio sui prerequisiti."
+      ],
+      "details": ["Il server non ha accesso a internet.", "È un Windows Server 2022 appena installato."],
+      "questions": [],
+      "followUps": [],
+      "cause": "Componente prerequisito non installato (ASP.NET Core Hosting Bundle o ruolo IIS).",
+      "solutions": [
+        "Installato l'ASP.NET Core Hosting Bundle e il ruolo IIS, riavviato il server; installazione completata.",
+        "Scaricati i pacchetti offline dall'area clienti per il server senza internet; installazione completata."
+      ],
+      "replies": [
+        "il setup indica il componente mancante: di solito è l'ASP.NET Core Hosting Bundle della versione indicata nelle note di rilascio, oppure il ruolo IIS. Lo installi, riavvii il server e rilanci l'installazione. Se il server non ha accesso a internet trova i pacchetti offline nell'area clienti. Ricordiamo i requisiti: Windows Server 2019 o successivo, SQL Server 2019 o successivo, 4 core e 16 GB di RAM consigliati."
+      ],
+      "kb": ["KB-{P}-0104"], "releaseNotes": []
+    },
+    {
+      "code": "TR-PRESTAZIONI-ONPREM", "products": ["FF", "DA"], "modes": ["OnPrem"], "versionFrom": null, "versionTo": null,
+      "category": "prestazioni", "priority": "Normal", "errorCode": null, "weight": 4,
+      "subjects": ["Programma lentissimo", "{prodotto} lento", "Tempi di risposta altissimi"],
+      "symptoms": [
+        "{prodotto} è diventato lentissimo, ogni pagina impiega dieci secondi ad aprirsi.",
+        "da qualche settimana il programma è molto lento, soprattutto la mattina.",
+        "gli utenti si lamentano della lentezza, a volte le pagine vanno in timeout.",
+        "le ricerche e gli elenchi sono lentissimi da quando siamo più utenti.",
+        "il sistema rallenta molto nelle ore di punta e tutti gli uffici aspettano minuti per aprire una schermata."
+      ],
+      "details": ["Il database è su SQL Server Express.", "Siamo passati da 6 a 15 utenti.", "Il server è una macchina virtuale con 8 GB di RAM.", "Non è mai stata fatta manutenzione sul database."],
+      "questions": ["Quale edizione di SQL Server usate e quanti utenti lavorano insieme?", "È pianificato un piano di manutenzione del database?"],
+      "followUps": ["SQL Server Express, una quindicina di utenti.", "Nessuna manutenzione pianificata."],
+      "cause": "Database senza manutenzione (indici frammentati, statistiche vecchie) o SQL Server Express al limite di memoria.",
+      "solutions": [
+        "Pianificato il piano di manutenzione settimanale (ricostruzione indici e statistiche); i tempi di risposta sono tornati normali.",
+        "Passati da SQL Server Express a Standard per superare il limite di memoria; prestazioni ripristinate."
+      ],
+      "replies": [
+        "le cause più frequenti di una lentezza così sono due: il database senza manutenzione, con indici frammentati e statistiche non aggiornate, e SQL Server Express arrivato al suo limite di memoria. Le consigliamo di pianificare un piano di manutenzione settimanale (ricostruzione degli indici e aggiornamento delle statistiche) e, oltre i dieci utenti, di passare all'edizione Standard. Se il problema resta, ci mandi il report di Aiuto > Diagnostica generato durante la lentezza.",
+        "dal report di diagnostica gli indici del database risultano molto frammentati: pianifichi la manutenzione settimanale e verifichi la memoria disponibile per SQL Server."
+      ],
+      "kb": ["KB-{P}-0105"], "releaseNotes": []
+    },
+    {
+      "code": "TR-PRESTAZIONI-SAAS", "products": ["FF", "DA"], "modes": ["Saas"], "versionFrom": null, "versionTo": null,
+      "category": "prestazioni", "priority": "Normal", "errorCode": null, "weight": 2,
+      "subjects": ["Lentezza versione online", "Programma lento"],
+      "symptoms": [
+        "{prodotto} online è lentissimo oggi, le pagine non si caricano.",
+        "da un paio di giorni il programma è lento solo nel nostro ufficio di Milano.",
+        "un utente ha il programma lentissimo, gli altri no.",
+        "la versione cloud risponde con molta lentezza dal nostro ufficio, a casa invece va bene."
+      ],
+      "details": ["Abbiamo un proxy aziendale.", "Usiamo Chrome."],
+      "questions": ["La lentezza riguarda tutti gli utenti o solo alcuni uffici o persone?"],
+      "followUps": ["Solo un ufficio.", "Solo un utente."],
+      "cause": "Problema di rete o proxy dell'ufficio, oppure cache ed estensioni del browser dell'utente; il servizio era regolare.",
+      "solutions": [
+        "Verificato che il servizio era regolare; la lentezza dipendeva dal proxy dell'ufficio, sistemato dal reparto IT.",
+        "Svuotata la cache del browser e disattivata un'estensione; le prestazioni sono tornate normali."
+      ],
+      "replies": [
+        "nella versione SaaS monitoriamo le prestazioni del servizio, che nelle ultime ore sono regolari. Se la lentezza riguarda un solo ufficio, controlli la connessione e il proxy aziendale; se riguarda una sola persona, provi a svuotare la cache del browser e a disattivare le estensioni. Prima di aprire un ticket può controllare anche la pagina di stato della piattaforma."
+      ],
+      "kb": ["KB-{P}-0105"], "releaseNotes": []
+    },
+    {
+      "code": "TR-BACKUP-ONPREM", "products": ["FF", "DA"], "modes": ["OnPrem"], "versionFrom": null, "versionTo": null,
+      "category": "backup", "priority": "High", "errorCode": null, "weight": 2,
+      "subjects": ["Ripristino da backup", "Documenti mancanti dopo il ripristino", "Come ripristinare"],
+      "symptoms": [
+        "abbiamo ripristinato il database di ieri ma ora molti allegati non si aprono.",
+        "dobbiamo ripristinare {prodotto} su un nuovo server dopo un guasto, come si fa?",
+        "dopo il ripristino del backup i file risultano mancanti.",
+        "il server si è rotto e abbiamo il backup del database: basta quello per ripartire?"
+      ],
+      "details": ["Il backup lo fa il nostro fornitore IT.", "Abbiamo solo il backup di SQL Server."],
+      "questions": [],
+      "followUps": [],
+      "cause": "Ripristinato solo il database senza la cartella dei dati della stessa data.",
+      "solutions": [
+        "Ripristinata anche la cartella dei dati della stessa data del database con i servizi fermi; allegati di nuovo disponibili.",
+        "Spiegata la procedura completa di ripristino (database e cartella dei dati) per il nuovo server."
+      ],
+      "replies": [
+        "per un ripristino completo servono il backup del database e quello della cartella dei dati (allegati, repository, certificati) della stessa data. Fermi i servizi di {prodotto}, ripristini entrambi e riavvii i servizi. Ripristinare solo il database lascia riferimenti a file che non ci sono, ed è quello che vede adesso."
+      ],
+      "kb": ["KB-{P}-0106"], "releaseNotes": []
+    },
+    {
+      "code": "TR-RESTORE-SAAS", "products": ["FF", "DA"], "modes": ["Saas"], "versionFrom": null, "versionTo": null,
+      "category": "backup", "priority": "High", "errorCode": null, "weight": 2,
+      "subjects": ["Dati cancellati per errore", "Richiesta di ripristino"],
+      "symptoms": [
+        "un collega ha cancellato per errore una cartella intera, si può recuperare?",
+        "abbiamo eliminato per sbaglio alcuni dati la settimana scorsa, potete ripristinarli?",
+        "ci servirebbe recuperare la situazione di lunedì scorso, abbiamo perso delle modifiche."
+      ],
+      "details": ["È successo martedì.", "Non vogliamo perdere il lavoro fatto dopo."],
+      "questions": [],
+      "followUps": [],
+      "cause": "Richiesta di ripristino dati nella versione SaaS (backup giornalieri conservati 30 giorni).",
+      "solutions": [
+        "Recuperati i dati dal backup in un ambiente separato e reimportati senza sovrascrivere il lavoro successivo."
+      ],
+      "replies": [
+        "nella versione SaaS i backup sono giornalieri e conservati per 30 giorni. Il ripristino avviene in un ambiente separato, da cui recuperiamo solo i dati che ci indica: il lavoro fatto nel frattempo non viene sovrascritto. Ci confermi cosa ripristinare e la data di riferimento."
+      ],
+      "kb": ["KB-{P}-0106"], "releaseNotes": []
+    },
+    {
+      "code": "TR-UTENTE-BLOCCATO", "products": ["FF", "DA"], "modes": ["OnPrem", "Saas"], "versionFrom": null, "versionTo": null,
+      "category": "accesso", "priority": "Normal", "errorCode": "{P}-E0110", "weight": 3,
+      "subjects": ["Utente bloccato", "Errore {codice}", "Non riesco ad accedere"],
+      "symptoms": [
+        "una collega ha sbagliato la password e ora risulta bloccata con {codice}.",
+        "non riesco più ad accedere, dice utente bloccato per troppi tentativi.",
+        "il nostro amministratore è in ferie e un utente è bloccato, come si sblocca?",
+        "dopo aver cambiato la password un utente è rimasto bloccato fuori."
+      ],
+      "details": ["Abbiamo provato a reimpostare la password.", "L'utente accede di solito con l'account aziendale."],
+      "questions": [],
+      "followUps": [],
+      "cause": "Utente bloccato dopo cinque tentativi di accesso errati.",
+      "solutions": [
+        "Un amministratore ha sbloccato l'utente da Impostazioni > Utenti > Sblocca e inviato il collegamento per reimpostare la password.",
+        "Atteso lo sblocco automatico dopo 30 minuti; l'utente ha reimpostato la password."
+      ],
+      "replies": [
+        "dopo cinque tentativi errati l'utente resta bloccato per 30 minuti, poi si sblocca da solo. Un amministratore può sbloccarlo subito da Impostazioni > Utenti > (utente) > Sblocca e inviargli il collegamento per reimpostare la password. Se l'utente accede con l'account aziendale (SSO) non ha una password di {prodotto}: in quel caso il blocco è sull'account aziendale."
+      ],
+      "kb": ["KB-{P}-0107"], "releaseNotes": ["RN-FF-5.1.2-06"]
+    }
+  ]
+}

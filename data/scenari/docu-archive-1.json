@@ -1,0 +1,248 @@
+{
+  "_comment": "Casi DocuArchive: indicizzazione, ricerca, workflow.",
+  "cases": [
+    {
+      "code": "DA-INDEX-CODA-ONPREM", "products": ["DA"], "modes": ["OnPrem"], "versionFrom": "2.4.7", "versionTo": null,
+      "category": "indicizzazione", "priority": "High", "errorCode": "DA-E4410", "weight": 5,
+      "subjects": ["I nuovi documenti non si trovano", "Errore {codice}", "Ricerca non aggiornata"],
+      "symptoms": [
+        "i documenti caricati da ieri non compaiono nella ricerca, quelli vecchi sì. Nel pannello c'è {codice}.",
+        "la ricerca non trova i documenti nuovi. Il pannello di amministrazione dice che la coda di indicizzazione è ferma.",
+        "abbiamo caricato una cinquantina di contratti stamattina e nessuno è ricercabile.",
+        "nel pannello di amministrazione i documenti in attesa di indicizzazione sono più di 3.000 e non calano.",
+        "da lunedì quello che archiviamo non si trova con la ricerca; i documenti però ci sono se navighiamo nelle cartelle.",
+        "la ricerca restituisce solo documenti vecchi di qualche giorno, come se l'archivio non si aggiornasse più, e compare l'avviso {codice}."
+      ],
+      "details": ["Il server è stato riavviato per manutenzione nel fine settimana.", "Il disco dati è quasi pieno.", "Versione {versione}.", "Nel log dell'indicizzatore si ripete sempre lo stesso identificativo di documento."],
+      "questions": ["Il servizio DocuArchive Indexer risulta avviato sul server?", "Quanto spazio libero c'è sul disco dell'indice?"],
+      "followUps": ["Il servizio risultava arrestato.", "Sul disco dell'indice c'è il 4% libero.", "Il servizio è avviato, ma nel log c'è sempre lo stesso errore su un documento."],
+      "cause": "Servizio DocuArchive Indexer fermo dopo il riavvio, disco dell'indice pieno o documento danneggiato che blocca la coda.",
+      "solutions": [
+        "Avviato il servizio DocuArchive Indexer e impostato l'avvio automatico; la coda è ripartita da dove si era fermata.",
+        "Liberato spazio sul disco dell'indice (sotto il 15% libero l'indicizzazione si ferma); la coda è stata smaltita in un'ora.",
+        "Messo in quarantena il documento danneggiato da Amministrazione > Indicizzazione > Documenti in errore; la coda è ripartita."
+      ],
+      "replies": [
+        "l'avviso {codice} indica che la coda di indicizzazione è ferma, per questo i documenti nuovi non sono ricercabili. Le cause più comuni sono tre: il servizio DocuArchive Indexer è fermo (spesso dopo un riavvio, se l'avvio è manuale), il disco dell'indice ha meno del 15% libero, oppure un documento danneggiato blocca l'elaborazione. Verifichi il servizio e lo imposti in avvio automatico; la coda riparte da dove si era fermata, senza ricostruire l'indice.",
+        "dal pannello risulta la coda ferma. Avvii il servizio DocuArchive Indexer e controlli lo spazio sul disco dell'indice; se nel log si ripete sempre lo stesso documento, lo metta in quarantena da Amministrazione > Indicizzazione > Documenti in errore. I documenti in attesa verranno indicizzati automaticamente."
+      ],
+      "kb": ["KB-DA-0001"], "releaseNotes": ["RN-DA-2.4.7-03"]
+    },
+    {
+      "code": "DA-INDEX-CODA-SAAS", "products": ["DA"], "modes": ["Saas"], "versionFrom": null, "versionTo": null,
+      "category": "indicizzazione", "priority": "Normal", "errorCode": "DA-E4410", "weight": 2,
+      "subjects": ["Documenti non ricercabili", "Ricerca non trova i documenti di oggi"],
+      "symptoms": [
+        "i documenti caricati oggi non si trovano con la ricerca. Usiamo DocuArchive online.",
+        "la ricerca non trova i file che abbiamo caricato un'ora fa.",
+        "nella versione cloud i nuovi documenti compaiono nelle cartelle ma non nella ricerca.",
+        "abbiamo caricato molti documenti con l'importazione e la ricerca non li trova ancora."
+      ],
+      "details": ["Abbiamo importato circa 20.000 documenti ieri sera.", "Il problema c'è per tutti gli utenti."],
+      "questions": ["Avete fatto di recente un'importazione massiva?"],
+      "followUps": ["Sì, ieri sera circa 20.000 documenti.", "No, solo caricamenti normali."],
+      "cause": "Nella versione SaaS l'indicizzazione di grandi importazioni richiede alcune ore; nessun intervento richiesto al cliente.",
+      "solutions": [
+        "Verificato che la coda della piattaforma stava elaborando l'importazione; i documenti sono diventati ricercabili entro la giornata.",
+        "Rilevato un rallentamento della coda di indicizzazione sulla piattaforma, risolto dal team operativo; nessuna azione del cliente."
+      ],
+      "replies": [
+        "nella versione SaaS l'indicizzazione è gestita da noi. Dopo un'importazione massiva i documenti vengono resi ricercabili progressivamente: per 20.000 documenti possono servire alcune ore. Abbiamo verificato che la coda sta procedendo regolarmente; non deve ricaricare nulla.",
+        "abbiamo controllato la coda di indicizzazione del vostro archivio: c'era un rallentamento lato piattaforma, già risolto. I documenti saranno ricercabili a breve, senza interventi da parte vostra."
+      ],
+      "kb": [], "releaseNotes": []
+    },
+    {
+      "code": "DA-OCR-NONATTIVO", "products": ["DA"], "modes": ["OnPrem", "Saas"], "versionFrom": "3.0.4", "versionTo": null,
+      "category": "ricerca", "priority": "Normal", "errorCode": "DA-E4415", "weight": 4,
+      "subjects": ["La ricerca non trova le scansioni", "Avviso {codice}", "Ricerca nel testo non funziona"],
+      "symptoms": [
+        "la ricerca per parole non trova i documenti scansionati, solo quelli in PDF nativo.",
+        "cercando il nome di un fornitore non escono le fatture scansionate, compare l'avviso {codice}.",
+        "le scansioni della posta in arrivo non sono ricercabili nel testo.",
+        "nella classe \"Protocollo in entrata\" la ricerca full-text non trova nulla.",
+        "ricercando una parola che sappiamo essere scritta nel documento scansionato non viene restituito niente, mentre per i file Word funziona."
+      ],
+      "details": ["Le scansioni le facciamo dalla multifunzione dell'ufficio.", "Abbiamo creato la classe documentale il mese scorso.", "Versione {versione}."],
+      "questions": ["I documenti che non trovate appartengono a una classe documentale specifica?"],
+      "followUps": ["Sì, sono tutti nella classe \"Posta in arrivo\".", "Sono nella nuova classe creata a settembre."],
+      "cause": "OCR non attivo per la classe documentale dei documenti scansionati.",
+      "solutions": [
+        "Attivato il riconoscimento testo sulla classe e avviata la rielaborazione dei documenti esistenti; le scansioni sono diventate ricercabili.",
+        "Attivato l'OCR in Amministrazione > Classi documentali > Riconoscimento testo; i nuovi documenti sono ricercabili al caricamento, gli altri dopo la rielaborazione."
+      ],
+      "replies": [
+        "dalla 3.0.4 il riconoscimento del testo (OCR) si attiva per singola classe documentale, e sulla classe delle scansioni non è attivo: per questo compare l'avviso {codice}. Lo attivi in Amministrazione > Classi documentali > (classe) > Riconoscimento testo; per i documenti già archiviati usi \"Rielabora documenti esistenti\", che lavora in background.",
+        "i documenti scansionati sono immagini: per cercarne il testo serve l'OCR, che va attivato sulla classe documentale. Attivandolo e rielaborando i documenti esistenti la ricerca li troverà."
+      ],
+      "kb": ["KB-DA-0002"], "releaseNotes": ["RN-DA-3.0.4-02"]
+    },
+    {
+      "code": "DA-INDICE-CORROTTO", "products": ["DA"], "modes": ["OnPrem"], "versionFrom": null, "versionTo": null,
+      "category": "indicizzazione", "priority": "High", "errorCode": "DA-E4420", "weight": 2,
+      "subjects": ["Ricerca con risultati incompleti", "Errore {codice}", "Indice danneggiato"],
+      "symptoms": [
+        "dopo un blackout la ricerca restituisce pochissimi risultati.",
+        "all'avvio del servizio compare {codice}, indice di ricerca danneggiato.",
+        "la ricerca dà errore su alcune parole e su altre restituisce risultati parziali.",
+        "dopo che il server si è spento all'improvviso la ricerca non funziona più bene."
+      ],
+      "details": ["Il server non ha un gruppo di continuità.", "La versione è la {versione}."],
+      "questions": [],
+      "followUps": [],
+      "cause": "Indice di ricerca danneggiato da uno spegnimento improvviso del server.",
+      "solutions": [
+        "Ricostruito l'indice con daadmin index rebuild --all dopo aver fermato l'indicizzatore e salvato la vecchia cartella; ricerca completa dopo circa due ore.",
+        "Eseguita la ricostruzione dell'indice; consigliato un gruppo di continuità per il server."
+      ],
+      "replies": [
+        "lo spegnimento improvviso ha danneggiato l'indice di ricerca. Va ricostruito: fermi il servizio DocuArchive Indexer, rinomini la cartella dell'indice (IndexPath) come copia di sicurezza, esegua da prompt come amministratore daadmin index rebuild --all e riavvii il servizio. La ricostruzione procede in background, circa un'ora ogni 500.000 documenti; nel frattempo la ricerca è disponibile ma incompleta."
+      ],
+      "kb": ["KB-DA-0003"], "releaseNotes": ["RN-DA-3.1.1-05"]
+    },
+    {
+      "code": "DA-INDEX-LENTA-ANTIVIRUS", "products": ["DA"], "modes": ["OnPrem"], "versionFrom": null, "versionTo": null,
+      "category": "indicizzazione", "priority": "Normal", "errorCode": null, "weight": 3,
+      "subjects": ["Indicizzazione lentissima", "I documenti diventano ricercabili dopo ore", "Server lento durante l'indicizzazione"],
+      "symptoms": [
+        "i documenti caricati diventano ricercabili solo dopo diverse ore, prima bastavano pochi minuti.",
+        "l'indicizzazione è lentissima e il server ha la CPU sempre al 100%.",
+        "la coda di indicizzazione cala ma molto lentamente, circa cento documenti l'ora.",
+        "da quando abbiamo installato il nuovo antivirus il server di DocuArchive è lento e l'indicizzazione non finisce mai."
+      ],
+      "details": ["Il reparto IT ha cambiato antivirus il mese scorso.", "Non ci sono errori nel pannello.", "Il server ha 8 GB di RAM."],
+      "questions": ["L'antivirus del server analizza in tempo reale le cartelle del repository e dell'indice?"],
+      "followUps": ["Sì, non ci sono esclusioni.", "Non lo so, chiedo all'IT: confermano che non ci sono esclusioni."],
+      "cause": "Antivirus con scansione in tempo reale sulle cartelle del repository e dell'indice.",
+      "solutions": [
+        "Escluse dalla scansione in tempo reale le cartelle del repository e dell'indice e il processo DocuArchive.Indexer.exe; l'indicizzazione è tornata a pochi minuti.",
+        "Configurate le esclusioni dell'antivirus e aumentata la RAM del server; la coda si è smaltita in mezza giornata."
+      ],
+      "replies": [
+        "una lentezza così, senza errori, dipende quasi sempre dall'antivirus che analizza in tempo reale ogni scrittura dell'indicizzatore. Chieda al reparto IT di escludere dalla scansione in tempo reale la cartella del repository, la cartella dell'indice (IndexPath) e il processo DocuArchive.Indexer.exe; i file vengono comunque analizzati al caricamento. Verifichi anche che il server abbia almeno 8 GB di RAM liberi per l'indicizzatore.",
+        "il problema è legato alla scansione dell'antivirus sulle cartelle di DocuArchive: con le esclusioni indicate nell'articolo della knowledge base l'indicizzazione torna ai tempi normali."
+      ],
+      "kb": ["KB-DA-0004"], "releaseNotes": []
+    },
+    {
+      "code": "DA-RICERCA-JOLLY-247", "products": ["DA"], "modes": ["OnPrem", "Saas"], "versionFrom": "2.4.7", "versionTo": "2.4.7",
+      "category": "ricerca", "priority": "Normal", "errorCode": null, "weight": 2,
+      "subjects": ["Ricerca lentissima", "Ricerca con asterisco lenta"],
+      "symptoms": [
+        "le ricerche con l'asterisco all'inizio impiegano più di un minuto.",
+        "cercando *contratto la ricerca va in timeout.",
+        "la ricerca è diventata lentissima da quando l'archivio ha superato il milione di documenti.",
+        "se cerco parte di una parola con il carattere jolly davanti la ricerca non finisce più."
+      ],
+      "details": ["Le altre ricerche sono veloci.", "Versione {versione}."],
+      "questions": [],
+      "followUps": [],
+      "cause": "Bug noto della 2.4.7: ricerche con jolly iniziale lente su archivi grandi.",
+      "solutions": [
+        "Consigliato di evitare il jolly iniziale o usare la ricerca per metadati; programmato l'aggiornamento alla 3.0.4, dopo il quale le ricerche rispondono in meno di due secondi.",
+        "Spiegato il limite noto delle ricerche con jolly iniziale; gli utenti usano la ricerca per metadati in attesa della versione correttiva."
+      ],
+      "replies": [
+        "è un comportamento noto della 2.4.7: con più di un milione di documenti le ricerche che iniziano con un carattere jolly sono molto lente. Nel frattempo eviti il jolly iniziale oppure usi la ricerca per metadati. La 3.0.4 introduce un indice dedicato che risolve il problema; dopo l'aggiornamento l'indice si ricostruisce in background.",
+        "si tratta di un limite noto della versione installata: sugli archivi con più di un milione di documenti le ricerche che iniziano con un carattere jolly sono molto lente. Le consigliamo di non usare il jolly all'inizio della parola, oppure di cercare per metadati. Il team di sviluppo sta lavorando a un nuovo indice per la prossima versione."
+      ],
+      "kb": [], "releaseNotes": ["RN-DA-2.4.7-01", "RN-DA-3.0.4-01"]
+    },
+    {
+      "code": "DA-WF-APPROVATORE", "products": ["DA"], "modes": ["OnPrem", "Saas"], "versionFrom": null, "versionTo": null,
+      "category": "workflow", "priority": "High", "errorCode": "DA-E5120", "weight": 4,
+      "subjects": ["Workflow bloccato", "Errore {codice}", "Documento fermo in approvazione"],
+      "symptoms": [
+        "un documento è fermo in approvazione da due settimane con l'errore {codice}.",
+        "tutti i contratti in workflow si sono bloccati nel passo di approvazione del direttore.",
+        "il workflow delle fatture passive è sospeso e dice che l'approvatore non è più attivo.",
+        "da quando un collega se n'è andato i documenti che doveva approvare sono fermi.",
+        "le richieste di acquisto non avanzano oltre il secondo passo, compare un messaggio sull'approvatore assegnato."
+      ],
+      "details": ["Il collega ha lasciato l'azienda a fine mese e abbiamo disattivato il suo utente.", "Ci sono una trentina di documenti fermi.", "Il workflow l'aveva configurato un consulente."],
+      "questions": ["L'approvatore del passo è stato disattivato di recente?"],
+      "followUps": ["Sì, l'utente è stato disattivato perché la persona non lavora più qui.", "Sì, il direttore è in pensione da settembre."],
+      "cause": "L'approvatore assegnato nel modello di workflow è stato disattivato.",
+      "solutions": [
+        "Riassegnati i passi sospesi con Workflow > Riassegna passo; aggiornato il modello usando un gruppo come approvatore.",
+        "Sostituito l'utente disattivato nel modello di workflow e riassegnati i documenti fermi; i workflow sono ripresi senza perdere lo storico."
+      ],
+      "replies": [
+        "l'errore {codice} compare quando l'approvatore assegnato è stato disattivato. Un amministratore può aprire ciascun documento e scegliere Workflow > Riassegna passo indicando il nuovo approvatore: il workflow riprende dal passo sospeso e lo storico resta. Per evitare che succeda di nuovo, aggiorni il modello di workflow usando un gruppo invece di un singolo utente; dalla 3.2.0 si può anche indicare un sostituto per ogni approvatore.",
+        "i documenti sono sospesi perché l'utente approvatore non è più attivo. Li riassegni con Workflow > Riassegna passo e aggiorni il modello di workflow con il nuovo approvatore."
+      ],
+      "kb": ["KB-DA-0005"], "releaseNotes": ["RN-DA-3.2.0-05"]
+    },
+    {
+      "code": "DA-WF-TIMER-311", "products": ["DA"], "modes": ["OnPrem", "Saas"], "versionFrom": "3.1.1", "versionTo": "3.1.1",
+      "category": "workflow", "priority": "Normal", "errorCode": "DA-E5125", "weight": 3,
+      "subjects": ["Solleciti del workflow non partono", "Errore {codice}", "Scadenza workflow non scatta"],
+      "symptoms": [
+        "i solleciti automatici del workflow non partono più, i documenti restano fermi con {codice}.",
+        "la scadenza di 3 giorni lavorativi non scatta e il documento resta in attesa.",
+        "l'escalation automatica al responsabile non avviene più da gennaio.",
+        "il passo con approvazione automatica dopo cinque giorni non si chiude da solo."
+      ],
+      "details": ["Il problema è iniziato con il nuovo anno.", "Siamo sulla {versione}.", "Il servizio Scheduler è avviato."],
+      "questions": ["Il calendario aziendale ha festività inserite per l'anno in corso?"],
+      "followUps": ["No, il calendario dell'anno è vuoto.", "Controllando, l'anno nuovo non ha nessuna festività."],
+      "cause": "Bug noto della 3.1.1: i timer in giorni lavorativi non si pianificano se il calendario non ha festività per l'anno.",
+      "solutions": [
+        "Aggiunta una festività al calendario dell'anno in Amministrazione > Calendari: i timer sono stati pianificati entro un'ora. Consigliato l'aggiornamento alla 3.2.0.",
+        "Aggiornato alla 3.2.0; al primo avvio i passi fermi sono stati ricalcolati.",
+        "Inserite le festività dell'anno nel calendario aziendale: i timer sono stati pianificati e i solleciti sono ripartiti."
+      ],
+      "replies": [
+        "è un bug noto della 3.1.1: i timer espressi in giorni lavorativi non vengono pianificati se il calendario aziendale non ha festività per l'anno in corso, e il passo resta fermo con {codice}. Come soluzione temporanea aggiunga almeno una festività all'anno in Amministrazione > Calendari: entro un'ora i timer vengono pianificati. La correzione è nella 3.2.0.",
+        "il problema è descritto nelle note della 3.1.1: basta inserire una festività nel calendario dell'anno, oppure aggiornare alla 3.2.0, che ricalcola anche i passi fermi.",
+        "è un problema noto della versione installata: i timer in giorni lavorativi non vengono pianificati se il calendario aziendale non ha festività per l'anno in corso, e il documento resta fermo con {codice}. In Amministrazione > Calendari aggiunga almeno una festività dell'anno: entro un'ora i timer vengono pianificati. La correzione è prevista nella prossima versione."
+      ],
+      "kb": ["KB-DA-0006"], "releaseNotes": ["RN-DA-3.1.1-01", "RN-DA-3.2.0-01"]
+    },
+    {
+      "code": "DA-WF-CONFIG", "products": ["DA"], "modes": ["OnPrem", "Saas"], "versionFrom": "3.0.4", "versionTo": null,
+      "category": "configurazione", "priority": "Low", "errorCode": null, "weight": 2,
+      "subjects": ["Approvazione da parte di più persone", "Domanda sui workflow", "Configurazione workflow"],
+      "symptoms": [
+        "vorremmo che i contratti siano approvati sia dall'ufficio legale sia dall'amministrazione, si può fare?",
+        "è possibile che basti l'approvazione di uno qualsiasi dei tre responsabili?",
+        "come configuro un passo di workflow con più approvatori contemporaneamente?",
+        "ci serve un'approvazione congiunta di due persone prima della firma: come si imposta?"
+      ],
+      "details": ["Abbiamo già un workflow con un solo approvatore.", "Siamo sulla {versione}."],
+      "questions": [],
+      "followUps": [],
+      "cause": "Richiesta di configurazione: passo di approvazione parallela.",
+      "solutions": ["Spiegata la configurazione dell'approvazione parallela con regola \"tutti\" o \"almeno uno\" e la pubblicazione di una nuova versione del modello."],
+      "replies": [
+        "sì, dalla 3.0.4. In Amministrazione > Workflow apra il modello, aggiunga un passo di tipo Approvazione e nella scheda Approvatori indichi più utenti o gruppi; nella regola scelga \"tutti\" o \"almeno uno\". Poi salvi e pubblichi una nuova versione: vale per i documenti avviati dopo la pubblicazione, quelli in corso proseguono con la versione precedente."
+      ],
+      "kb": ["KB-DA-0015"], "releaseNotes": ["RN-DA-3.0.4-03"]
+    },
+    {
+      "code": "DA-RICERCA-METADATI", "products": ["DA"], "modes": ["OnPrem", "Saas"], "versionFrom": null, "versionTo": "3.1.1",
+      "category": "ricerca", "priority": "Normal", "errorCode": null, "weight": 3,
+      "subjects": ["La ricerca non funziona", "Ricerca per data non trova i documenti", "Non troviamo un contratto"],
+      "symptoms": [
+        "la ricerca non funziona, non troviamo i documenti.",
+        "cercando i contratti del 2019 non esce niente, ma sono sicuro che ci sono.",
+        "la ricerca avanzata per data restituisce documenti che non c'entrano.",
+        "non riusciamo a trovare le fatture di un certo periodo con la ricerca avanzata.",
+        "abbiamo archiviato tutti i vecchi contratti il mese scorso ma filtrando per l'anno del contratto non li troviamo."
+      ],
+      "details": ["Abbiamo caricato i documenti storici di recente.", "Il problema è solo con la ricerca avanzata.", "Usiamo il campo Data."],
+      "questions": ["Che criteri usate nella ricerca: parole del testo, un metadato o il campo Data?", "I documenti che non trovate sono stati caricati di recente anche se sono vecchi?"],
+      "followUps": ["Usiamo il campo Data della ricerca avanzata con l'anno 2019.", "Sì, li abbiamo caricati a settembre ma sono contratti di anni fa."],
+      "cause": "Il campo \"Data\" della ricerca avanzata filtra sulla data di registrazione, non sulla data del documento.",
+      "solutions": [
+        "Spiegata la differenza tra data di registrazione e data del documento; la ricerca con il filtro sul metadato \"Data contratto\" della classe trova i documenti.",
+        "Usato il filtro sul metadato data della classe documentale invece del campo Data; dalla 3.2.0 i due campi sono distinti."
+      ],
+      "replies": [
+        "ogni documento ha due date: quella di registrazione (quando è stato caricato) e la data del documento, che è un metadato della classe. Il campo \"Data\" della ricerca avanzata filtra sulla data di registrazione: un contratto del 2019 caricato a settembre non si trova cercando il 2019. Usi invece Ricerca avanzata > Classe > campo data del contratto. Dalla 3.2.0 i due campi sono distinti nella ricerca.",
+        "i documenti ci sono: la ricerca filtra sulla data di caricamento. Per cercare per data del documento selezioni la classe documentale e usi il suo campo data."
+      ],
+      "kb": ["KB-DA-0014"], "releaseNotes": ["RN-DA-3.2.0-06"]
+    }
+  ]
+}

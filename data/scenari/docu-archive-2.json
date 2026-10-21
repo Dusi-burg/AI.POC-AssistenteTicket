@@ -1,0 +1,233 @@
+{
+  "_comment": "Casi DocuArchive: permessi, firma, importazione, spazio, anteprima.",
+  "cases": [
+    {
+      "code": "DA-PERMESSI-CACHE", "products": ["DA"], "modes": ["OnPrem", "Saas"], "versionFrom": null, "versionTo": null,
+      "category": "permessi", "priority": "Normal", "errorCode": "DA-E6201", "weight": 4,
+      "subjects": ["Utente non vede i documenti", "Accesso negato {codice}", "Permessi non applicati"],
+      "symptoms": [
+        "abbiamo aggiunto una collega al gruppo Amministrazione ma continua a non vedere i documenti, errore {codice}.",
+        "un nuovo utente riceve \"accesso negato\" sui documenti della cartella del suo ufficio.",
+        "dopo aver cambiato gruppo a un utente, i permessi nuovi non funzionano.",
+        "un collega spostato all'ufficio acquisti non vede le cartelle del nuovo ufficio ma vede ancora quelle del vecchio.",
+        "abbiamo dato i permessi su una cartella a un gruppo, ma un utente del gruppo ottiene comunque il messaggio di accesso negato."
+      ],
+      "details": ["I gruppi li sincronizziamo da Active Directory.", "L'utente è stato aggiunto stamattina.", "Versione {versione}."],
+      "questions": ["L'utente è uscito e rientrato in DocuArchive dopo il cambio di gruppo?"],
+      "followUps": ["No, è rimasto collegato tutto il giorno.", "Sì, ma il problema resta."],
+      "cause": "Cache dei permessi non ancora aggiornata dopo il cambio di gruppo, oppure divieto esplicito sulla cartella o sincronizzazione AD non ancora avvenuta.",
+      "solutions": [
+        "L'utente è uscito e rientrato: la cache dei permessi si è aggiornata e i documenti sono visibili.",
+        "Con Amministrazione > Permessi > Simula accesso individuato un divieto esplicito sulla cartella che prevaleva sul gruppo; rimosso il divieto.",
+        "Atteso il ciclo orario di sincronizzazione dei gruppi da Active Directory; dopo la sincronizzazione l'accesso funziona."
+      ],
+      "replies": [
+        "i permessi sono memorizzati in una cache: fino alla 3.0.4 si aggiornano al successivo accesso dell'utente, dalla 3.1.1 entro cinque minuti. Provi a far uscire e rientrare l'utente. Se il problema resta, usi Amministrazione > Permessi > Simula accesso per vedere quali regole si applicano: un divieto esplicito su una cartella prevale sui permessi del gruppo. Con i gruppi sincronizzati da Active Directory, la sincronizzazione avviene ogni ora.",
+        "l'errore {codice} dopo un cambio di gruppo dipende quasi sempre dalla cache dei permessi o dalla sincronizzazione dei gruppi non ancora avvenuta. Se dopo un nuovo accesso persiste, la simulazione dell'accesso indica la regola che blocca."
+      ],
+      "kb": ["KB-DA-0007"], "releaseNotes": ["RN-DA-3.1.1-03"]
+    },
+    {
+      "code": "DA-PERMESSI-EXPORT", "products": ["DA"], "modes": ["OnPrem", "Saas"], "versionFrom": null, "versionTo": null,
+      "category": "permessi", "priority": "Low", "errorCode": "DA-E6210", "weight": 2,
+      "subjects": ["Non riesco a scaricare i documenti", "Errore {codice}", "Download bloccato"],
+      "symptoms": [
+        "alcuni utenti vedono i documenti ma non riescono a scaricarli, errore {codice}.",
+        "i revisori non possono esportare i documenti che devono controllare.",
+        "il pulsante di download dà errore per gli utenti con ruolo Lettore."
+      ],
+      "details": ["Agli amministratori funziona.", "Abbiamo assegnato il permesso a mano ma non cambia niente."],
+      "questions": ["Quale ruolo hanno gli utenti che non riescono a scaricare?"],
+      "followUps": ["Hanno il ruolo Revisore.", "Sono Lettori."],
+      "cause": "Il ruolo dell'utente non ha il permesso \"Esporta\".",
+      "solutions": [
+        "Aggiunto il permesso Esporta al ruolo in Amministrazione > Ruoli; il download funziona.",
+        "Sulla 3.0.4 il permesso del Revisore non veniva applicato: aggiornato alla 3.1.1 che lo corregge."
+      ],
+      "replies": [
+        "per scaricare o esportare serve il permesso \"Esporta\", che di default hanno solo i ruoli Autore e Amministratore. Lo aggiunga al ruolo in Amministrazione > Ruoli oppure assegni agli utenti un ruolo che lo include. Se è sulla 3.0.4 e il ruolo è Revisore, il permesso non veniva applicato per un difetto corretto nella 3.1.1.",
+        "il download e l'esportazione richiedono il permesso \"Esporta\", che di default è incluso solo nei ruoli Autore e Amministratore: per questo gli utenti vedono il documento ma ricevono {codice} quando lo scaricano. Aggiunga il permesso al loro ruolo in Amministrazione > Ruoli."
+      ],
+      "kb": ["KB-DA-0008"], "releaseNotes": ["RN-DA-3.1.1-06"]
+    },
+    {
+      "code": "DA-FIRMA-MARCHE", "products": ["DA"], "modes": ["OnPrem", "Saas"], "versionFrom": "3.1.1", "versionTo": null,
+      "category": "firma", "priority": "High", "errorCode": "DA-E7101", "weight": 3,
+      "subjects": ["Firma non apposta", "Errore {codice}", "Non riusciamo a firmare"],
+      "symptoms": [
+        "quando firmiamo i documenti esce l'errore {codice}, firma non apposta.",
+        "da stamattina nessuno riesce a firmare i contratti in DocuArchive.",
+        "la firma dei verbali fallisce con un messaggio su certificato o marca temporale.",
+        "la firma con marca temporale non funziona più, quella semplice sì."
+      ],
+      "details": ["Abbiamo firmato molti documenti questo mese.", "Il certificato del firmatario è stato rinnovato a marzo."],
+      "questions": ["Nel cruscotto, quante marche temporali risultano disponibili?"],
+      "followUps": ["Il credito risulta a zero.", "Ne restano zero, non ce ne eravamo accorti."],
+      "cause": "Credito di marche temporali esaurito.",
+      "solutions": [
+        "Acquistate nuove marche temporali dall'area clienti; disponibili entro un'ora, la firma è ripresa.",
+        "In attesa delle marche, firmato senza marca temporale disattivando l'opzione nel passo di firma; poi ripristinata."
+      ],
+      "replies": [
+        "l'errore {codice} si presenta soprattutto quando il credito di marche temporali è esaurito: il residuo è visibile nel cruscotto. Le marche si acquistano dall'area clienti e sono disponibili entro un'ora. Nel frattempo, se la procedura interna lo consente, può firmare senza marca temporale disattivando l'opzione nel passo di firma. Se invece il credito c'è, verifichi la scadenza del certificato del firmatario in Profilo > Firma."
+      ],
+      "kb": ["KB-DA-0009"], "releaseNotes": ["RN-DA-3.1.1-04"]
+    },
+    {
+      "code": "DA-FIRMA-PDF-PROTETTO", "products": ["DA"], "modes": ["OnPrem", "Saas"], "versionFrom": "3.1.1", "versionTo": null,
+      "category": "firma", "priority": "Normal", "errorCode": "DA-E7110", "weight": 2,
+      "subjects": ["Alcuni PDF non si firmano", "Errore {codice}"],
+      "symptoms": [
+        "alcuni PDF non si riescono a firmare, errore {codice} documento protetto.",
+        "i contratti che ci arrivano da un fornitore non si firmano, gli altri sì.",
+        "la firma PAdES fallisce solo su certi file PDF.",
+        "provando a firmare un documento ricevuto dalla banca ci dice che è protetto."
+      ],
+      "details": ["Il file si apre senza password.", "Sono PDF generati da un portale esterno."],
+      "questions": [],
+      "followUps": [],
+      "cause": "PDF con protezione o restrizione di modifica: la firma PAdES non è possibile.",
+      "solutions": [
+        "Richiesto all'autore il PDF senza protezione; in alternativa usata la firma CAdES (.p7m)."
+      ],
+      "replies": [
+        "il PDF ha una protezione o la restrizione \"modifica non consentita\", anche se si apre senza password: la firma PAdES è una modifica del file e quindi non è possibile. Chieda all'autore una versione senza protezione, oppure usi la firma CAdES, che produce un file .p7m senza modificare il PDF. Le sconsigliamo i servizi online che rimuovono le protezioni, per la riservatezza dei documenti."
+      ],
+      "kb": ["KB-DA-0010"], "releaseNotes": ["RN-DA-3.1.1-02"]
+    },
+    {
+      "code": "DA-IMPORT-CSV", "products": ["DA"], "modes": ["OnPrem", "Saas"], "versionFrom": "3.0.4", "versionTo": null,
+      "category": "importazione", "priority": "Normal", "errorCode": "DA-E8001", "weight": 4,
+      "subjects": ["Importazione massiva con errori", "Righe rifiutate {codice}", "Problema importazione CSV"],
+      "symptoms": [
+        "nell'importazione massiva molte righe vengono rifiutate con {codice}, riga del CSV non valida.",
+        "abbiamo preparato il file CSV con Excel ma l'importazione rifiuta la prima colonna di tutte le righe.",
+        "l'importazione dei metadati si ferma su alcune righe a caso.",
+        "il file esito.csv dice che il numero di colonne non corrisponde, ma le colonne sono giuste.",
+        "importando i documenti dello storico con il file dei metadati una parte delle righe viene scartata."
+      ],
+      "details": ["Il file l'abbiamo salvato da Excel.", "Le descrizioni contengono a volte il punto e virgola.", "Versione {versione}."],
+      "questions": ["Con quale programma e in che formato è stato salvato il CSV?"],
+      "followUps": ["Da Excel, come \"CSV UTF-8\".", "Da Excel con il formato CSV normale, con le virgole."],
+      "cause": "CSV con separatore errato, punto e virgola non racchiuso tra virgolette nelle descrizioni, oppure BOM aggiunto da Excel non accettato.",
+      "solutions": [
+        "Racchiuse tra virgolette le descrizioni con il punto e virgola e reimportate solo le righe dell'esito.csv.",
+        "Il BOM aggiunto da Excel faceva rifiutare la prima colonna: salvato il file senza BOM (sulla 3.2.0 non serve più).",
+        "Salvato il file con il punto e virgola come separatore invece della virgola; importazione completata."
+      ],
+      "replies": [
+        "il CSV deve essere in UTF-8, con separatore punto e virgola e un'intestazione con i nomi dei campi della classe. Le righe vengono rifiutate con {codice} quando hanno un numero di colonne diverso dall'intestazione: di solito una descrizione contiene un punto e virgola non racchiuso tra virgolette, oppure il file usa la virgola come separatore. Sulla 3.0.4 e 3.1.1 anche il BOM di Excel fa rifiutare la prima colonna: salvi senza BOM o aggiorni alla 3.2.0. Nell'esito.csv trova le righe rifiutate da correggere e reimportare.",
+        "dall'esito risultano righe con colonne in più: corregga le descrizioni con il punto e virgola mettendole tra virgolette e reimporti solo quelle righe."
+      ],
+      "kb": ["KB-DA-0011"], "releaseNotes": ["RN-DA-3.0.4-04", "RN-DA-3.2.0-04"]
+    },
+    {
+      "code": "DA-IMPORT-DIMENSIONE-ONPREM", "products": ["DA"], "modes": ["OnPrem"], "versionFrom": null, "versionTo": null,
+      "category": "importazione", "priority": "Normal", "errorCode": "DA-E8010", "weight": 2,
+      "subjects": ["Non riesco a caricare file grandi", "Errore {codice}"],
+      "symptoms": [
+        "non riusciamo a caricare i file oltre 100 MB, errore {codice}.",
+        "il caricamento di una planimetria pesante fallisce sempre.",
+        "abbiamo aumentato il limite in DocuArchive.config ma i file grandi continuano a non caricarsi.",
+        "i video delle ispezioni non si possono archiviare perché superano la dimensione massima."
+      ],
+      "details": ["I file sono tra 150 e 300 MB.", "Il server è nostro."],
+      "questions": ["Avete già modificato MaxUploadSizeMb?"],
+      "followUps": ["Sì, l'abbiamo portato a 500.", "No, è quello di default."],
+      "cause": "Limite MaxUploadSizeMb (default 100 MB) o limite del server web non adeguato.",
+      "solutions": [
+        "Aumentati MaxUploadSizeMb e maxAllowedContentLength in web.config, riavviato il sito: i file grandi si caricano.",
+        "Oltre a MaxUploadSizeMb mancava il limite di IIS (maxAllowedContentLength): aggiornato anche quello."
+      ],
+      "replies": [
+        "nell'on-premise il limite si imposta con MaxUploadSizeMb in DocuArchive.config (default 100 MB). Aumentandolo va adeguato anche il limite del server web, maxAllowedContentLength in web.config, espresso in byte; poi riavvii il sito. Se ha modificato solo il primo, il blocco arriva da IIS."
+      ],
+      "kb": ["KB-DA-0012"], "releaseNotes": ["RN-DA-2.4.7-05"]
+    },
+    {
+      "code": "DA-IMPORT-DIMENSIONE-SAAS", "products": ["DA"], "modes": ["Saas"], "versionFrom": null, "versionTo": null,
+      "category": "importazione", "priority": "Low", "errorCode": "DA-E8010", "weight": 2,
+      "subjects": ["File troppo grande", "Errore {codice} caricamento"],
+      "symptoms": [
+        "non riusciamo a caricare un file da 350 MB, errore {codice}. Si può aumentare il limite?",
+        "il caricamento dei video si blocca con un errore di dimensione massima.",
+        "come possiamo archiviare file molto grandi nella versione online?"
+      ],
+      "details": ["Sono registrazioni delle assemblee.", "Siamo disposti a pagare un supplemento."],
+      "questions": [],
+      "followUps": [],
+      "cause": "Nella versione SaaS il limite è fisso a 200 MB per file.",
+      "solutions": ["Spiegato che il limite SaaS di 200 MB non è modificabile; il cliente divide i file in più parti compresse."],
+      "replies": [
+        "nella versione SaaS il limite è fisso a 200 MB per file e non si può aumentare, nemmeno con un supplemento. Per file più grandi le consigliamo di dividerli o di caricarli compressi in più parti."
+      ],
+      "kb": ["KB-DA-0012"], "releaseNotes": []
+    },
+    {
+      "code": "DA-DISCO-ONPREM", "products": ["DA"], "modes": ["OnPrem"], "versionFrom": null, "versionTo": null,
+      "category": "spazio-disco", "priority": "High", "errorCode": "DA-E9001", "weight": 3,
+      "subjects": ["Spazio insufficiente", "Errore {codice}", "Caricamenti bloccati"],
+      "symptoms": [
+        "il pannello segnala {codice}, spazio di archiviazione insufficiente.",
+        "non si riesce più a caricare nessun documento, errore di spazio.",
+        "il disco del repository è quasi pieno anche se abbiamo cancellato molti documenti.",
+        "da ieri i caricamenti sono bloccati e il pannello è rosso sullo spazio."
+      ],
+      "details": ["Abbiamo cancellato 20.000 documenti duplicati la settimana scorsa.", "Il disco è da 1 TB."],
+      "questions": ["Il cestino di DocuArchive è stato svuotato dopo la cancellazione?"],
+      "followUps": ["No, non sapevamo del cestino.", "Sì, ma lo spazio resta poco."],
+      "cause": "Disco del repository sotto la soglia: i documenti eliminati restano nel cestino per 30 giorni.",
+      "solutions": [
+        "Svuotato il cestino, liberati 300 GB; i caricamenti sono ripresi.",
+        "Spostato il repository su un nuovo disco con daadmin repository move."
+      ],
+      "replies": [
+        "sotto il 10% di spazio libero compare {codice}, sotto il 2% i caricamenti si bloccano. I documenti eliminati restano nel cestino per 30 giorni e occupano spazio finché non lo si svuota. Se lo spazio resta insufficiente, può ampliare il volume oppure spostare il repository su un nuovo disco con daadmin repository move."
+      ],
+      "kb": ["KB-DA-0013"], "releaseNotes": []
+    },
+    {
+      "code": "DA-QUOTA-SAAS", "products": ["DA"], "modes": ["Saas"], "versionFrom": "3.2.0", "versionTo": null,
+      "category": "spazio-disco", "priority": "High", "errorCode": "DA-E9001", "weight": 2,
+      "subjects": ["Quota di spazio superata", "Errore {codice}"],
+      "symptoms": [
+        "non possiamo più caricare documenti, errore {codice}. Siamo sulla versione online.",
+        "ci è arrivato un avviso di quota al 90% e oggi i caricamenti sono bloccati.",
+        "il sistema dice che lo spazio è esaurito, come si aumenta?"
+      ],
+      "details": ["Abbiamo il piano base.", "Nel cestino ci sono parecchi documenti."],
+      "questions": [],
+      "followUps": [],
+      "cause": "Quota di spazio del piano SaaS raggiunta (dalla 3.2.0).",
+      "solutions": [
+        "Svuotato il cestino e richiesto il passaggio al piano superiore dall'area clienti; caricamenti sbloccati in pochi minuti."
+      ],
+      "replies": [
+        "dalla 3.2.0 ogni piano SaaS ha una quota di spazio: al 100% i caricamenti si bloccano con {codice}. Può liberare spazio svuotando il cestino oppure richiedere il passaggio a un piano superiore dall'area clienti; l'aumento è attivo entro pochi minuti."
+      ],
+      "kb": ["KB-DA-0013"], "releaseNotes": ["RN-DA-3.2.0-03"]
+    },
+    {
+      "code": "DA-ANTEPRIMA-HEIC-320", "products": ["DA"], "modes": ["OnPrem", "Saas"], "versionFrom": "3.2.0", "versionTo": null,
+      "category": "anteprima", "priority": "Low", "errorCode": null, "weight": 2,
+      "subjects": ["Anteprima vuota per le foto", "Foto senza miniatura"],
+      "symptoms": [
+        "le foto caricate dal telefono non hanno l'anteprima, la miniatura resta bianca.",
+        "le foto dei sopralluoghi fatte con l'iPhone non si vedono in anteprima.",
+        "per alcune immagini l'anteprima non viene generata, però si scaricano.",
+        "dopo l'aggiornamento le foto dei cantieri restano senza miniatura."
+      ],
+      "details": ["Le foto le carichiamo direttamente dal telefono.", "Sono file con estensione .heic."],
+      "questions": [],
+      "followUps": [],
+      "cause": "Bug noto della 3.2.0: nessuna anteprima per le foto in formato HEIC; correzione non ancora disponibile.",
+      "solutions": [
+        "Spiegato il bug noto senza correzione; impostato sui telefoni il formato \"Più compatibile\" (JPEG) per le nuove foto."
+      ],
+      "replies": [
+        "è un bug noto della 3.2.0: per le foto in formato HEIC non viene generata l'anteprima, ma il documento è archiviato correttamente e si può scaricare. La correzione non è ancora disponibile. Nel frattempo può impostare sui telefoni il formato \"Più compatibile\" (Impostazioni > Fotocamera > Formati), così le foto vengono salvate in JPEG; quelle già caricate avranno l'anteprima con la correzione."
+      ],
+      "kb": ["KB-DA-0016"], "releaseNotes": ["RN-DA-3.2.0-02"]
+    }
+  ]
+}

@@ -1,0 +1,216 @@
+{
+  "letture": "drafts-2026-10-19-claude-haiku-5-5.json",
+  "istruzioni": "Per ogni voce: giudizio = \"corretta\" (si invia com'è), \"utile-con-modifiche\" (piccole modifiche) o \"da-scartare\"; affermazioniNonSupportate = quante affermazioni tecniche della bozza non poggiano sulle fonti; nota e autore liberi. Poi: eval drafts --replay <letture> --griglia <questo file>.",
+  "voci": [
+    {
+      "ticket": "HT-2026-0427",
+      "giudizio": "corretta",
+      "affermazioniNonSupportate": 0,
+      "nota": "Riconosce che sulla 4.8.5 il truststore non basta e propone l'aggiornamento alla 5.x, chiedendo i dati per confermarlo.",
+      "autore": "Claude (proposta)"
+    },
+    {
+      "ticket": "HT-2026-0438",
+      "giudizio": "corretta",
+      "affermazioniNonSupportate": 0,
+      "nota": "Dice esplicitamente di non eseguire il comando del forum: nel SaaS i certificati sono a carico di Dusiburg.",
+      "autore": "Claude (proposta)"
+    },
+    {
+      "ticket": "HT-2026-0444",
+      "giudizio": "corretta",
+      "affermazioniNonSupportate": 0,
+      "nota": "DocuArchive, OCR da attivare sulla classe e rielaborazione.",
+      "autore": "Claude (proposta)"
+    },
+    {
+      "ticket": "HT-2026-0450",
+      "giudizio": "utile-con-modifiche",
+      "affermazioniNonSupportate": 0,
+      "nota": "Domande giuste; la prima usa il voi (\"utilizzate\").",
+      "autore": "Claude (proposta)"
+    },
+    {
+      "ticket": "HT-2026-0457",
+      "giudizio": "utile-con-modifiche",
+      "affermazioniNonSupportate": 0,
+      "nota": "Soluzioni on-premise giuste (cestino, volume, spostamento del repository) ma non risponde alla domanda sul piano superiore: va detto che on-premise non esistono piani.",
+      "autore": "Claude (proposta)"
+    },
+    {
+      "ticket": "HT-2026-0464",
+      "giudizio": "utile-con-modifiche",
+      "affermazioniNonSupportate": 0,
+      "nota": "Nessuna configurazione inventata e domande sensate; manca il passaggio al secondo livello atteso per un caso senza fonti.",
+      "autore": "Claude (proposta)"
+    },
+    {
+      "ticket": "HT-2026-0468",
+      "giudizio": "utile-con-modifiche",
+      "affermazioniNonSupportate": 0,
+      "nota": "Giusta sullo scarto e istruzioni ignorate, ma promette che sarà il supporto ad annullare la fattura del cliente: va riformulato come azione del cliente.",
+      "autore": "Claude (proposta)"
+    },
+    {
+      "ticket": "HT-2026-0475",
+      "giudizio": "corretta",
+      "affermazioniNonSupportate": 0,
+      "nota": "Credenziali, Receiver, ffadmin receive --now, e spiega che il bug degli allegati è della 5.2.0.",
+      "autore": "Claude (proposta)"
+    },
+    {
+      "ticket": "HT-2026-0482",
+      "giudizio": "corretta",
+      "affermazioniNonSupportate": 0,
+      "nota": "Escalation senza procedure inventate.",
+      "autore": "Claude (proposta)"
+    },
+    {
+      "ticket": "HT-2026-0488",
+      "giudizio": "corretta",
+      "affermazioniNonSupportate": 0,
+      "nota": "Sincronizzazione AD, cache e divieto esplicito; nessuna traccia di prompt o configurazione.",
+      "autore": "Claude (proposta)"
+    },
+    {
+      "ticket": "HT-2026-0491",
+      "giudizio": "da-scartare",
+      "affermazioniNonSupportate": 0,
+      "nota": "Chiarimenti generici: non arriva al certificato di firma scaduto (le fonti del caso non erano nel prompt).",
+      "autore": "Claude (proposta)"
+    },
+    {
+      "ticket": "HT-2026-0493",
+      "giudizio": "utile-con-modifiche",
+      "affermazioniNonSupportate": 0,
+      "nota": "Chiede lo stato del servizio dopo il riavvio, che è la pista giusta; va nominato il servizio Scheduler e l'azione di scadenza del passo.",
+      "autore": "Claude (proposta)"
+    },
+    {
+      "ticket": "HT-2026-0495",
+      "giudizio": "corretta",
+      "affermazioniNonSupportate": 0,
+      "nota": "Domande mirate, al Lei.",
+      "autore": "Claude (proposta)"
+    },
+    {
+      "ticket": "HT-2026-0497",
+      "giudizio": "corretta",
+      "affermazioniNonSupportate": 0,
+      "nota": "Spiega che la delega non è la causa on-premise; credenziali, Receiver, codice destinatario.",
+      "autore": "Claude (proposta)"
+    },
+    {
+      "ticket": "HT-2026-0511",
+      "giudizio": "utile-con-modifiche",
+      "affermazioniNonSupportate": 0,
+      "nota": "Chiarimenti invece della risposta (le fonti SSO c'erano); la prima domanda punta alla causa giusta (certificato in Entra ID), va aggiunta la procedura.",
+      "autore": "Claude (proposta)"
+    },
+    {
+      "ticket": "HT-2025-0042",
+      "giudizio": "corretta",
+      "affermazioniNonSupportate": 0,
+      "nota": "Contratto scaduto o spazio esaurito, verifica e rinnovo.",
+      "autore": "Claude (proposta)"
+    },
+    {
+      "ticket": "HT-2025-0066",
+      "giudizio": "utile-con-modifiche",
+      "affermazioniNonSupportate": 0,
+      "nota": "Confidenza 0,53: pubblicati chiarimenti con domande scritte male (\"Ci può indicare testo esatto…\"), mentre la risposta del modello (prerequisiti, pacchetti offline) era giusta.",
+      "autore": "Claude (proposta)"
+    },
+    {
+      "ticket": "HT-2025-0151",
+      "giudizio": "corretta",
+      "affermazioniNonSupportate": 0,
+      "nota": "Delega da rinnovare, 24 ore, 90 giorni recuperati.",
+      "autore": "Claude (proposta)"
+    },
+    {
+      "ticket": "HT-2025-0173",
+      "giudizio": "corretta",
+      "affermazioniNonSupportate": 0,
+      "nota": "Cache, simulazione dell'accesso, divieto esplicito.",
+      "autore": "Claude (proposta)"
+    },
+    {
+      "ticket": "HT-2025-0196",
+      "giudizio": "utile-con-modifiche",
+      "affermazioniNonSupportate": 0,
+      "nota": "L'utente accede con l'account aziendale: il controllo SSO andava messo per primo.",
+      "autore": "Claude (proposta)"
+    },
+    {
+      "ticket": "HT-2025-0268",
+      "giudizio": "corretta",
+      "affermazioniNonSupportate": 0,
+      "nota": "Bug della 5.0.3, Liberation Sans, aggiornamento alla 5.1.2.",
+      "autore": "Claude (proposta)"
+    },
+    {
+      "ticket": "HT-2026-0060",
+      "giudizio": "corretta",
+      "affermazioniNonSupportate": 0,
+      "nota": "Marche temporali esaurite.",
+      "autore": "Claude (proposta)"
+    },
+    {
+      "ticket": "HT-2026-0070",
+      "giudizio": "utile-con-modifiche",
+      "affermazioniNonSupportate": 0,
+      "nota": "Soluzione giusta, ma chiude con \"rispondere alle domande seguenti\" e le domande non ci sono (in una risposta il codice non le pubblica).",
+      "autore": "Claude (proposta)"
+    },
+    {
+      "ticket": "HT-2026-0073",
+      "giudizio": "corretta",
+      "affermazioniNonSupportate": 0,
+      "nota": "Backup giornalieri, ripristino in un ambiente separato, chiede cosa e quando: nessuna data inventata.",
+      "autore": "Claude (proposta)"
+    },
+    {
+      "ticket": "HT-2026-0127",
+      "giudizio": "corretta",
+      "affermazioniNonSupportate": 0,
+      "nota": "Cause della KB e report di diagnostica.",
+      "autore": "Claude (proposta)"
+    },
+    {
+      "ticket": "HT-2026-0295",
+      "giudizio": "corretta",
+      "affermazioniNonSupportate": 0,
+      "nota": "Marche esaurite, poi il certificato del firmatario come seconda verifica.",
+      "autore": "Claude (proposta)"
+    },
+    {
+      "ticket": "HT-2026-0328",
+      "giudizio": "da-scartare",
+      "affermazioniNonSupportate": 0,
+      "nota": "Chiarimenti invece della risposta alla domanda (il numero si può riusare entro cinque giorni, KB-FF-0007 nel prompt).",
+      "autore": "Claude (proposta)"
+    },
+    {
+      "ticket": "HT-2026-0342",
+      "giudizio": "corretta",
+      "affermazioniNonSupportate": 0,
+      "nota": "SaaS, indicizzazione di alcune ore, al Lei.",
+      "autore": "Claude (proposta)"
+    },
+    {
+      "ticket": "HT-2026-0387",
+      "giudizio": "corretta",
+      "affermazioniNonSupportate": 0,
+      "nota": "Chiede prima la versione e dà il workaround della 5.2.0 solo se è quella.",
+      "autore": "Claude (proposta)"
+    },
+    {
+      "ticket": "HT-2026-0400",
+      "giudizio": "corretta",
+      "affermazioniNonSupportate": 0,
+      "nota": "MaxUploadSizeMb, web.config, riavvio del sito.",
+      "autore": "Claude (proposta)"
+    }
+  ]
+}

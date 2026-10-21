@@ -1,0 +1,19 @@
+<Project Sdk="Aspire.AppHost.Sdk/13.6.1">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <AspireUseCliBundle>true</AspireUseCliBundle>
+    <UserSecretsId>29c88890-cc3f-4090-82fc-dd4e2ecf92e5</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="MessagePack" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Dusiburg.AI.Ticket.Agent\Dusiburg.AI.Ticket.Agent.csproj" />
+    <ProjectReference Include="..\Dusiburg.AI.Ticket.Web\Dusiburg.AI.Ticket.Web.csproj" />
+    <ProjectReference Include="..\Dusiburg.AI.Ticket.Mcp\Dusiburg.AI.Ticket.Mcp.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <!-- Unico proprietario del database Ticket; ospita come librerie i client dei modelli e di Zammad (G8). -->
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Data.SqlClient" />
+    <PackageReference Include="System.Security.Cryptography.Pkcs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Dusiburg.AI.Ticket.ServiceDefaults\Dusiburg.AI.Ticket.ServiceDefaults.csproj" />
+    <ProjectReference Include="..\Dusiburg.AI.Ticket.Ai\Dusiburg.AI.Ticket.Ai.csproj" />
+    <ProjectReference Include="..\Dusiburg.AI.Ticket.Zammad\Dusiburg.AI.Ticket.Zammad.csproj" />
+    <ProjectReference Include="..\Dusiburg.AI.Ticket.Core\Dusiburg.AI.Ticket.Core.csproj" />
+    <ProjectReference Include="..\Dusiburg.AI.Ticket.Agentic\Dusiburg.AI.Ticket.Agentic.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Dusiburg.AI.Ticket.Agent.Tests" />
+  </ItemGroup>
+
+</Project>

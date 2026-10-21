@@ -1,0 +1,142 @@
+{
+  "articles": [
+    {
+      "code": "KB-DA-0001", "products": ["DA"], "mode": "OnPrem", "versionFrom": null, "versionTo": null, "updatedOn": "2026-02-09",
+      "title": "Coda di indicizzazione ferma (on-premise)",
+      "sections": [
+        { "title": "Sintomo", "body": "I documenti caricati di recente non compaiono nella ricerca, mentre quelli vecchi sì. Il pannello di amministrazione mostra DA-E4410 \"Coda di indicizzazione ferma\" e un numero di documenti in attesa che non cala." },
+        { "title": "Cause", "body": "1. Il servizio DocuArchive Indexer è fermo, spesso dopo un riavvio del server con avvio manuale del servizio.\n2. Il disco della cartella dell'indice è pieno (serve almeno il 15% libero).\n3. Un documento danneggiato blocca l'elaborazione: nel log compare ripetutamente lo stesso identificativo." },
+        { "title": "Soluzione", "body": "Avviare il servizio DocuArchive Indexer e impostarlo in avvio automatico. Se il disco è pieno liberare spazio o spostare l'indice (IndexPath in DocuArchive.config). Se un documento blocca la coda, metterlo in quarantena dal pannello Amministrazione > Indicizzazione > Documenti in errore. La coda riparte da dove si era fermata: non serve ricostruire l'indice." }
+      ]
+    },
+    {
+      "code": "KB-DA-0002", "products": ["DA"], "mode": null, "versionFrom": "3.0.4", "versionTo": null, "updatedOn": "2025-07-14",
+      "title": "Ricerca nel testo dei documenti scansionati: l'OCR per classe documentale",
+      "sections": [
+        { "title": "Sintomo", "body": "La ricerca full-text trova i documenti nati digitali ma non le scansioni; accanto ai risultati compare l'avviso DA-E4415 \"Testo non disponibile: OCR non attivo per la classe documentale\"." },
+        { "title": "Soluzione", "body": "Dalla 3.0.4 l'OCR si attiva per singola classe documentale: Amministrazione > Classi documentali > (classe) > Riconoscimento testo. I nuovi documenti della classe vengono riconosciuti al caricamento; per quelli già archiviati usare \"Rielabora documenti esistenti\", che lavora in background (circa 2.000 pagine l'ora nell'on-premise standard)." },
+        { "title": "SaaS", "body": "Nella versione SaaS l'attivazione è uguale; la rielaborazione dei documenti esistenti è inclusa nel piano e non consuma spazio aggiuntivo." }
+      ]
+    },
+    {
+      "code": "KB-DA-0003", "products": ["DA"], "mode": "OnPrem", "versionFrom": null, "versionTo": null, "updatedOn": "2026-01-19",
+      "title": "Ricostruire l'indice di ricerca (on-premise)",
+      "sections": [
+        { "title": "Quando serve", "body": "Dopo uno spegnimento improvviso del server o un disco pieno durante l'indicizzazione l'indice può danneggiarsi: la ricerca restituisce risultati parziali o errori, e dalla 3.1.1 l'avvio del servizio segnala DA-E4420 \"Indice di ricerca danneggiato\"." },
+        { "title": "Procedura", "body": "1. Fermare il servizio DocuArchive Indexer.\n2. Rinominare la cartella dell'indice (IndexPath) come copia di sicurezza.\n3. Da prompt come amministratore: daadmin index rebuild --all\n4. Avviare il servizio. La ricostruzione procede in background; la ricerca è disponibile ma incompleta finché non termina (circa un'ora ogni 500.000 documenti)." }
+      ]
+    },
+    {
+      "code": "KB-DA-0004", "products": ["DA"], "mode": "OnPrem", "versionFrom": null, "versionTo": null, "updatedOn": "2025-09-29",
+      "title": "Indicizzazione lenta: antivirus e risorse del server",
+      "sections": [
+        { "title": "Sintomo", "body": "L'indicizzazione dei nuovi documenti richiede ore invece di minuti, senza errori; la coda cala ma molto lentamente e la CPU del server è alta." },
+        { "title": "Causa più frequente", "body": "L'antivirus analizza in tempo reale le cartelle del repository e dell'indice: ogni scrittura dell'indicizzatore viene scansionata." },
+        { "title": "Soluzione", "body": "Escludere dalla scansione in tempo reale la cartella del repository, la cartella dell'indice (IndexPath) e il processo DocuArchive.Indexer.exe; i file vengono comunque analizzati al caricamento. Verificare inoltre che il server abbia almeno 8 GB di RAM liberi per l'indicizzatore e che l'indice sia su disco SSD." }
+      ]
+    },
+    {
+      "code": "KB-DA-0005", "products": ["DA"], "mode": null, "versionFrom": null, "versionTo": null, "updatedOn": "2026-07-06",
+      "title": "Workflow sospeso: approvatore non più attivo",
+      "sections": [
+        { "title": "Sintomo", "body": "Un documento resta fermo in un passo di approvazione e il workflow mostra DA-E5120 \"Workflow sospeso: l'approvatore assegnato non è più attivo\". Succede quando l'utente approvatore è stato disattivato, per esempio per le dimissioni." },
+        { "title": "Soluzione", "body": "Un amministratore apre il documento, sceglie Workflow > Riassegna passo e indica il nuovo approvatore: il workflow riprende dal passo sospeso senza perdere lo storico. Per evitare il problema aggiornare il modello di workflow sostituendo l'utente disattivato, oppure usare un gruppo invece di un singolo utente come approvatore." },
+        { "title": "Dalla 3.2.0", "body": "Ogni approvatore può indicare un sostituto: se l'approvatore viene disattivato il passo passa al sostituto senza sospendersi." }
+      ]
+    },
+    {
+      "code": "KB-DA-0006", "products": ["DA"], "mode": null, "versionFrom": "3.1.1", "versionTo": null, "updatedOn": "2026-07-06",
+      "title": "Workflow: timer e scadenze in giorni lavorativi",
+      "sections": [
+        { "title": "Sintomo", "body": "Un passo con scadenza (per esempio \"approvare entro 3 giorni lavorativi\") non scatta mai: il documento resta fermo con DA-E5125 \"Timer del passo non pianificato\"." },
+        { "title": "Versione 3.1.1", "body": "Sulla 3.1.1 è un bug noto: i timer in giorni lavorativi non vengono pianificati se il calendario aziendale non ha festività per l'anno in corso. Soluzione temporanea: in Amministrazione > Calendari aggiungere almeno una festività all'anno corrente (per esempio Natale); i timer vengono pianificati entro un'ora. La correzione è nella 3.2.0." },
+        { "title": "Altre cause", "body": "Verificare che il servizio DocuArchive Scheduler sia avviato e che il passo abbia un'azione di scadenza configurata (sollecito, escalation o approvazione automatica)." }
+      ]
+    },
+    {
+      "code": "KB-DA-0007", "products": ["DA"], "mode": null, "versionFrom": null, "versionTo": null, "updatedOn": "2026-01-19",
+      "title": "Permessi e gruppi: quando hanno effetto",
+      "sections": [
+        { "title": "Sintomo", "body": "Dopo aver aggiunto un utente a un gruppo, l'utente continua a non vedere i documenti della cartella e riceve DA-E6201 \"Accesso negato al documento\"." },
+        { "title": "Spiegazione", "body": "I permessi sono memorizzati in una cache. Fino alla 3.0.4 la cache si aggiorna al successivo accesso dell'utente: basta che l'utente esca e rientri. Dalla 3.1.1 si aggiorna da sola entro cinque minuti." },
+        { "title": "Se non basta", "body": "Verificare in Amministrazione > Permessi > Simula accesso quali regole si applicano: un divieto esplicito su una cartella prevale sui permessi del gruppo. Nell'on-premise con gruppi sincronizzati da Active Directory la sincronizzazione avviene ogni ora." }
+      ]
+    },
+    {
+      "code": "KB-DA-0008", "products": ["DA"], "mode": null, "versionFrom": null, "versionTo": null, "updatedOn": "2025-11-17",
+      "title": "Ruoli predefiniti e permesso di esportazione",
+      "sections": [
+        { "title": "Ruoli", "body": "I ruoli predefiniti sono Lettore (visualizza), Autore (carica e modifica i propri documenti), Revisore (approva nei workflow) e Amministratore. Il download e l'esportazione massiva richiedono il permesso \"Esporta\", che di default hanno solo Autore e Amministratore." },
+        { "title": "Download non consentito (DA-E6210)", "body": "Se un utente vede il documento ma non può scaricarlo compare DA-E6210 \"Esportazione non consentita per il ruolo\". Aggiungere il permesso Esporta al ruolo in Amministrazione > Ruoli, oppure assegnare all'utente un ruolo che lo includa. Sulla 3.0.4 il ruolo Revisore non riceveva il permesso anche se assegnato: corretto nella 3.1.1." }
+      ]
+    },
+    {
+      "code": "KB-DA-0009", "products": ["DA"], "mode": null, "versionFrom": "3.1.1", "versionTo": null, "updatedOn": "2025-11-17",
+      "title": "Firma digitale e marche temporali",
+      "sections": [
+        { "title": "Sintomo", "body": "La firma dei documenti fallisce con DA-E7101 \"Firma non apposta: certificato non valido o marca temporale non disponibile\"." },
+        { "title": "Credito di marche esaurito", "body": "La causa più comune è il credito di marche temporali esaurito: il residuo è nel cruscotto (dalla 3.1.1). Le marche si acquistano dall'area clienti e diventano disponibili entro un'ora. Fino ad allora si può firmare senza marca temporale disattivando l'opzione nel passo di firma, se la procedura interna lo consente." },
+        { "title": "Certificato", "body": "Se il credito c'è, verificare la scadenza del certificato del firmatario in Profilo > Firma; per la firma remota serve anche l'OTP del firmatario." }
+      ]
+    },
+    {
+      "code": "KB-DA-0010", "products": ["DA"], "mode": null, "versionFrom": "3.1.1", "versionTo": null, "updatedOn": "2025-11-17",
+      "title": "Firmare PDF protetti",
+      "sections": [
+        { "title": "Sintomo", "body": "La firma PAdES di alcuni PDF fallisce con DA-E7110 \"Il documento è protetto e non può essere firmato\"." },
+        { "title": "Soluzione", "body": "I PDF protetti da password o con la restrizione \"modifica non consentita\" non si possono firmare in PAdES, perché la firma è una modifica del file. Chiedere all'autore un PDF senza protezione, oppure usare la firma CAdES (file .p7m), che non modifica il PDF. Non usare servizi online per rimuovere la protezione da documenti riservati." }
+      ]
+    },
+    {
+      "code": "KB-DA-0011", "products": ["DA"], "mode": null, "versionFrom": "3.0.4", "versionTo": null, "updatedOn": "2026-07-06",
+      "title": "Importazione massiva: il file CSV dei metadati",
+      "sections": [
+        { "title": "Formato", "body": "Il CSV deve essere in UTF-8, con separatore punto e virgola e una riga di intestazione con i nomi dei campi della classe documentale. La colonna NomeFile indica il file da importare, nella stessa cartella del CSV. Le date vanno nel formato gg/mm/aaaa." },
+        { "title": "DA-E8001 — riga rifiutata", "body": "Una riga viene rifiutata con DA-E8001 \"Riga del CSV non valida\" se ha un numero di colonne diverso dall'intestazione: di solito una descrizione contiene un punto e virgola non racchiuso tra virgolette, oppure il file è stato salvato con la virgola come separatore. Sulla 3.0.4 e sulla 3.1.1 anche il BOM aggiunto da Excel fa rifiutare la prima colonna: salvare come \"CSV UTF-8\" senza BOM o aggiornare alla 3.2.0." },
+        { "title": "Esito", "body": "Al termine l'importazione produce un file esito.csv con le righe rifiutate e il motivo: si correggono e si reimportano solo quelle." }
+      ]
+    },
+    {
+      "code": "KB-DA-0012", "products": ["DA"], "mode": null, "versionFrom": null, "versionTo": null, "updatedOn": "2025-06-09",
+      "title": "Dimensione massima dei file",
+      "sections": [
+        { "title": "Sintomo", "body": "Il caricamento di un file grande fallisce con DA-E8010 \"File oltre la dimensione massima consentita\"." },
+        { "title": "On-premise", "body": "Il limite si imposta con MaxUploadSizeMb in DocuArchive.config (default 100 MB). Aumentandolo va adeguato anche il limite del server web (maxAllowedContentLength in web.config, in byte). Riavviare il sito dopo la modifica." },
+        { "title": "SaaS", "body": "Nella versione SaaS il limite è fisso a 200 MB per file e non si può aumentare. Per file più grandi (video, archivi) dividerli o caricarli compressi in più parti." }
+      ]
+    },
+    {
+      "code": "KB-DA-0013", "products": ["DA"], "mode": null, "versionFrom": null, "versionTo": null, "updatedOn": "2026-07-06",
+      "title": "Spazio del repository e quote",
+      "sections": [
+        { "title": "On-premise", "body": "Quando il disco del repository scende sotto il 10% libero il pannello mostra DA-E9001 \"Spazio di archiviazione insufficiente\" e sotto il 2% i caricamenti si bloccano. Aggiungere spazio al volume o spostare il repository su un nuovo disco con daadmin repository move; i documenti eliminati restano nel cestino per 30 giorni e occupano spazio finché non si svuota." },
+        { "title": "SaaS", "body": "Dalla 3.2.0 ogni piano ha una quota: al 90% gli amministratori ricevono un avviso, al 100% i caricamenti si bloccano con DA-E9001. Si può svuotare il cestino o richiedere il passaggio a un piano superiore dall'area clienti; l'aumento è attivo entro pochi minuti." }
+      ]
+    },
+    {
+      "code": "KB-DA-0014", "products": ["DA"], "mode": null, "versionFrom": null, "versionTo": null, "updatedOn": "2026-07-06",
+      "title": "Ricerca per data: data del documento e data di registrazione",
+      "sections": [
+        { "title": "Sintomo", "body": "Una ricerca per data non trova documenti che l'utente sa essere in archivio, oppure ne trova di inattesi." },
+        { "title": "Spiegazione", "body": "Ogni documento ha due date: la data di registrazione (quando è stato caricato in DocuArchive) e la data del documento (un metadato della classe, per esempio la data della fattura o del contratto). Fino alla 3.1.1 il campo \"Data\" della ricerca avanzata filtra sulla data di registrazione: un contratto del 2019 caricato oggi non si trova cercando il 2019. Dalla 3.2.0 i due campi sono distinti." },
+        { "title": "Come cercare", "body": "Per la data del documento usare il filtro sul metadato della classe (Ricerca avanzata > Classe > campo data). Controllare anche che la classe documentale selezionata sia quella giusta: la ricerca avanzata cerca solo nella classe scelta." }
+      ]
+    },
+    {
+      "code": "KB-DA-0015", "products": ["DA"], "mode": null, "versionFrom": "3.0.4", "versionTo": null, "updatedOn": "2025-06-09",
+      "title": "Configurare un workflow con approvazione parallela",
+      "sections": [
+        { "title": "Procedura", "body": "In Amministrazione > Workflow aprire il modello, aggiungere un passo di tipo Approvazione e nella scheda Approvatori indicare più utenti o gruppi. Nella regola scegliere \"tutti\" (servono tutte le approvazioni) o \"almeno uno\" (basta la prima). Salvare e pubblicare una nuova versione del modello." },
+        { "title": "Documenti in corso", "body": "I documenti già in workflow continuano con la versione del modello con cui sono partiti; la nuova versione vale per i documenti avviati dopo la pubblicazione." }
+      ]
+    },
+    {
+      "code": "KB-DA-0016", "products": ["DA"], "mode": null, "versionFrom": "3.2.0", "versionTo": null, "updatedOn": "2026-07-06",
+      "title": "Anteprima non generata per le foto HEIC",
+      "sections": [
+        { "title": "Sintomo", "body": "Per le foto scattate con iPhone (formato HEIC) l'anteprima resta vuota; il documento è archiviato correttamente e si può scaricare." },
+        { "title": "Stato", "body": "È un bug noto della 3.2.0 senza correzione disponibile. Soluzione temporanea: impostare il telefono su \"Più compatibile\" (Impostazioni > Fotocamera > Formati) in modo che salvi in JPEG, oppure convertire le foto prima del caricamento. Le foto già caricate avranno l'anteprima quando sarà disponibile la correzione." }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <!-- Console operativa (G9): nessun accesso al database né ai modelli, solo HTTP verso l'Agent. -->
+  <ItemGroup>
+    <ProjectReference Include="..\Dusiburg.AI.Ticket.ServiceDefaults\Dusiburg.AI.Ticket.ServiceDefaults.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Dusiburg.AI.Ticket.Web.Tests" />
+  </ItemGroup>
+
+</Project>

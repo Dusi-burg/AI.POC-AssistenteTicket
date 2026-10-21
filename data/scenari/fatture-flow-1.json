@@ -1,0 +1,311 @@
+{
+  "_comment": "Casi FattureFlow: firma, trasmissione, scarti, validazione. L'ultima variante di 'symptoms' è riservata al test set. Segnaposto: {prodotto} {versione} {codice}.",
+  "cases": [
+    {
+      "code": "FF-FIRMA-CERT-ONPREM", "products": ["FF"], "modes": ["OnPrem"], "versionFrom": null, "versionTo": null,
+      "category": "firma", "priority": "High", "errorCode": "FF-E1102", "weight": 4,
+      "subjects": ["Fatture non firmate", "Errore {codice} in invio", "Certificato di firma scaduto?", "Blocco firma fatture"],
+      "symptoms": [
+        "da questa mattina nessuna fattura viene firmata, restano tutte nello stato \"Da firmare\" con l'errore {codice}.",
+        "FattureFlow non firma più le fatture: l'errore è {codice} \"certificato di firma scaduto o revocato\".",
+        "abbiamo circa 40 fatture bloccate che non partono, il messaggio parla del certificato di firma.",
+        "provando a inviare le fatture del mese compare un errore sulla firma digitale e non va avanti niente.",
+        "non riusciamo a firmare: ci era arrivata un'e-mail di avviso sulla scadenza ma pensavamo di avere ancora tempo.",
+        "le fatture si fermano tutte prima dell'invio, il sistema dice che la firma non è stata apposta perché il certificato non sarebbe più valido."
+      ],
+      "details": [
+        "Siamo sulla versione {versione}.",
+        "Il certificato è su una chiavetta USB collegata al server.",
+        "Abbiamo già ricevuto il nuovo certificato dal certificatore ma non sappiamo come sostituirlo.",
+        "Il server è stato riavviato ieri sera per gli aggiornamenti di Windows."
+      ],
+      "questions": ["Ha già a disposizione il nuovo certificato (file .p12/.pfx o token)?", "Il certificato è su file o su dispositivo collegato al server?"],
+      "followUps": ["Sì, il certificatore ci ha mandato il file .p12 con la password.", "Il nuovo certificato è arrivato ieri, è un file .pfx."],
+      "cause": "Certificato di firma scaduto, nuovo certificato non ancora importato in FattureFlow.",
+      "solutions": [
+        "Importato il nuovo certificato da Impostazioni > Firma > Sostituisci certificato e riavviato il servizio FattureFlow Sender; le fatture \"Da firmare\" sono state firmate e inviate automaticamente.",
+        "Sostituito il certificato scaduto con quello rinnovato (file .p12) e riavviato FattureFlow Sender: le fatture bloccate sono ripartite senza doverle ricreare."
+      ],
+      "replies": [
+        "il certificato di firma configurato è scaduto. Per sostituirlo:\n1. vada in Impostazioni > Firma e scelga \"Sostituisci certificato\";\n2. importi il nuovo file .p12/.pfx con la relativa password;\n3. riavvii il servizio FattureFlow Sender dal server.\nLe fatture nello stato \"Da firmare\" verranno firmate e inviate da sole: non le crei di nuovo, altrimenti il sistema di interscambio le scarterebbe come duplicate.",
+        "l'errore {codice} indica che il certificato di firma non è più valido. Una volta ricevuto il certificato rinnovato lo importi da Impostazioni > Firma > Sostituisci certificato e poi riavvii il servizio FattureFlow Sender. Le fatture già in coda ripartono automaticamente; non serve reinviarle."
+      ],
+      "kb": ["KB-FF-0001"], "releaseNotes": ["RN-FF-4.8.5-05", "RN-FF-5.2.1-04"]
+    },
+    {
+      "code": "FF-FIRMA-REMOTA-SAAS", "products": ["FF"], "modes": ["Saas"], "versionFrom": "5.0.3", "versionTo": null,
+      "category": "firma", "priority": "High", "errorCode": "FF-E1102", "weight": 3,
+      "subjects": ["Firma remota non funziona", "Errore {codice}", "Fatture ferme da firmare"],
+      "symptoms": [
+        "le fatture non vengono firmate, l'errore è {codice}. Usiamo la versione online, non abbiamo certificati installati.",
+        "da ieri FattureFlow online non firma più le fatture e dice che il certificato è scaduto, ma noi non abbiamo mai installato nessun certificato.",
+        "compare l'errore {codice} su tutte le fatture di oggi. Dobbiamo rinnovare qualcosa?",
+        "ci risulta un errore di firma su tutte le fatture emesse, siamo sul servizio cloud.",
+        "il sistema non firma le fatture e nel messaggio parla di firma non apposta. Non capiamo cosa dobbiamo fare noi visto che è tutto online."
+      ],
+      "details": ["Il nostro legale rappresentante è cambiato a inizio anno.", "Lo scorso anno avevamo fatto una procedura con lo SPID, forse c'entra.", "Non abbiamo modificato nulla nelle impostazioni."],
+      "questions": ["Chi è il firmatario indicato nelle impostazioni di firma remota, ed è ancora in carica?"],
+      "followUps": ["Il firmatario è ancora il nostro amministratore delegato.", "Il firmatario indicato era il vecchio legale rappresentante."],
+      "cause": "Delega di firma remota scaduta dopo dodici mesi (versione SaaS).",
+      "solutions": [
+        "Il legale rappresentante ha rinnovato la delega da Impostazioni > Firma remota > Rinnova delega con SPID; le fatture sono ripartite entro dieci minuti.",
+        "Rinnovata la delega di firma remota scaduta; dopo il riconoscimento con CIE le fatture \"Da firmare\" sono state firmate automaticamente."
+      ],
+      "replies": [
+        "nella versione SaaS la firma è remota e non richiede certificati installati, ma si basa su una delega che dura dodici mesi: la vostra è scaduta. Il firmatario può rinnovarla da Impostazioni > Firma remota > Rinnova delega, con il riconoscimento tramite SPID o CIE. Il rinnovo è immediato e le fatture in attesa ripartono da sole entro dieci minuti.",
+        "l'errore {codice} nella versione online indica che la delega di firma remota non è più attiva (scade dopo dodici mesi). La rinnovi da Impostazioni > Firma remota > Rinnova delega; se il legale rappresentante è cambiato, la nuova delega va fatta a suo nome. Non deve reinviare le fatture."
+      ],
+      "kb": ["KB-FF-0002"], "releaseNotes": ["RN-FF-5.0.3-03"]
+    },
+    {
+      "code": "FF-FIRMA-PIN", "products": ["FF"], "modes": ["OnPrem", "Saas"], "versionFrom": null, "versionTo": null,
+      "category": "firma", "priority": "Normal", "errorCode": "FF-E1105", "weight": 2,
+      "subjects": ["Errore PIN firma", "{codice} in fase di firma", "Firma bloccata"],
+      "symptoms": [
+        "quando firmiamo le fatture esce l'errore {codice}, ma il codice che inseriamo è giusto.",
+        "la firma si blocca con l'errore {codice} dopo aver inserito il codice.",
+        "ci dice che il PIN o il codice di firma è errato, abbiamo provato più volte e adesso è bloccato.",
+        "dopo aver cambiato il telefono del titolare la firma non funziona più, errore di codice non valido."
+      ],
+      "details": ["Abbiamo provato tre o quattro volte.", "Il problema è iniziato dopo il cambio dell'ora legale.", "Il token è collegato a una macchina virtuale."],
+      "questions": ["Usate un dispositivo di firma collegato al server o la firma remota con OTP?"],
+      "followUps": ["Usiamo l'app sul telefono per i codici.", "Abbiamo la chiavetta collegata al server."],
+      "cause": "PIN del dispositivo non aggiornato in FattureFlow oppure OTP rifiutato per l'ora del telefono non sincronizzata.",
+      "solutions": [
+        "Per la firma remota: impostata l'ora automatica sul telefono del firmatario, gli OTP vengono accettati. Per il token: aggiornato il PIN in Impostazioni > Firma > Dispositivo.",
+        "Aggiornato in FattureFlow il PIN del dispositivo cambiato dal certificatore; la firma è ripresa."
+      ],
+      "replies": [
+        "l'errore {codice} indica un PIN o un codice OTP non accettato. Se usa la firma remota, controlli che l'ora del telefono sia impostata in automatico: con uno scarto di oltre 30 secondi i codici vengono rifiutati; dopo cinque tentativi errati la firma resta bloccata 15 minuti. Se usa un dispositivo collegato al server, verifichi che il PIN in Impostazioni > Firma > Dispositivo sia quello attuale.",
+        "il codice di firma viene rifiutato. Con il token sul server, dopo un cambio del PIN va aggiornato anche in Impostazioni > Firma > Dispositivo; con tre PIN errati il dispositivo si blocca e serve il PUK del certificatore. Con la firma remota, invece, il caso più comune è l'ora del telefono non sincronizzata."
+      ],
+      "kb": ["KB-FF-0003", "KB-FF-0002"], "releaseNotes": []
+    },
+    {
+      "code": "FF-TLS-ONPREM", "products": ["FF"], "modes": ["OnPrem"], "versionFrom": "5.0.3", "versionTo": null,
+      "category": "trasmissione", "priority": "High", "errorCode": "FF-E2041", "weight": 5,
+      "subjects": ["Errore {codice} nell'invio", "Fatture non trasmesse", "Problema canale di trasmissione", "Invio SdI non funziona"],
+      "symptoms": [
+        "da stamattina tutte le fatture vanno in errore con il codice {codice}, \"handshake TLS rifiutato\".",
+        "non riusciamo più a trasmettere le fatture: errore {codice} di connessione al canale.",
+        "le fatture restano in errore di trasmissione. Nel log del servizio c'è scritto \"The remote certificate is invalid according to the validation procedure\".",
+        "l'invio verso il sistema di interscambio fallisce sempre con un errore di connessione sicura, fino a venerdì funzionava.",
+        "FattureFlow non trasmette più nulla, il messaggio è {codice}. Non abbiamo cambiato niente sul server.",
+        "tutte le trasmissioni falliscono con un errore TLS sul canale, come se il certificato del gateway non fosse più riconosciuto dal nostro server."
+      ],
+      "details": [
+        "Siamo sulla {versione}, installata sul nostro server.",
+        "Abbiamo un firewall con ispezione del traffico, ma nessuno l'ha toccato.",
+        "Nell'area clienti abbiamo visto un avviso sul rinnovo del canale, ma non sappiamo se ci riguarda.",
+        "Le altre applicazioni del server navigano normalmente."
+      ],
+      "questions": ["Nel log del servizio FattureFlow Sender compare un errore sul certificato remoto?", "Tra il server e internet c'è un proxy o un firewall con ispezione TLS?"],
+      "followUps": ["Sì, nel log c'è proprio un errore sul certificato remoto non valido.", "Non abbiamo proxy, solo il firewall perimetrale senza ispezione."],
+      "cause": "Il gateway di interscambio ha rinnovato il certificato: la nuova CA intermedia non era nel truststore del server FattureFlow.",
+      "solutions": [
+        "Importata la catena aggiornata dei certificati del canale con ffadmin truststore import, verificata con ffadmin truststore verify --channel e riavviato FattureFlow Sender: le fatture sono state ritrasmesse.",
+        "Aggiornato il truststore con il pacchetto \"Catena certificati canale\" dell'area clienti; dopo il riavvio del servizio gli invii sono ripresi."
+      ],
+      "replies": [
+        "l'errore {codice} si presenta quando il server non riconosce il certificato del gateway di interscambio, che è stato rinnovato di recente. Per risolvere:\n1. scarichi dall'area clienti il pacchetto \"Catena certificati canale\" aggiornato;\n2. da prompt dei comandi come amministratore esegua ffadmin truststore import <file .p7b>;\n3. verifichi con ffadmin truststore verify --channel che risponda OK;\n4. riavvii il servizio FattureFlow Sender.\nLe fatture in errore verranno ritrasmesse automaticamente.",
+        "dalla descrizione il problema è la catena dei certificati del canale: dopo il rinnovo del certificato del gateway la nuova CA intermedia va importata nel truststore di FattureFlow. Usi il comando ffadmin truststore import con il pacchetto aggiornato scaricabile dall'area clienti e poi riavvii FattureFlow Sender. Se avete un firewall con ispezione TLS, escluda dall'ispezione l'indirizzo del gateway."
+      ],
+      "kb": ["KB-FF-0004"], "releaseNotes": ["RN-FF-5.0.3-01"]
+    },
+    {
+      "code": "FF-TLS-SAAS", "products": ["FF"], "modes": ["Saas"], "versionFrom": null, "versionTo": null,
+      "category": "trasmissione", "priority": "High", "errorCode": "FF-E2041", "weight": 3,
+      "subjects": ["Errore {codice}", "Fatture in errore di invio", "Invio non riuscito"],
+      "symptoms": [
+        "alcune fatture di oggi risultano in errore con il codice {codice}, \"handshake TLS rifiutato\". Dobbiamo reinviarle?",
+        "vediamo l'errore {codice} su una decina di fatture inviate stamattina, usiamo FattureFlow online.",
+        "le fatture restano \"In invio\" da ore e alcune sono andate in errore di connessione al canale.",
+        "da circa le 9 le fatture non partono e compare un errore di trasmissione. Dobbiamo fare qualcosa noi?",
+        "l'invio di oggi si è bloccato con un errore di connessione sicura verso il sistema di interscambio; non abbiamo server nostri, è tutto in cloud."
+      ],
+      "details": ["Abbiamo provato a reinviarle una volta ma niente.", "È urgente perché a fine mese dobbiamo chiudere la fatturazione.", "Il resto del programma funziona."],
+      "questions": ["Ha già provato a reinviare manualmente le fatture?"],
+      "followUps": ["No, le abbiamo lasciate così.", "Sì, due le abbiamo reinviate ma sono andate di nuovo in errore."],
+      "cause": "Interruzione temporanea del gateway di interscambio sulla piattaforma SaaS; nessuna azione richiesta al cliente.",
+      "solutions": [
+        "Interruzione del gateway risolta lato piattaforma; le fatture sono state ritrasmesse automaticamente. Nessuna azione richiesta al cliente.",
+        "Errore dovuto a un disservizio temporaneo del canale, segnalato sulla pagina di stato: la ritrasmissione automatica ha completato gli invii in giornata."
+      ],
+      "replies": [
+        "nella versione SaaS il canale di trasmissione è gestito da noi: non ci sono certificati o server da configurare da parte vostra. Stamattina c'è stata un'interruzione temporanea del gateway, pubblicata sulla pagina di stato della piattaforma. Le fatture in errore vengono ritrasmesse automaticamente ogni 15 minuti per 24 ore: non le reinvii e non le duplichi. Il ritardo non comporta sanzioni se la fattura parte entro i termini.",
+        "non deve fare nulla: le fatture con errore {codice} vengono ritrasmesse automaticamente dalla piattaforma. Le consigliamo di non reinviarle a mano, per evitare scarti per file duplicato. Se tra quattro ore le vedesse ancora in errore, ci risponda indicando il numero di una delle fatture."
+      ],
+      "kb": ["KB-FF-0005"], "releaseNotes": []
+    },
+    {
+      "code": "FF-TLS-485", "products": ["FF"], "modes": ["OnPrem"], "versionFrom": "4.8.5", "versionTo": "4.8.5", "notBefore": "2025-11-03",
+      "category": "trasmissione", "priority": "High", "errorCode": "FF-E2041", "weight": 3,
+      "subjects": ["Errore {codice} anche dopo aver importato i certificati", "Trasmissione bloccata", "Fatture non inviate"],
+      "symptoms": [
+        "le fatture vanno in errore {codice}. Abbiamo già importato la nuova catena di certificati ma l'errore resta.",
+        "da lunedì nessuna fattura viene trasmessa, errore {codice}. Abbiamo seguito la procedura del truststore senza risultato.",
+        "il canale di trasmissione rifiuta la connessione, l'errore è sempre {codice}.",
+        "non riusciamo più a inviare fatture: errore TLS sul canale anche se i certificati sono aggiornati."
+      ],
+      "details": ["La versione installata è la {versione}.", "Il comando ffadmin truststore verify ci dà comunque errore.", "Non aggiorniamo FattureFlow da un paio di anni."],
+      "questions": ["Quale versione di FattureFlow è installata sul server?"],
+      "followUps": ["Siamo ancora sulla 4.8.5.", "Dalla pagina Informazioni risulta la 4.8.5."],
+      "cause": "La 4.8.5 supporta solo TLS 1.2 e suite di cifratura dismesse dal gateway; la serie 4.8 è fuori supporto.",
+      "solutions": [
+        "Aggiornato FattureFlow dalla 4.8.5 all'ultima 5.x, che supporta TLS 1.3: la trasmissione è ripresa.",
+        "Spiegato che la 4.8.5 non può collegarsi al canale; il cliente ha pianificato e completato l'aggiornamento alla 5.x, dopo il quale gli invii funzionano."
+      ],
+      "replies": [
+        "sulla 4.8.5 l'errore {codice} non dipende dai certificati: questa versione negozia il canale solo con TLS 1.2 e con suite di cifratura che il gateway non accetta più, per cui importare la catena non basta. L'unica soluzione è aggiornare almeno alla 5.0.3 (consigliamo l'ultima 5.x, si può fare direttamente dalla 4.8.5). Ricordiamo che la serie 4.8 è a fine vita: il supporto termina il 30 giugno 2026. Prima dell'aggiornamento esegua un backup del database.",
+        "la versione installata, 4.8.5, non supporta TLS 1.3, richiesto ora dal gateway di interscambio: per questo la trasmissione fallisce anche con i certificati aggiornati. Serve l'aggiornamento alla serie 5.x. Dopo l'aggiornamento controlli i codici IVA, perché dalla 5.0 la natura richiede il sottocodice."
+      ],
+      "kb": ["KB-FF-0016"], "releaseNotes": ["RN-FF-4.8.5-04", "RN-FF-5.0.3-01"]
+    },
+    {
+      "code": "FF-TIMEOUT-PROXY", "products": ["FF"], "modes": ["OnPrem"], "versionFrom": null, "versionTo": null,
+      "category": "trasmissione", "priority": "Normal", "errorCode": "FF-E2050", "weight": 3,
+      "subjects": ["Timeout in trasmissione", "Errore {codice}", "Invii lentissimi e poi errore"],
+      "symptoms": [
+        "le fatture restano in invio per un paio di minuti e poi vanno in errore {codice}, tempo scaduto.",
+        "dopo il cambio del proxy aziendale FattureFlow non riesce più a trasmettere, errore {codice}.",
+        "ogni invio finisce in timeout. Dal browser del server internet funziona.",
+        "abbiamo l'errore {codice} da quando il reparto IT ha messo il nuovo proxy con autenticazione."
+      ],
+      "details": ["Il proxy richiede utente e password di dominio.", "Siamo sulla {versione}.", "Altri programmi sul server escono regolarmente."],
+      "questions": ["Il server esce su internet tramite un proxy? Con quale tipo di autenticazione?"],
+      "followUps": ["Sì, proxy con autenticazione di dominio (NTLM).", "Il proxy ha utente e password semplici."],
+      "cause": "Il servizio FattureFlow Sender non usa il proxy del browser: proxy non configurato in FattureFlow.config (o autenticazione NTLM del proxy non supportata dalla versione installata).",
+      "solutions": [
+        "Configurati ProxyAddress, ProxyUser e ProxyPassword in FattureFlow.config e riavviato il servizio; ffadmin channel test ora risponde OK.",
+        "Il proxy usa NTLM e la versione installata non lo supporta: creata un'eccezione senza autenticazione per il gateway in attesa dell'aggiornamento alla 5.2.1."
+      ],
+      "replies": [
+        "il servizio FattureFlow Sender non usa le impostazioni del browser, per cui il proxy va configurato a parte: in FattureFlow.config imposti ProxyAddress, ProxyUser e ProxyPassword e riavvii il servizio. Con il comando ffadmin channel test può verificare la connessione. Se il proxy usa l'autenticazione NTLM serve la 5.2.1; con versioni precedenti va creata un'eccezione senza autenticazione verso il gateway sulla porta 443.",
+        "l'errore {codice} indica che il servizio non riesce a raggiungere il canale entro il tempo massimo. Nel suo caso il nuovo proxy non è configurato in FattureFlow: aggiunga le chiavi ProxyAddress, ProxyUser e ProxyPassword in FattureFlow.config e riavvii FattureFlow Sender."
+      ],
+      "kb": ["KB-FF-0006"], "releaseNotes": ["RN-FF-5.2.1-02"]
+    },
+    {
+      "code": "FF-SCARTO-DUPLICATO", "products": ["FF"], "modes": ["OnPrem", "Saas"], "versionFrom": null, "versionTo": null,
+      "category": "scarti", "priority": "Normal", "errorCode": "FF-E2210", "weight": 4,
+      "subjects": ["Fattura scartata come duplicata", "Scarto {codice}", "Notifica di scarto"],
+      "symptoms": [
+        "ci è arrivato uno scarto {codice} per file duplicato, ma la fattura l'abbiamo mandata una volta sola.",
+        "una fattura è stata scartata perché risulta già trasmessa. Avevamo avuto un errore e l'abbiamo reinviata.",
+        "abbiamo ricevuto la notifica di scarto per fattura duplicata. Il cliente dice di non averla ricevuta.",
+        "il sistema di interscambio ha scartato la fattura n. 245 dicendo che è un duplicato.",
+        "dopo aver reinviato alcune fatture che sembravano in errore ci sono arrivati degli scarti per duplicazione. Cosa dobbiamo fare?"
+      ],
+      "details": ["La prima volta ci era sembrato che l'invio non fosse andato a buon fine.", "Si tratta di tre fatture dello stesso cliente.", "Il cliente ci chiede di rimandargliela."],
+      "questions": ["Nella prima fattura inviata è presente la ricevuta di consegna?"],
+      "followUps": ["Sì, nella prima c'è la ricevuta di consegna.", "La prima risulta \"Consegnata\"."],
+      "cause": "Fattura reinviata dopo un errore apparente: il primo invio era andato a buon fine.",
+      "solutions": [
+        "Verificata la ricevuta di consegna della prima fattura; la fattura duplicata è stata annullata in FattureFlow. Il cliente l'aveva già nel suo cassetto fiscale.",
+        "La prima trasmissione era stata consegnata: annullato il duplicato e inviata al cliente la copia di cortesia della fattura originale."
+      ],
+      "replies": [
+        "lo scarto {codice} indica che il sistema di interscambio ha già ricevuto una fattura con lo stesso numero, data e partita IVA. Nel dettaglio della prima fattura c'è la ricevuta di consegna, quindi è regolarmente emessa: la fattura duplicata va annullata in FattureFlow e non rinviata. Al cliente può mandare la copia di cortesia; la trova comunque anche nel suo cassetto fiscale.",
+        "la fattura risulta già consegnata al primo invio, per questo il secondo è stato scartato come duplicato. Non c'è nulla da reinviare: annulli la fattura scartata. Le consigliamo, prima di reinviare una fattura in errore, di controllare sempre se nel dettaglio è arrivata la ricevuta."
+      ],
+      "kb": ["KB-FF-0007"], "releaseNotes": ["RN-FF-5.2.0-05"]
+    },
+    {
+      "code": "FF-SCARTO-PIVA", "products": ["FF"], "modes": ["OnPrem", "Saas"], "versionFrom": null, "versionTo": null,
+      "category": "scarti", "priority": "Normal", "errorCode": "FF-E2215", "weight": 3,
+      "subjects": ["Scarto per partita IVA", "Fattura scartata {codice}", "Partita IVA cliente non valida"],
+      "symptoms": [
+        "una fattura è stata scartata con il codice {codice}, partita IVA del destinatario non valida.",
+        "ci è arrivato uno scarto sulla partita IVA del cliente, ma il cliente dice che è giusta.",
+        "il sistema di interscambio ha rifiutato la fattura perché la partita IVA non risulterebbe valida.",
+        "abbiamo uno scarto {codice}: dobbiamo rifare la fattura con un nuovo numero?",
+        "è tornata indietro una fattura per un problema sulla partita IVA del cliente: possiamo riutilizzare lo stesso numero?"
+      ],
+      "details": ["Il cliente è nuovo, inserito la settimana scorsa.", "Abbiamo copiato la partita IVA dal suo ordine.", "Lo scarto è arrivato due giorni fa."],
+      "questions": ["Può verificare la partita IVA nell'anagrafica del cliente in FattureFlow?"],
+      "followUps": ["In effetti mancava una cifra.", "Abbiamo controllato: due cifre erano invertite."],
+      "cause": "Partita IVA del cliente errata nell'anagrafica.",
+      "solutions": [
+        "Corretta la partita IVA in Clienti > Dati fiscali e riemessa la fattura con lo stesso numero entro cinque giorni dallo scarto.",
+        "Partita IVA del cliente corretta in anagrafica; nuova fattura emessa con lo stesso numero e data, consegnata regolarmente."
+      ],
+      "replies": [
+        "lo scarto {codice} indica che la partita IVA del destinatario non è valida (inesistente o con la cifra di controllo errata). Corregga l'anagrafica del cliente in Clienti > Dati fiscali e crei una nuova fattura con lo stesso numero: una fattura scartata non si considera emessa e il numero si può riutilizzare entro cinque giorni dallo scarto.",
+        "la fattura scartata non è emessa, quindi può riemetterla con lo stesso numero, entro cinque giorni dalla notifica, dopo aver corretto la partita IVA nell'anagrafica del cliente."
+      ],
+      "kb": ["KB-FF-0007"], "releaseNotes": []
+    },
+    {
+      "code": "FF-SCARTO-CODDEST", "products": ["FF"], "modes": ["OnPrem", "Saas"], "versionFrom": null, "versionTo": null,
+      "category": "scarti", "priority": "Normal", "errorCode": "FF-E2230", "weight": 3,
+      "subjects": ["Scarto codice destinatario", "Errore {codice}", "Codice SDI cliente non valido"],
+      "symptoms": [
+        "abbiamo ricevuto uno scarto {codice} per codice destinatario non valido.",
+        "la fattura è stata scartata perché il codice destinatario non esiste. Il cliente ce l'ha dato per e-mail.",
+        "una fattura a un privato è stata rifiutata per il codice destinatario.",
+        "ci torna indietro la fattura con un errore sul codice destinatario di sette caratteri, come la dobbiamo rifare?"
+      ],
+      "details": ["Il cliente ha cambiato gestionale da poco.", "Abbiamo messo il codice che usavamo l'anno scorso.", "Il cliente è una persona fisica."],
+      "questions": ["Il cliente le ha comunicato un codice destinatario aggiornato o un indirizzo PEC?"],
+      "followUps": ["Il cliente ci ha mandato il nuovo codice.", "Ci ha dato la PEC."],
+      "cause": "Codice destinatario del cliente non più attivo.",
+      "solutions": [
+        "Aggiornato il codice destinatario del cliente e riemessa la fattura con lo stesso numero entro cinque giorni.",
+        "Per il privato impostato il codice 0000000; fattura riemessa e consegnata."
+      ],
+      "replies": [
+        "il codice destinatario indicato non esiste o non è più attivo. Chieda al cliente il codice aggiornato oppure l'indirizzo PEC; per i privati senza codice si usa 0000000. Poi emetta di nuovo la fattura con lo stesso numero entro cinque giorni dallo scarto.",
+        "lo scarto {codice} si risolve correggendo il codice destinatario nell'anagrafica del cliente e riemettendo la fattura, che può mantenere lo stesso numero perché quella scartata non è emessa."
+      ],
+      "kb": ["KB-FF-0007"], "releaseNotes": []
+    },
+    {
+      "code": "FF-XML-CAMPO", "products": ["FF"], "modes": ["OnPrem", "Saas"], "versionFrom": null, "versionTo": null,
+      "category": "validazione-xml", "priority": "Normal", "errorCode": "FF-E2301", "weight": 3,
+      "subjects": ["Errore di validazione {codice}", "Campo obbligatorio mancante", "Fattura non validata"],
+      "symptoms": [
+        "la fattura non parte e compare l'errore {codice}: campo obbligatorio mancante ModalitaPagamento.",
+        "abbiamo importato le fatture dal gestionale e tutte danno errore {codice}.",
+        "FattureFlow blocca la fattura prima dell'invio dicendo che manca un campo obbligatorio.",
+        "esce un errore di validazione su IndirizzoCedente, ma i nostri dati aziendali ci sono."
+      ],
+      "details": ["Il problema è solo sulle fatture importate.", "Abbiamo cambiato sede da poco.", "Le fatture create a mano partono."],
+      "questions": ["Le fatture con errore sono create in FattureFlow o importate da un gestionale?"],
+      "followUps": ["Sono tutte importate dal gestionale.", "Le creiamo a mano in FattureFlow."],
+      "cause": "Campo obbligatorio non valorizzato (dati aziendali o modalità di pagamento), spesso nel gestionale di origine.",
+      "solutions": [
+        "Completati i dati mancanti in Impostazioni > Azienda e nel modello di fattura; le fatture sono state validate e inviate.",
+        "Il gestionale non esportava la modalità di pagamento: corretto il tracciato di esportazione, le nuove importazioni sono valide."
+      ],
+      "replies": [
+        "l'errore {codice} indica un campo obbligatorio mancante, che il messaggio riporta per nome. I dati di testata (indirizzo, sede) si completano in Impostazioni > Azienda, la modalità di pagamento nel modello di fattura o nella singola fattura. Se le fatture arrivano dal gestionale, il dato va corretto lì: altrimenti l'errore si ripete a ogni importazione.",
+        "FattureFlow controlla il file prima dell'invio e si ferma perché manca un campo obbligatorio. Completi il campo indicato e salvi di nuovo la fattura; per quelle importate faccia correggere il gestionale di origine."
+      ],
+      "kb": ["KB-FF-0008"], "releaseNotes": []
+    },
+    {
+      "code": "FF-XML-TOTALI", "products": ["FF"], "modes": ["OnPrem", "Saas"], "versionFrom": null, "versionTo": null,
+      "category": "validazione-xml", "priority": "Normal", "errorCode": "FF-E2305", "weight": 3,
+      "subjects": ["Totali non quadrano", "Errore {codice}", "Differenza di un centesimo"],
+      "symptoms": [
+        "alcune fatture vengono bloccate con {codice}, il totale non corrisponde per un centesimo.",
+        "l'errore {codice} dice che i totali non quadrano, ma i conti li abbiamo fatti a mano e sono giusti.",
+        "le fatture con lo sconto in percentuale non passano la validazione per problemi di arrotondamento.",
+        "il sistema segnala una differenza tra il totale del documento e la somma delle righe."
+      ],
+      "details": ["Succede solo con le righe che hanno lo sconto.", "Usiamo prezzi con quattro decimali.", "Versione {versione}."],
+      "questions": ["Le righe delle fatture in errore hanno sconti percentuali o prezzi con più di due decimali?"],
+      "followUps": ["Sì, hanno lo sconto del 3%.", "Sì, i prezzi unitari hanno quattro decimali."],
+      "cause": "Arrotondamenti sulle righe con sconto percentuale o prezzi a più decimali.",
+      "solutions": [
+        "Impostato l'arrotondamento per riga in Impostazioni > Calcolo; le fatture sono state ricalcolate e validate.",
+        "Il caso del centesimo con sconto di riga era il bug corretto nella 5.2.1: dopo l'aggiornamento i totali quadrano."
+      ],
+      "replies": [
+        "l'errore {codice} nasce dagli arrotondamenti su righe con sconto percentuale o prezzi a più di due decimali. In Impostazioni > Calcolo imposti l'arrotondamento per riga, poi riapra e salvi le fatture bloccate. Se è sulla 5.2.0 o precedente, la 5.2.1 corregge anche un caso di differenza di un centesimo con gli sconti di riga.",
+        "la differenza di un centesimo dipende dal modo di arrotondare: impostando l'arrotondamento per riga i totali risultano coerenti con il controllo del sistema di interscambio."
+      ],
+      "kb": ["KB-FF-0008"], "releaseNotes": ["RN-FF-5.2.1-05"]
+    }
+  ]
+}
