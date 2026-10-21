@@ -19,6 +19,7 @@ internal sealed class AgentRunConfiguration : IEntityTypeConfiguration<AgentRun>
         builder.Property(r => r.ErrorCode).HasMaxLength(ColumnSizes.ErrorCode).IsUnicode(false);
         builder.Property(r => r.Error).HasMaxLength(ColumnSizes.Error);
         builder.Property(r => r.TraceId).HasMaxLength(ColumnSizes.TraceId).IsUnicode(false).IsFixedLength();
+        builder.Property(r => r.Mode).HasColumnName("PipelineModeId").HasConversion<byte>();
 
         // Idempotenza (P2): lo stesso articolo di Zammad non si elabora due volte, qualunque sia la sorgente dell'evento.
         builder.HasIndex(r => new { r.ZammadTicketId, r.ZammadArticleId }).IsUnique();
@@ -28,11 +29,32 @@ internal sealed class AgentRunConfiguration : IEntityTypeConfiguration<AgentRun>
 
         builder.HasOne<EnumLookup<RunTrigger>>().WithMany().HasForeignKey(r => r.Trigger).OnDelete(DeleteBehavior.Restrict);
         builder.HasOne<EnumLookup<AgentRunState>>().WithMany().HasForeignKey(r => r.State).OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<EnumLookup<PipelineMode>>().WithMany().HasForeignKey(r => r.Mode).OnDelete(DeleteBehavior.Restrict);
 
         builder.HasOne(r => r.Draft)
             .WithOne()
             .HasForeignKey<AgentDraft>(d => d.AgentRunId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        builder.HasMany(r => r.ToolCalls)
+            .WithOne()
+            .HasForeignKey(c => c.AgentRunId)
+            .OnDelete(DeleteBehavior.Cascade);
+    }
+}
+
+internal sealed class AgentToolCallConfiguration : IEntityTypeConfiguration<AgentToolCall>
+{
+    public void Configure(EntityTypeBuilder<AgentToolCall> builder)
+    {
+        builder.ToTable(nameof(AgentToolCall), TicketDbContext.AgentSchema);
+
+        builder.Property(c => c.ToolName).HasMaxLength(ColumnSizes.ToolName).IsUnicode(false);
+        builder.Property(c => c.Arguments).HasMaxLength(ColumnSizes.ToolArguments);
+        builder.Property(c => c.Outcome).HasMaxLength(ColumnSizes.ErrorCode).IsUnicode(false);
+        builder.Property(c => c.Message).HasMaxLength(ColumnSizes.Reason);
+
+        builder.HasIndex(c => new { c.AgentRunId, c.Sequence }).IsUnique();
     }
 }
 

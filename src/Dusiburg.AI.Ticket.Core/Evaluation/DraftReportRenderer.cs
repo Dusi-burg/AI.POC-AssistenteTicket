@@ -30,7 +30,8 @@ public static class DraftReportRenderer
         AppendSummary(md, s);
         AppendDecisions(md, run);
         AppendWithoutVerification(md, s);
-        AppendTimings(md, s);
+        AppendTimings(md, s, run.Mode);
+        AppendAgent(md, run);
         AppendCases(md, run, gradeOf);
         AppendTexts(md, run, gradeOf);
 
@@ -43,7 +44,8 @@ public static class DraftReportRenderer
 
         md.AppendLine("| Parametro | Valore |");
         md.AppendLine("|---|---|");
-        md.AppendLine($"| Modelli | `{run.ClassifyModel}` (classificazione), `{run.DraftModel}` (bozza) — provider `{run.Provider}` |");
+        md.AppendLine($"| Modelli | `{run.ClassifyModel}` (classificazione), `{run.DraftModel}` ({(run.Mode == PipelineMode.Agent ? "agente con i tool" : "bozza")}) — provider `{run.Provider}` |");
+        md.AppendLine($"| Modalità | {(run.Mode == PipelineMode.Agent ? "**agente**: le fonti le sceglie il modello con i tool di `ticket-mcp` (Fase 9b)" : "pipeline fissa: le fonti le sceglie il retrieval")} |");
         md.AppendLine($"| Casi | {run.Cases.Count}: {run.Cases.Count - traps} normali (stratificati per prodotto e modalità), {traps} trabocchetti |");
         md.AppendLine($"| Soglia della confidenza | {Number(run.ConfidenceMinForDraft)} |");
         md.AppendLine($"| Durata | {Seconds(run.Duration.TotalMilliseconds)} in tutto, {Seconds(run.Duration.TotalMilliseconds / Math.Max(1, run.Cases.Count))} a caso |");
@@ -121,7 +123,7 @@ public static class DraftReportRenderer
         md.AppendLine();
     }
 
-    private static void AppendTimings(StringBuilder md, DraftEvaluationSummary s)
+    private static void AppendTimings(StringBuilder md, DraftEvaluationSummary s, PipelineMode mode)
     {
         md.AppendLine("## Tempi per passo");
         md.AppendLine();
@@ -129,8 +131,42 @@ public static class DraftReportRenderer
         md.AppendLine("|---|---|---|");
         md.AppendLine($"| Classificazione | {Seconds(s.Classification.Mean)} | {Seconds(s.Classification.P95)} |");
         md.AppendLine($"| Retrieval (con l'embedding della query) | {Seconds(s.Retrieval.Mean)} | {Seconds(s.Retrieval.P95)} |");
-        md.AppendLine($"| Generazione | {Seconds(s.Generation.Mean)} | {Seconds(s.Generation.P95)} |");
+        md.AppendLine($"| {(mode == PipelineMode.Agent ? "Agente (tool e bozza; il retrieval è dentro i tool)" : "Generazione")} | {Seconds(s.Generation.Mean)} | {Seconds(s.Generation.P95)} |");
         md.AppendLine($"| **Totale** | **{Seconds(s.Total.Mean)}** | **{Seconds(s.Total.P95)}** |");
+        md.AppendLine();
+    }
+
+    /// <summary>Modalità agente: quante chiamate, quali tool, quante fermate dalla guardia, se la fonte del caso è stata letta.</summary>
+    private static void AppendAgent(StringBuilder md, DraftEvaluationRun run)
+    {
+        List<DraftCaseRecord> traced = [.. run.Cases.Where(c => c.Agent is not null)];
+
+        if (run.Mode != PipelineMode.Agent || traced.Count == 0)
+        {
+            return;
+        }
+
+        List<int> calls = [.. traced.Select(c => c.Agent!.Calls.Count)];
+        List<DraftCaseRecord> withRelevant = [.. traced.Where(c => c.CaseCode is not null && c.Trap is null)];
+
+        md.AppendLine("## Modalità agente");
+        md.AppendLine();
+        md.AppendLine("| Misura | Valore |");
+        md.AppendLine("|---|---|");
+        md.AppendLine($"| Chiamate ai tool per caso | media {calls.Average().ToString("0.0", Italian)}, massimo {calls.Max()} |");
+        md.AppendLine($"| Casi **senza** chiamate | {calls.Count(c => c == 0)} su {traced.Count} |");
+        md.AppendLine($"| Chiamate fermate dalla guardia / in errore | {traced.Sum(c => c.Agent!.Rejected)} / {traced.Sum(c => c.Agent!.Errors)} |");
+        md.AppendLine($"| Fonti lette per caso | media {traced.Average(c => c.PromptSources.Count).ToString("0.0", Italian)} |");
+        md.AppendLine($"| Casi normali con una fonte del caso fra le lette | {withRelevant.Count(c => c.RelevantPromptSources.Count > 0)} su {withRelevant.Count} |");
+        md.AppendLine();
+        md.AppendLine("| Tool | Chiamate | Riuscite |");
+        md.AppendLine("|---|---|---|");
+
+        foreach (IGrouping<string, ToolCallTrace> tool in traced.SelectMany(c => c.Agent!.Calls).GroupBy(c => c.Tool).OrderByDescending(g => g.Count()))
+        {
+            md.AppendLine($"| `{tool.Key}` | {tool.Count()} | {tool.Count(c => c.Outcome == "ok")} |");
+        }
+
         md.AppendLine();
     }
 
@@ -186,8 +222,16 @@ public static class DraftReportRenderer
             md.AppendLine(c.DraftText);
             md.AppendLine("```");
             md.AppendLine();
-            md.AppendLine($"Fonti del prompt: {(c.PromptSources.Count == 0 ? "nessuna" : string.Join(", ", c.PromptSources.Select(k => c.RelevantPromptSources.Contains(k) ? $"**{k}**" : k)))}." +
+            md.AppendLine($"{(c.Agent is null ? "Fonti del prompt" : "Fonti lette dall'agente")}: {(c.PromptSources.Count == 0 ? "nessuna" : string.Join(", ", c.PromptSources.Select(k => c.RelevantPromptSources.Contains(k) ? $"**{k}**" : k)))}." +
                 $" Citate: {(c.Citations.Count == 0 ? "nessuna" : string.Join(", ", c.Citations.Select(x => x.IsVerified ? x.Id : $"{x.Id} (non fornita)")))}.");
+
+            if (c.Agent is { } agent)
+            {
+                md.AppendLine();
+                md.AppendLine(agent.Calls.Count == 0
+                    ? "Chiamate ai tool: nessuna."
+                    : $"Chiamate ai tool: {string.Join(" → ", agent.Calls.Select(call => $"`{call.Tool}` {Cell(call.Arguments)}{(call.Outcome == "ok" ? "" : $" ({call.Outcome})")}"))}.");
+            }
 
             if (c.Kind != DraftKind.Answer && c.ModelProposedAnswer)
             {

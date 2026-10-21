@@ -9,6 +9,7 @@ using Dusiburg.AI.Ticket.Core.Drafting;
 using Dusiburg.AI.Ticket.Core.Evaluation;
 using Dusiburg.AI.Ticket.Core.Pipeline;
 using Dusiburg.AI.Ticket.Rag.Evaluation;
+using Dusiburg.AI.Ticket.Shared.Domain;
 using Dusiburg.AI.Ticket.Shared.Serialization;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -27,6 +28,9 @@ internal static class EvalDraftsCommand
         "affermazioniNonSupportate = quante affermazioni tecniche della bozza non poggiano sulle fonti; nota e autore liberi. " +
         "Poi: eval drafts --replay <letture> --griglia <questo file>.";
 
+    public const string FixedMode = "fissa";
+    public const string AgentMode = "agente";
+
     /// <summary>Come le API (camelCase, enum come stringhe), indentato e con gli accenti leggibili.</summary>
     internal static readonly JsonSerializerOptions JsonOptions =
         new(TicketJson.Options) { WriteIndented = true, Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping };
@@ -38,9 +42,15 @@ internal static class EvalDraftsCommand
         var normal = new Option<int>("--casi") { Description = "Casi normali oltre ai 15 trabocchetti.", DefaultValueFactory = _ => DraftEvaluator.DefaultNormalCases };
         var replay = new Option<string?>("--replay") { Description = "File delle letture (drafts-….json): rifà il report senza chiamare il modello." };
         var grades = new Option<string?>("--griglia") { Description = "Griglia compilata (griglia-….json) da applicare al report." };
+        var mode = new Option<string>("--modo")
+        {
+            Description = "fissa (default) oppure agente: le fonti le sceglie il modello con i tool di ticket-mcp (Fase 9b, serve l'AppHost acceso).",
+            DefaultValueFactory = _ => FixedMode
+        };
+        mode.AcceptOnlyFromAmong(FixedMode, AgentMode);
         var command = new Command("drafts", "Bozze della pipeline sul test set: decisioni, verifica, tempi; report, letture e griglia in eval/.")
         {
-            provider, normal, replay, grades
+            provider, normal, replay, grades, mode
         };
 
         command.SetAction(async (parse, cancellationToken) =>
@@ -50,7 +60,8 @@ internal static class EvalDraftsCommand
 
             string runFile = parse.GetValue(replay) is { } replayFile
                 ? Path.GetFullPath(replayFile)
-                : await RunAsync(services, parse.GetValue(provider), parse.GetValue(normal), directory, cancellationToken);
+                : await RunAsync(services, parse.GetValue(provider), parse.GetValue(normal),
+                    parse.GetValue(mode) == AgentMode ? PipelineMode.Agent : PipelineMode.Fixed, directory, cancellationToken);
 
             DraftEvaluationRun run = JsonSerializer.Deserialize<DraftEvaluationRun>(await File.ReadAllTextAsync(runFile, cancellationToken), JsonOptions)
                 ?? throw new InvalidDataException($"{runFile} vuoto.");
@@ -78,22 +89,23 @@ internal static class EvalDraftsCommand
     }
 
     /// <summary>Il giro col modello: letture in JSON e, se non c'è già, la griglia vuota accanto. Restituisce il file delle letture.</summary>
-    private static async Task<string> RunAsync(IServiceProvider services, string? provider, int normalCount, string directory, CancellationToken cancellationToken)
+    private static async Task<string> RunAsync(
+        IServiceProvider services, string? provider, int normalCount, PipelineMode mode, string directory, CancellationToken cancellationToken)
     {
         using IServiceScope scope = services.CreateScope();
         AiOptions aiOptions = services.GetRequiredService<AiOptions>();
-        TicketPipeline pipeline = scope.ServiceProvider.GetRequiredService<TicketPipeline>();
+        TicketPipeline pipeline = scope.ServiceProvider.GetRequiredService<TicketPipeline>().WithMode(mode);
         IChatClientFactory factory = services.GetRequiredService<IChatClientFactory>();
 
         if (provider is not null)
         {
             AiOptions overridden = aiOptions with { TaskProviders = Enum.GetValues<ModelTask>().ToDictionary(task => task, _ => provider) };
             factory = new ChatClientFactory(overridden, services.GetRequiredService<ILoggerFactory>());
-            pipeline = pipeline.WithModel(new TicketLanguageModel(factory));
+            pipeline = pipeline.WithModel(new TicketLanguageModel(factory), factory);
         }
 
         (string effectiveProvider, string classifyModel) = Describe(factory, ModelTask.Classify);
-        (_, string draftModel) = Describe(factory, ModelTask.Draft);
+        (_, string draftModel) = Describe(factory, mode == PipelineMode.Agent ? ModelTask.Agent : ModelTask.Draft);
 
         DraftEvaluator evaluator = scope.ServiceProvider.GetRequiredService<DraftEvaluator>();
         IReadOnlyList<EvalCase> cases = await evaluator.SelectCasesAsync(SeedDataFiles.Load(), normalCount, cancellationToken);
@@ -107,8 +119,8 @@ internal static class EvalDraftsCommand
             ? await OllamaHealthProbe.DescribeLoadedModelsAsync(aiOptions, cancellationToken)
             : [];
 
-        var run = new DraftEvaluationRun(DateTimeOffset.Now, effectiveProvider, classifyModel, draftModel, pipeline.Options.ConfidenceMinForDraft, duration, loaded, records);
-        string name = $"drafts-{run.RunAt.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)}-{Slug(draftModel)}";
+        var run = new DraftEvaluationRun(DateTimeOffset.Now, effectiveProvider, classifyModel, draftModel, pipeline.Options.ConfidenceMinForDraft, duration, loaded, records, mode);
+        string name = $"drafts-{run.RunAt.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)}-{Slug(draftModel)}{(mode == PipelineMode.Agent ? "-agente" : "")}";
         string runFile = Path.Combine(directory, $"{name}.json");
         await File.WriteAllTextAsync(runFile, JsonSerializer.Serialize(run, JsonOptions), cancellationToken);
 

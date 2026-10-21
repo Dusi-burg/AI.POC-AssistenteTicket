@@ -24,6 +24,9 @@ flowchart LR
     AG --> DB[("LocalDB localdev<br/>database Ticket")]
     AG --> OL{{"Ollama · 127.0.0.1:11434<br/>qwen3.5:9b GPU · embeddinggemma CPU"}}
     W["Ticket.Web · :5402<br/>console"] -->|/api/health, runs, outcomes, catalog| AG
+    AG -->|PIPELINE_MODE=agent<br/>MCP HTTP, X-Api-Key| M["ticket-mcp · :5403<br/>tool in sola lettura"]
+    M -->|/api/knowledge| AG
+    M -->|ricerca ticket, token di ai-assistant| Z
     H["AppHost Aspire<br/>dashboard :17579"] -.-> AG
     H -.-> W
     H -.->|zammad-wsl: wsl … zammad-up.sh| Z
@@ -34,6 +37,7 @@ flowchart LR
 | AppHost (dashboard) | `https://localhost:17579` | O2C 17279, Sinistri 17379, Trasporto 17479 |
 | `Ticket.Agent` | `http://localhost:5401`, in ascolto su `0.0.0.0` | senza il proxy di Aspire, per ricevere il webhook da WSL |
 | `Ticket.Web` | `http://localhost:5402` | |
+| `ticket-mcp` | `http://localhost:5403/mcp` | server MCP della modalità agente (Fase 9b), con la chiave `X-Api-Key` |
 | Zammad | `http://127.0.0.1:8080` | pubblicato solo su localhost di WSL, inoltrato a Windows |
 | Ollama | `http://127.0.0.1:11434` | `127.0.0.1` e non `localhost`: ~2 s risparmiati per connessione |
 
@@ -47,7 +51,7 @@ non esiste.
 
 | Progetto | Ruolo |
 |---|---|
-| `Dusiburg.AI.Ticket.AppHost` | Aspire: Agent, Web, Ollama (se non risponde), stack Zammad in WSL, manopole |
+| `Dusiburg.AI.Ticket.AppHost` | Aspire: Agent, Web, `ticket-mcp`, Ollama (se non risponde), stack Zammad in WSL, manopole |
 | `Dusiburg.AI.Ticket.ServiceDefaults` | OpenTelemetry, health check, resilienza, service discovery, `ApiProblems` |
 | `Dusiburg.AI.Ticket.Shared` | enum del dominio, `DemoCatalog`, probe e report di salute, telemetria, JSON, codici d'errore |
 | `Dusiburg.AI.Ticket.Data` | EF Core: `TicketDbContext` con gli schemi `support`, `rag`, `agent`, seed del catalogo demo |
@@ -55,14 +59,17 @@ non esiste.
 | `Dusiburg.AI.Ticket.Rag` | pulizia e anonimizzazione, chunking, indicizzazione, retrieval ibrido (vettoriale in SQL + BM25 in memoria, RRF), valutazione |
 | `Dusiburg.AI.Ticket.Zammad` | client tipizzato dell'API di Zammad, modelli dell'API, probe |
 | `Dusiburg.AI.Ticket.Core` | pipeline: contesto da Zammad, classificazione, generazione, verifica, confidenza, composizione con la dicitura AI, pubblicazione, elaborazioni registrate; esito della bozza e marcatura AI dopo l'invio |
-| `Dusiburg.AI.Ticket.Agent` | Minimal API: webhook `/webhooks/zammad` e polling, coda con un consumatore, `/api/runs`, `/api/outcomes`, `/api/catalog`, `/api/health` |
+| `Dusiburg.AI.Ticket.Agentic` | modalità agente (Fase 9b): client MCP verso `ticket-mcp`, guardia dei tool, `ToolAgentDrafter` con Agent Framework (`ChatClientAgent`) |
+| `Dusiburg.AI.Ticket.Agent` | Minimal API: webhook `/webhooks/zammad` e polling, coda con un consumatore, `/api/runs`, `/api/outcomes`, `/api/catalog`, `/api/knowledge` (Fase 9b), `/api/health` |
+| `Dusiburg.AI.Ticket.Mcp` | server MCP `ticket-mcp` (Fase 9b): cinque tool in sola lettura sopra `/api/knowledge` dell'Agent e la ricerca di Zammad; nessun database |
 | `Dusiburg.AI.Ticket.Web` | console Razor Pages: Stato, Elaborazioni (con dettaglio), Esiti, Dati demo |
 | `tools/Dusiburg.AI.Ticket.DbInit` | ricrea il database dal modello e carica catalogo demo e dati simulati di `data/` |
 | `tools/Dusiburg.AI.Ticket.DataGen` | genera `data/tickets.json` dai testi di `data/`, con seed fisso |
-| `tools/Dusiburg.AI.Ticket.Cli` | riga di comando: `zammad bootstrap`, `zammad seed`, `zammad trigger on` e `off`, `demo <n>`, `embed`, `search`, `eval retrieval`, `eval drafts`, `draft <ticket>`, `reply <ticket>`, `close <ticket>` |
+| `tools/Dusiburg.AI.Ticket.Cli` | riga di comando: `zammad bootstrap`, `zammad seed`, `zammad trigger on` e `off`, `zammad ai on|off|status` (Fase 9a), `demo <n>`, `embed`, `search`, `eval retrieval`, `eval drafts`, `draft <ticket>`, `reply <ticket>`, `close <ticket>` |
 
-Regole di confine: l'Agent è l'unico proprietario del database; la Web parla solo con l'Agent via HTTP; solo `Ai` conosce i
-provider dei modelli e solo `Zammad` conosce l'API di Zammad.
+Regole di confine: l'Agent è l'unico proprietario del database; la Web e il server MCP parlano con l'Agent via HTTP; solo `Ai`
+conosce i provider dei modelli e solo `Zammad` conosce l'API di Zammad; `Core` non dipende né da MCP né dall'Agent Framework
+(vede solo `IToolAgentDrafter`).
 
 ### Database
 
@@ -269,7 +276,7 @@ Due comandi della Cli, report in `eval/`. La verità di riferimento viene dal me
 | Comando | Che cosa misura | Uscite |
 |---|---|---|
 | `eval retrieval` | hit@1/3/5, MRR@10, precisione delle fonti del prompt sui ~135 ticket del test set, per variante (vettoriale, BM25, ibrida, con e senza penalità di versione) e per tipo di query (completa, solo sintomo); trabocchetti a parte | `retrieval-<data>.md` e `.json` |
-| `eval drafts [--provider ollama\|anthropic] [--casi 15]` | la pipeline dell'Agent **a secco** su 30 casi (15 trabocchetti + 15 normali stratificati per prodotto e modalità): decisione, citazioni valide e del caso, termini tecnici non supportati, atteso automatico dei trabocchetti (vago → chiarimenti, senza storico → nessuna soluzione, iniezione → manipolazione segnalata), effetto della verifica a valle, tempi, token e costo | `drafts-<data>-<modello>.md`, `.json` (letture), `griglia-<data>-<modello>.json` |
+| `eval drafts [--provider ollama\|anthropic] [--casi 15] [--modo fissa\|agente]` | la pipeline dell'Agent **a secco** su 30 casi (15 trabocchetti + 15 normali stratificati per prodotto e modalità): decisione, citazioni valide e del caso, termini tecnici non supportati, atteso automatico dei trabocchetti (vago → chiarimenti, senza storico → nessuna soluzione, iniezione → manipolazione segnalata), effetto della verifica a valle, tempi, token e costo | `drafts-<data>-<modello>[-agente].md`, `.json` (letture), `griglia-<data>-<modello>[-agente].json` |
 | `eval drafts --replay <letture> --griglia <griglia>` | lo stesso report senza richiamare il modello, con i giudizi della griglia manuale (corretta / utile con modifiche / da scartare, affermazioni non supportate, nota, autore) | `drafts-….md` |
 
 - Il ticket del test set si costruisce dal database (oggetto, primo messaggio del cliente pulito come in Zammad, contesto dal
@@ -282,12 +289,85 @@ Due comandi della Cli, report in `eval/`. La verità di riferimento viene dal me
 - La prima misura ha trovato due **falsi positivi** del verificatore (le parole dopo un percorso di menu o dopo l'ultima opzione
   di un comando entravano nel termine): corretti in `DraftVerifier`, con i test.
 
+### Modalità agente con i tool (Fase 9b)
+
+Un'alternativa alla pipeline fissa, accesa con `PIPELINE_MODE=agent`: invece di ricevere le 3–4 fonti del retrieval, il modello
+le sceglie con i tool del server MCP `ticket-mcp`. Il nucleo resta deterministico (G8): contesto, classificazione, verifica,
+confidenza, decisione, composizione con la dicitura AI e pubblicazione non cambiano.
+
+```mermaid
+sequenceDiagram
+    participant P as TicketPipeline
+    participant A as ToolAgentDrafter
+    participant G as Guardia dei tool
+    participant M as ticket-mcp
+    participant K as Agent /api/knowledge
+    P->>A: ticket + classificazione
+    loop fase di lavoro (al più AGENT_MAX_TOOL_CALLS)
+        A->>G: chiamata del modello
+        G->>G: argomenti del codice, fonti ammesse, limite
+        G->>M: tools/call (X-Api-Key)
+        M->>K: ricerca, fonte, note, storico
+        G-->>A: risultato compatto
+    end
+    A->>A: bozza in JSON, senza tool, con le sole fonti lette
+    A-->>P: bozza, fonti lette, chiamate
+    P->>P: verifica sulle fonti lette, confidenza, decisione
+```
+
+| Tool | Restituisce | Vincoli del codice (guardia) |
+|---|---|---|
+| `cerca_fonti` | ricerca ibrida della pipeline: chiave, tipo, applicabilità, distanza, estratto (≤ 8 fonti) | prodotto, modalità e versione del cliente iniettati e nascosti dallo schema |
+| `leggi_fonte` | testo completo di un ticket, articolo o nota | solo chiavi uscite da un risultato di questo ticket (`NOT_ALLOWED` altrimenti) |
+| `note_di_rilascio` | note del prodotto fra due versioni | prodotto del cliente iniettato |
+| `storico_cliente` | ultimi ticket dell'azienda del referente, senza il test set | email del referente iniettata |
+| `cerca_ticket_zammad` | ricerca per parole fra i ticket di Zammad, con la chiave dello storico | numero del ticket in corso escluso |
+
+- **Due fasi**, come l'agente autorità di Trasporto: prima il lavoro con i tool senza schema di output (con Ollama lo schema
+  vincola la generazione al JSON e il modello non chiama i tool), poi la bozza nello schema `ModelDraft` della pipeline fissa,
+  con le sole chiavi lette ammesse. Nella seconda fase la conversazione con i tool diventa testo: l'API di Anthropic rifiuta
+  chiamate ai tool nella cronologia di una richiesta che non li definisce.
+- **Fonti lette**: dalla ricerca il modello vede l'estratto del chunk migliore; `leggi_fonte` e `note_di_rilascio` valgono come
+  lettura della fonte intera. Verifica e confidenza lavorano solo su queste (`SourceEvidence` → `RetrievedSource`): una
+  citazione di una fonte mai letta è "non fornita"; senza chiamate non c'è nessuna fonte e la bozza diventa chiarimenti o
+  escalation.
+- **Risultati compatti** per il modello (estratti di 350 caratteri, fonti di 1.800, note di 300): il contesto è di 8K token.
+- **Registrazione**: ogni chiamata è uno span `agent.tool <nome>` (e `mcp.tool <nome>` nel server) e una riga di
+  `agent.AgentToolCall` (argomenti, esito `ok` / `error:…` / `rejected:…`, durata); `agent.AgentRun.PipelineModeId` dice la
+  modalità. La nota interna e il dettaglio dell'elaborazione nella console elencano le chiamate.
+- **Valutazione**: `eval drafts --modo agente [--provider anthropic]` sugli stessi 30 casi, con l'AppHost acceso (servono Agent e
+  `ticket-mcp`); il report aggiunge chiamate per caso, casi senza chiamate, chiamate fermate dalla guardia, uso dei tool.
+
+**Confronto del 2026-10-21** (stessi 30 casi, griglia proposta da Claude con gli stessi criteri della Fase 8; report in `eval/`):
+
+| | Fissa · `qwen3.5:9b` | Agente · `qwen3.5:9b` | Fissa · `claude-haiku-5-5` | Agente · `claude-haiku-5-5` |
+|---|---|---|---|---|
+| Bozze utili | 27/30 (22 + 5) | 28/30 (18 + 10) | 29/30 (22 + 7) | **30/30** (23 + 7) |
+| Da scartare | 3 | 2 | 1 | 0 |
+| Trabocchetti con l'atteso automatico | 6/7 | 7/7 | 7/7 | 7/7 |
+| Termini tecnici non supportati | 1/39 | 1/37 | 0/37 | 1/43 |
+| Tempo medio della pipeline (p95) | **9,9 s** (12,7 s) | 26,8 s (43,1 s) | 13,3 s (16,9 s) | 24,8 s (36,1 s) |
+| Chiamate ai tool per caso | — | 3,1 (max 6), 1 caso senza | — | 5,0, 3 fermate dal limite |
+| Costo per 30 casi | 0 | 0 | 0,046 $ | 0,162 $ |
+
+- **Dove l'agente aggiunge**: i trabocchetti di versione in cui la fonte giusta non è fra le prime 4 del retrieval fisso. Con i tool
+  entrambi i modelli trovano che sulla 4.8.5 serve l'aggiornamento alla 5.x (nota di rilascio letta) e che FF-E1102 sulla 5.2.1 è
+  il certificato di firma scaduto, dove la pipeline fissa ripeteva la procedura o chiedeva chiarimenti generici.
+- **Dove perde**: tempo (2–3 volte la pipeline fissa; dal vivo, scenario 1 con il primo caricamento e il triage di Zammad in
+  coda, 53 s) e, con il 9B, la forma (più "voi", dettagli inventati come il nome di una classe), più un caso in cui il modello
+  non ha chiamato nessun tool e la bozza è diventata escalation. Il cloud chiama più tool (anche `storico_cliente` e
+  `cerca_ticket_zammad`, che il 9B quasi non usa) e costa 3,5 volte la pipeline fissa.
+- **Le fonti lette** per caso sono 11–12 perché ogni ricerca ne mostra fino a 8 (estratti); la verifica non ha trovato citazioni
+  di fonti non lette in nessuno dei 60 casi.
+- La modalità resta un'alternativa: il default è la pipeline fissa (G8), che sta sotto i 45 s con margine.
+
 ## 4. Modelli
 
 | Compito | Default | Manopola |
 |---|---|---|
 | Classificazione del ticket | `ollama` · `qwen3.5:9b` | `MODEL_CLASSIFY_PROVIDER` |
 | Bozza di risposta | `ollama` · `qwen3.5:9b` | `MODEL_DRAFT_PROVIDER` |
+| Agente con i tool (Fase 9b, solo con `PIPELINE_MODE=agent`) | `ollama` · `qwen3.5:9b` | `MODEL_AGENT_PROVIDER` |
 | Embedding | `embeddinggemma` su CPU, 768 dimensioni, prefissi query/documento | `EMBEDDING_MODEL`, `EMBEDDING_DIMENSIONS` |
 
 Il cloud (`anthropic`, `claude-haiku-5-5`) serve solo al confronto su comando della Fase 8 (`eval drafts --provider anthropic`,
@@ -306,7 +386,10 @@ default del codice.
 |---|---|
 | `OLLAMA_ENDPOINT` | `http://127.0.0.1:11434` |
 | `OLLAMA_CHAT_MODEL`, `OLLAMA_NUM_CTX`, `OLLAMA_NUM_GPU` | `qwen3.5:9b`, `8192`, `99` (`auto` = scelta di Ollama) |
-| `MODEL_CLASSIFY_PROVIDER`, `MODEL_DRAFT_PROVIDER` | `ollama` |
+| `MODEL_CLASSIFY_PROVIDER`, `MODEL_DRAFT_PROVIDER`, `MODEL_AGENT_PROVIDER` | `ollama` |
+| `PIPELINE_MODE` | `fixed` (`agent` = le fonti le sceglie il modello con i tool di `ticket-mcp`, Fase 9b) |
+| `AGENT_MAX_TOOL_CALLS` | `6` (chiamate ai tool per ticket nella modalità agente) |
+| `TICKET_MCP_URL` | `http://ticket-mcp/mcp` (service discovery; la Cli usa `http://localhost:5403/mcp`) |
 | `ANTHROPIC_MODEL` | `claude-haiku-5-5` |
 | `EMBEDDING_MODEL`, `EMBEDDING_DIMENSIONS` | `embeddinggemma`, `768` |
 | `TICKET_PROMPT_CAPTURE_DIR` | — (cattura dei prompt su file, per la diagnostica) |
@@ -331,6 +414,7 @@ Segreti (user-secrets dell'AppHost, mai stampati):
 | `Parameters:zammad-api-token` | `zammad bootstrap`: token di `ai-assistant` | Agent (`ZAMMAD_API_TOKEN`) |
 | `Parameters:zammad-webhook-secret` | `zammad bootstrap` (generato una volta) | Agent (`ZAMMAD_WEBHOOK_SECRET`, firma HMAC del webhook, Fase 6) |
 | `Parameters:anthropic-api-key` | l'utente, facoltativa | Agent, confronto della Fase 8 |
+| `Parameters:ticket-mcp-key` | l'AppHost al primo avvio (generata, 32 caratteri) | `ticket-mcp`, Agent e Cli (`TICKET_MCP_KEY`, Fase 9b) |
 
 ## 5. Controlli di salute
 

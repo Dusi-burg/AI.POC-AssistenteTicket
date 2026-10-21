@@ -64,11 +64,15 @@ ambiguous product) plus 15 regular cases stratified by product and mode; the 4 d
 The cloud model asks for clarification more often before proposing a fix: it avoids wrong answers on the traps, but in two
 regular cases it asks when the answer was already in the sources. The local model answers more and sometimes slips into "voi".
 
+Measured again on 2026-10-21, after the customer questions were appended to answers too: 27/30 useful drafts locally and 29/30
+with the cloud model, same timings (`eval/drafts-2026-10-21-*`).
+
 ```powershell
 dotnet run --project tools/Dusiburg.AI.Ticket.Cli -- eval retrieval                       # hit@k and MRR, retrieval variants
 dotnet run --project tools/Dusiburg.AI.Ticket.Cli -- eval drafts                          # drafts on the 30 cases (~5 min), report, readings and empty grid
 dotnet run --project tools/Dusiburg.AI.Ticket.Cli -- eval drafts --replay eval/drafts-<date>-qwen3.5-9b.json --griglia eval/griglia-<date>-qwen3.5-9b.json
 dotnet run --project tools/Dusiburg.AI.Ticket.Cli -- eval drafts --provider anthropic     # cloud comparison (~6 min, ~$0.05): needs Parameters:anthropic-api-key
+dotnet run --project tools/Dusiburg.AI.Ticket.Cli -- eval drafts --modo agente            # agent mode with tools (~13 min, AppHost running)
 ```
 
 ### Limitations
@@ -90,6 +94,24 @@ and release notes: that is what the POC adds. On the 6 demo scenarios (2026-10-2
 categories and 5 priorities out of 6, in ~5 s; the draft pays +1–2 s of GPU queueing, once Ollama gets the same context size as
 the pipeline (with different context sizes the model reloaded on every ticket: +8 s). Prerequisites and commands in
 [docs/demo.md](docs/demo.md#ai-di-zammad-facoltativa-fase-9a) (Italian).
+
+### Agent mode with tools (optional)
+
+With `PIPELINE_MODE=agent` the sources are not picked by retrieval: the model searches and reads them with the read-only tools of
+the `ticket-mcp` MCP server (hybrid search, full read, release notes, customer history, Zammad search). The code puts product,
+version and customer into the calls, caps the number of calls and accepts only citations of sources actually read; verification,
+confidence, decision and AI disclosure are those of the fixed pipeline. On the same 30 cases (2026-10-21, grid proposed by
+Claude):
+
+| | Fixed · `qwen3.5:9b` | Agent · `qwen3.5:9b` | Fixed · `claude-haiku-5-5` | Agent · `claude-haiku-5-5` |
+|---|---|---|---|---|
+| Useful drafts | 27/30 | 28/30 | 29/30 | **30/30** |
+| Mean time (p95) | **9.9 s** (12.7 s) | 26.8 s (43.1 s) | 13.3 s (16.9 s) | 24.8 s (36.1 s) |
+| Cost for 30 cases | 0 | 0 | $0.046 | $0.162 |
+
+The agent solves the version traps whose source was not in the top four (4.8.5 out of support, expired signing certificate), but
+takes 2–3 times as long and, with the 9B model, writes worse Italian. The fixed pipeline stays the default. Details in
+[docs/architettura.md](docs/architettura.md#modalità-agente-con-i-tool-fase-9b) (Italian).
 
 ## Architecture
 

@@ -57,9 +57,13 @@ if (zammad.Managed)
 
 // Token dell'utente tecnico ai-assistant, scritto da "zammad bootstrap" (Fase 4): Parameters:zammad-api-token.
 // Il parametro si dichiara solo se valorizzato, così l'AppHost parte anche senza e /api/health segnala la mancanza.
-if (builder.Configuration["Parameters:zammad-api-token"] is { Length: > 0 })
+var zammadToken = builder.Configuration["Parameters:zammad-api-token"] is { Length: > 0 }
+    ? builder.AddParameter("zammad-api-token", secret: true)
+    : null;
+
+if (zammadToken is not null)
 {
-    agent.WithEnvironment(ZammadSettings.ApiTokenKey, builder.AddParameter("zammad-api-token", secret: true));
+    agent.WithEnvironment(ZammadSettings.ApiTokenKey, zammadToken);
 }
 
 // Segreto HMAC del webhook di Zammad (generato da "zammad bootstrap"): l'Agent verifica la firma delle consegne (Fase 6).
@@ -73,6 +77,27 @@ if (builder.Configuration["Parameters:anthropic-api-key"] is { Length: > 0 })
 {
     agent.WithEnvironment("ANTHROPIC_API_KEY", builder.AddParameter("anthropic-api-key", secret: true));
 }
+
+// Server MCP della modalità agente (Fase 9b): tool in sola lettura sulle API di conoscenza dell'Agent e sulla ricerca di Zammad
+// (token di ai-assistant). Nessun riferimento a sql: l'Agent resta l'unico proprietario del database. La chiave si genera al
+// primo avvio e resta negli user-secrets (Parameters:ticket-mcp-key), dove la trova anche la Cli per la valutazione.
+var mcpKey = builder.AddParameter("ticket-mcp-key", new GenerateParameterDefault { MinLength = 32, Special = false }, secret: true, persist: true);
+
+var mcp = builder.AddProject<Projects.Dusiburg_AI_Ticket_Mcp>("ticket-mcp")
+    .WithReference(agent)
+    .WithEnvironment("TICKET_MCP_KEY", mcpKey)
+    .WithHttpHealthCheck("/health");
+
+mcp.WithConfigurationEnvironment(builder, [ZammadSettings.BaseUrlKey]);
+
+if (zammadToken is not null)
+{
+    mcp.WithEnvironment(ZammadSettings.ApiTokenKey, zammadToken);
+}
+
+// L'Agent chiama ticket-mcp solo con PIPELINE_MODE=agent; il server MCP richiama l'Agent per la conoscenza.
+agent.WithReference(mcp)
+    .WithEnvironment("TICKET_MCP_KEY", mcpKey);
 
 // Console: solo HTTP verso l'Agent, nessun riferimento a sql. I link a Zammad e al dashboard arrivano come variabili.
 var web = builder.AddProject<Projects.Dusiburg_AI_Ticket_Web>("web")

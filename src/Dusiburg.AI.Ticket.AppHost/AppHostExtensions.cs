@@ -27,6 +27,7 @@ internal static class ModelSettings
         "ANTHROPIC_MODEL",
         "MODEL_CLASSIFY_PROVIDER",
         "MODEL_DRAFT_PROVIDER",
+        "MODEL_AGENT_PROVIDER",
         "EMBEDDING_MODEL",
         "EMBEDDING_DIMENSIONS",
         "TICKET_PROMPT_CAPTURE_DIR"
@@ -39,10 +40,10 @@ internal static class RetrievalSettings
     public static readonly string[] All = ["RETRIEVAL_TOP_K", "PROMPT_SOURCES_MAX", "RRF_K", "RETRIEVAL_VERSION_PENALTY"];
 }
 
-/// <summary>Manopole della pipeline e del feedback, copiate da <c>AgentOptions.Keys</c> (Fasi 6 e 7).</summary>
+/// <summary>Manopole della pipeline e del feedback, copiate da <c>AgentOptions.Keys</c> (Fasi 6, 7 e 9b).</summary>
 internal static class PipelineSettings
 {
-    public static readonly string[] All = ["CONFIDENCE_MIN_FOR_DRAFT", "TICKET_EVENT_SOURCE", "POLLING_INTERVAL_SECONDS", "FEEDBACK_MAX_EDIT_DISTANCE"];
+    public static readonly string[] All = ["CONFIDENCE_MIN_FOR_DRAFT", "TICKET_EVENT_SOURCE", "POLLING_INTERVAL_SECONDS", "FEEDBACK_MAX_EDIT_DISTANCE", "PIPELINE_MODE"];
 }
 
 internal static class ZammadSettings

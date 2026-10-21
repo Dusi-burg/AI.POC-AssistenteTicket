@@ -1,3 +1,4 @@
+using Dusiburg.AI.Ticket.Agentic;
 using Dusiburg.AI.Ticket.Ai;
 using Dusiburg.AI.Ticket.Core;
 using Dusiburg.AI.Ticket.Rag.Retrieval;
@@ -40,7 +41,11 @@ internal static class CliConfiguration
         // Chiave del modello cloud, per il confronto della Fase 8 (eval drafts --provider anthropic).
         AddIfMissing(AiOptions.Keys.AnthropicApiKey, secrets.Get(UserSecretsStore.AnthropicApiKeyKey));
 
-        foreach (string key in AiOptions.Keys.All.Concat(RetrievalOptions.Keys.All).Concat(AgentOptions.Keys.All).Append(ZammadOptions.Keys.BaseUrl).Append(ZammadOptions.Keys.WebhookTarget))
+        // Chiave di ticket-mcp, generata dall'AppHost al primo avvio (Fase 9b, eval drafts --modo agente).
+        AddIfMissing(ToolAgentOptions.Keys.McpKey, secrets.Get(UserSecretsStore.McpKeyKey));
+
+        foreach (string key in AiOptions.Keys.All.Concat(RetrievalOptions.Keys.All).Concat(AgentOptions.Keys.All).Concat(ToolAgentOptions.Keys.All)
+            .Append(ZammadOptions.Keys.BaseUrl).Append(ZammadOptions.Keys.WebhookTarget))
         {
             AddIfMissing(key, secrets.Get(key));
         }

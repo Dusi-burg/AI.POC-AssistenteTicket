@@ -37,7 +37,39 @@ public sealed class AgentRun
     /// <summary>Trace id di OpenTelemetry: il link alla traccia nel dashboard di Aspire.</summary>
     public string? TraceId { get; set; }
 
+    /// <summary>Pipeline fissa o agente con i tool (Fase 9b): <c>PIPELINE_MODE</c> al momento dell'elaborazione.</summary>
+    public PipelineMode Mode { get; set; } = PipelineMode.Fixed;
+
     public AgentDraft? Draft { get; set; }
+
+    /// <summary>Chiamate ai tool della modalità agente, nell'ordine; vuoto con la pipeline fissa.</summary>
+    public List<AgentToolCall> ToolCalls { get; } = [];
+}
+
+/// <summary>
+/// Una chiamata a un tool del server MCP nella modalità agente (Fase 9b): argomenti come li ha passati il modello più quelli
+/// imposti dal codice, esito (<c>ok</c>, <c>error:&lt;codice&gt;</c>, <c>rejected:&lt;codice&gt;</c> se l'ha fermata la guardia).
+/// </summary>
+public sealed class AgentToolCall
+{
+    public int Id { get; set; }
+
+    public int AgentRunId { get; set; }
+
+    /// <summary>Ordine della chiamata nel run, da 1.</summary>
+    public byte Sequence { get; set; }
+
+    public required string ToolName { get; set; }
+
+    /// <summary>Argomenti in JSON.</summary>
+    public required string Arguments { get; set; }
+
+    public required string Outcome { get; set; }
+
+    public int DurationMs { get; set; }
+
+    /// <summary>Messaggio d'errore o del rifiuto; <c>null</c> se la chiamata è riuscita.</summary>
+    public string? Message { get; set; }
 }
 
 /// <summary>

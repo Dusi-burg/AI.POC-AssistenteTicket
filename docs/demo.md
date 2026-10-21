@@ -128,6 +128,30 @@ Il triage parte sullo stesso evento della nostra bozza e usa la stessa GPU: le d
 già acceso (app di Ollama), impostare anche `[Environment]::SetEnvironmentVariable('OLLAMA_CONTEXT_LENGTH', '8192', 'User')` e
 riavviarlo.
 
+## Modalità agente con i tool (facoltativa, Fase 9b)
+
+La stessa demo, ma le fonti le sceglie il modello con i tool del server MCP `ticket-mcp` (cerca, legge per intero, controlla le
+note di rilascio e lo storico del cliente) invece di riceverle dal retrieval. Si accende all'avvio dell'AppHost:
+
+```powershell
+$env:PIPELINE_MODE = 'agent'
+dotnet run --project src/Dusiburg.AI.Ticket.AppHost        # ticket-mcp parte sempre; l'Agent lo usa solo in modalità agente
+dotnet run --project tools/Dusiburg.AI.Ticket.Cli -- demo 1
+```
+
+Che cosa mostrare:
+
+- **Nota interna**: "Fonti lette dall'agente con i tool" e l'elenco delle chiamate con gli argomenti; prodotto, modalità e
+  versione nelle chiamate li ha messi il codice, non il modello.
+- **Console → Elaborazioni → dettaglio**: la tabella "Chiamate ai tool dell'agente", con le chiamate fermate dalla guardia in giallo
+  (per esempio `leggi_fonte` su una chiave che non è uscita da una ricerca).
+- **Dashboard di Aspire**: nella traccia dell'elaborazione lo span `agente` con dentro `agent.tool …`, e nella risorsa
+  `ticket-mcp` gli span `mcp.tool …` con le chiamate alle API di conoscenza dell'Agent.
+- La decisione resta del codice: dicitura AI, verifica delle citazioni (solo fonti lette) e confidenza sono le stesse.
+
+È più lenta della pipeline fissa (ogni chiamata ai tool è un giro del modello): sui tempi e sulla qualità vedere il confronto in
+[architettura.md](architettura.md#modalità-agente-con-i-tool-fase-9b).
+
 ## Se qualcosa non va
 
 | Sintomo | Che cosa fare |

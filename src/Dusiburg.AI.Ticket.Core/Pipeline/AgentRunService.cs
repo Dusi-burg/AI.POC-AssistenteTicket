@@ -73,6 +73,7 @@ public sealed class AgentRunService(TicketDbContext db, TicketPipeline pipeline,
         run.State = AgentRunState.Running;
         run.StartedAt = timeProvider.GetUtcNow();
         run.TraceId = activity?.TraceId.ToHexString();
+        run.Mode = pipeline.Options.Mode;
         await db.SaveChangesAsync(cancellationToken);
 
         try
@@ -85,6 +86,7 @@ public sealed class AgentRunService(TicketDbContext db, TicketPipeline pipeline,
                 proposal, run.Id, run.TraceId is { } trace ? traceUrl?.Invoke(trace) : null, cancellationToken);
 
             db.AgentDrafts.Add(ToEntity(run.Id, proposal, publication.NoteArticleId));
+            run.ToolCalls.AddRange(ToEntities(proposal.Calls));
             Complete(run, AgentRunState.Completed, null, null);
             activity?.SetTag("ticket.tags", string.Join(",", publication.Tags));
         }
@@ -92,6 +94,8 @@ public sealed class AgentRunService(TicketDbContext db, TicketPipeline pipeline,
         {
             logger.LogError(exception, "Elaborazione {RunId} del ticket {TicketId} non riuscita", run.Id, run.ZammadTicketId);
             db.ChangeTracker.Entries<AgentDraft>().ToList().ForEach(e => e.State = EntityState.Detached);
+            db.ChangeTracker.Entries<AgentToolCall>().ToList().ForEach(e => e.State = EntityState.Detached);
+            run.ToolCalls.Clear();
             Complete(run, AgentRunState.Failed, CodeOf(exception), exception.Message);
             activity?.SetStatus(ActivityStatusCode.Error, exception.Message);
         }
@@ -158,6 +162,18 @@ public sealed class AgentRunService(TicketDbContext db, TicketPipeline pipeline,
 
         return draft;
     }
+
+    /// <summary>Le chiamate ai tool della modalità agente, nell'ordine; argomenti e messaggi tagliati alla colonna.</summary>
+    internal static IEnumerable<AgentToolCall> ToEntities(IReadOnlyList<ToolCallRecord> calls) =>
+        calls.Take(byte.MaxValue).Select((call, index) => new AgentToolCall
+        {
+            Sequence = (byte)(index + 1),
+            ToolName = Truncate(call.ToolName, ColumnSizes.ToolName),
+            Arguments = Truncate(call.Arguments, ColumnSizes.ToolArguments),
+            Outcome = Truncate(call.Outcome, ColumnSizes.ErrorCode),
+            DurationMs = Milliseconds(call.Duration),
+            Message = call.Message is { Length: > 0 } message ? Truncate(message, ColumnSizes.Reason) : null
+        });
 
     private void Complete(AgentRun run, AgentRunState state, string? errorCode, string? error)
     {

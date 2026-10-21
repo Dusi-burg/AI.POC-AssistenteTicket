@@ -91,6 +91,8 @@ public static class RunEndpoints
     {
         AgentRun? run = await db.AgentRuns.AsNoTracking()
             .Include(r => r.Draft).ThenInclude(d => d!.Sources)
+            .Include(r => r.ToolCalls)
+            .AsSplitQuery()
             .SingleOrDefaultAsync(r => r.Id == id, cancellationToken);
 
         if (run is null)
@@ -106,10 +108,11 @@ public static class RunEndpoints
             new RunOutcomeView(d.Outcome, d.OutcomeAt, d.OutcomeReason, d.ReplyArticleId, d.FinalText, d.EditDistance, d.DisclosureKept),
             [.. d.Sources.OrderBy(s => s.Rank).Select(s => new RunSourceView(s.Rank, s.Source, s.SourceKey, s.IsCitedByModel, s.IsVerified, s.Reason))]);
 
-        return TypedResults.Ok(new RunDetail(Summary(run, d), draft));
+        return TypedResults.Ok(new RunDetail(Summary(run, d), draft,
+            [.. run.ToolCalls.OrderBy(c => c.Sequence).Select(c => new RunToolCallView(c.Sequence, c.ToolName, c.Arguments, c.Outcome, c.DurationMs, c.Message))]));
     }
 
     private static RunSummary Summary(AgentRun r, AgentDraft? d) => new(
         r.Id, r.ZammadTicketId, r.ZammadArticleId, r.TicketNumber, r.TicketTitle, r.Trigger, r.State, r.ReceivedAt, r.DurationMs, r.ErrorCode, r.Error,
-        r.TraceId, d == null ? null : d.Kind, d == null ? null : d.Confidence, d == null ? null : d.Outcome);
+        r.TraceId, d == null ? null : d.Kind, d == null ? null : d.Confidence, d == null ? null : d.Outcome, r.Mode);
 }

@@ -87,7 +87,7 @@
                                 }
                                 <span class="text-muted">@run.TicketTitle</span>
                             </td>
-                            <td class="small">@RunPresentation.Label(run.Trigger)</td>
+                            <td class="small">@RunPresentation.Label(run.Trigger)@(run.Mode == Dusiburg.AI.Ticket.Shared.Domain.PipelineMode.Agent ? " · agente" : "")</td>
                             <td><span class="badge @RunPresentation.BadgeClass(run.State)" title="@run.Error">@RunPresentation.Label(run.State)</span></td>
                             <td>
                                 @if (run.DraftKind is { } kind)

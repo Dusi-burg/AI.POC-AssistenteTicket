@@ -64,11 +64,15 @@ trabocchetti.
 Il modello cloud chiede più spesso chiarimenti prima di proporre una soluzione: evita le risposte sbagliate sui trabocchetti, ma
 in due casi normali chiede quando la risposta era già nelle fonti. Il locale risponde di più e ricade a volte nel "voi".
 
+Rimisurate il 2026-10-21, dopo le domande per il cliente accodate anche alle risposte: bozze utili 27/30 in locale e 29/30 con il
+cloud, tempi invariati (`eval/drafts-2026-10-21-*`).
+
 ```powershell
 dotnet run --project tools/Dusiburg.AI.Ticket.Cli -- eval retrieval                       # hit@k e MRR, varianti del retrieval
 dotnet run --project tools/Dusiburg.AI.Ticket.Cli -- eval drafts                          # bozze sui 30 casi (~5 min), report, letture e griglia vuota
 dotnet run --project tools/Dusiburg.AI.Ticket.Cli -- eval drafts --replay eval/drafts-<data>-qwen3.5-9b.json --griglia eval/griglia-<data>-qwen3.5-9b.json
 dotnet run --project tools/Dusiburg.AI.Ticket.Cli -- eval drafts --provider anthropic     # confronto con il cloud (~6 min, ~0,05 $): serve Parameters:anthropic-api-key
+dotnet run --project tools/Dusiburg.AI.Ticket.Cli -- eval drafts --modo agente            # modalità agente con i tool (~13 min, AppHost acceso)
 ```
 
 ### Limiti
@@ -91,6 +95,24 @@ storico, knowledge base e note di rilascio: è ciò che aggiunge il POC. Sui 6 s
 nostra classificazione su 5 categorie e 5 priorità su 6, in ~5 s; la bozza costa +1–2 s di coda sulla GPU, dopo aver dato a
 Ollama lo stesso contesto della pipeline (con contesti diversi il modello si ricaricava a ogni ticket: +8 s). Prerequisiti e
 comandi in [docs/demo.md](docs/demo.md#ai-di-zammad-facoltativa-fase-9a).
+
+### Modalità agente con i tool (facoltativa)
+
+Con `PIPELINE_MODE=agent` le fonti non le sceglie il retrieval: il modello le cerca e le legge con i tool in sola lettura del
+server MCP `ticket-mcp` (ricerca ibrida, lettura completa, note di rilascio, storico del cliente, ricerca in Zammad). Il codice
+mette prodotto, versione e cliente nelle chiamate, limita le chiamate e accetta solo citazioni di fonti lette; verifica,
+confidenza, decisione e dicitura AI restano quelle della pipeline fissa. Sugli stessi 30 casi (2026-10-21, griglia proposta da
+Claude):
+
+| | Fissa · `qwen3.5:9b` | Agente · `qwen3.5:9b` | Fissa · `claude-haiku-5-5` | Agente · `claude-haiku-5-5` |
+|---|---|---|---|---|
+| Bozze utili | 27/30 | 28/30 | 29/30 | **30/30** |
+| Tempo medio (p95) | **9,9 s** (12,7 s) | 26,8 s (43,1 s) | 13,3 s (16,9 s) | 24,8 s (36,1 s) |
+| Costo per 30 casi | 0 | 0 | 0,046 $ | 0,162 $ |
+
+L'agente risolve i trabocchetti di versione la cui fonte non era fra le prime quattro (4.8.5 fuori supporto, certificato di firma
+scaduto), ma impiega 2–3 volte il tempo e, con il 9B, peggiora la forma. Il default resta la pipeline fissa. Dettagli in
+[docs/architettura.md](docs/architettura.md#modalità-agente-con-i-tool-fase-9b).
 
 ## Architettura
 

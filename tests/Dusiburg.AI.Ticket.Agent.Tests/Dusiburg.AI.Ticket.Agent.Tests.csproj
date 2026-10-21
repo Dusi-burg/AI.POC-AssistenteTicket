@@ -25,4 +25,9 @@
     <ProjectReference Include="..\..\tools\Dusiburg.AI.Ticket.DbInit\Dusiburg.AI.Ticket.DbInit.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- Lo stesso embedding finto dei test della pipeline: indice e ricerca senza Ollama (API di conoscenza, Fase 9b) -->
+    <Compile Include="..\Dusiburg.AI.Ticket.Core.Tests\Support\HashingEmbeddingService.cs" Link="Support\HashingEmbeddingService.cs" />
+  </ItemGroup>
+
 </Project>

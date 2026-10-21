@@ -3,6 +3,7 @@ using Dusiburg.AI.Ticket.Core.Context;
 using Dusiburg.AI.Ticket.Core.Drafting;
 using Dusiburg.AI.Ticket.Core.Verification;
 using Dusiburg.AI.Ticket.Rag.Retrieval;
+using Dusiburg.AI.Ticket.Shared.Domain;
 
 namespace Dusiburg.AI.Ticket.Core.Pipeline;
 
@@ -10,7 +11,10 @@ namespace Dusiburg.AI.Ticket.Core.Pipeline;
 public sealed record PipelineTimings(
     TimeSpan Context, TimeSpan Classification, TimeSpan Retrieval, TimeSpan Generation, TimeSpan Verification, TimeSpan Publication, TimeSpan Total);
 
-/// <summary>Tutto ciò che la pipeline ha prodotto per un articolo del cliente, prima e dopo la decisione del codice.</summary>
+/// <summary>
+/// Tutto ciò che la pipeline ha prodotto per un articolo del cliente, prima e dopo la decisione del codice. Nella modalità agente
+/// (Fase 9b) <see cref="Retrieval"/> contiene le fonti lette con i tool e il tempo dell'agente è in <c>Timings.Generation</c>.
+/// </summary>
 public sealed record DraftProposal(
     IncomingTicket Ticket,
     ModelCall<ModelClassification> Classification,
@@ -20,4 +24,9 @@ public sealed record DraftProposal(
     ConfidenceAssessment Confidence,
     ComposedDraft Draft,
     IReadOnlyDictionary<string, long> ZammadTicketOfSource,
-    PipelineTimings Timings);
+    PipelineTimings Timings,
+    PipelineMode Mode = PipelineMode.Fixed,
+    IReadOnlyList<ToolCallRecord>? ToolCalls = null)
+{
+    public IReadOnlyList<ToolCallRecord> Calls => ToolCalls ?? [];
+}

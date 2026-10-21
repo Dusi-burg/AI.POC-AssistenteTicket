@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Modalità agente (Fase 9b): client MCP verso ticket-mcp, guardia dei tool, Agent Framework. Il nucleo (Core) non dipende
+       da nessuno dei due: vede solo IToolAgentDrafter. -->
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Agents.AI" />
+    <PackageReference Include="ModelContextProtocol.Core" />
+    <PackageReference Include="Microsoft.Extensions.Http" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Dusiburg.AI.Ticket.Core\Dusiburg.AI.Ticket.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Dusiburg.AI.Ticket.Agentic.Tests" />
+  </ItemGroup>
+
+</Project>

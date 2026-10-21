@@ -131,7 +131,10 @@ public sealed class DraftEvaluator(TicketDbContext db, RetrievalEvaluator retrie
             proposal.ModelDraft.Attempts,
             Sum(proposal.Classification.InputTokens, proposal.ModelDraft.InputTokens),
             Sum(proposal.Classification.OutputTokens, proposal.ModelDraft.OutputTokens),
-            new StepTimes(Ms(timings.Classification), Ms(timings.Retrieval), Ms(timings.Generation), Ms(timings.Verification)));
+            new StepTimes(Ms(timings.Classification), Ms(timings.Retrieval), Ms(timings.Generation), Ms(timings.Verification)),
+            proposal.Mode == PipelineMode.Agent
+                ? new AgentTrace([.. proposal.Calls.Select(c => new ToolCallTrace(c.ToolName, c.Arguments, c.Outcome, Ms(c.Duration)))])
+                : null);
     }
 
     private static DraftCaseRecord Failed(EvalCase evalCase, IncomingTicket ticket, string error) => new(

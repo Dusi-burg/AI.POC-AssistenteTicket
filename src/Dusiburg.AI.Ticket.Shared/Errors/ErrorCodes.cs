@@ -10,3 +10,11 @@ public static class ErrorCodes
     public const string UpstreamUnavailable = "UPSTREAM_UNAVAILABLE";
     public const string Internal = "INTERNAL";
 }
+
+/// <summary>Errore di un tool MCP (Fase 9b): l'involucro <c>{ error: { code, message } }</c> che il modello legge al posto del risultato.</summary>
+public sealed record ToolError(string Code, string Message);
+
+public sealed record ToolErrorResponse(ToolError Error)
+{
+    public static ToolErrorResponse Create(string code, string message) => new(new ToolError(code, message));
+}

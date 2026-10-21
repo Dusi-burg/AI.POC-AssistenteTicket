@@ -66,7 +66,7 @@ public sealed class TicketLanguageModel(IChatClientFactory factory)
     private static long? Sum(long? first, long? second) => first is { } a && second is { } b ? a + b : null;
 
     /// <summary>SHA-256 dei messaggi (ruolo e testo): due bozze con lo stesso hash hanno avuto lo stesso prompt.</summary>
-    internal static string PromptHash(IEnumerable<ChatMessage> messages)
+    public static string PromptHash(IEnumerable<ChatMessage> messages)
     {
         string text = string.Join("\n␞\n", messages.Select(m => $"{m.Role}: {m.Text}"));
 

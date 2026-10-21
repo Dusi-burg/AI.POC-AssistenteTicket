@@ -25,6 +25,10 @@
     <PackageVersion Include="Microsoft.Extensions.AI" Version="10.11.0" />
     <PackageVersion Include="Anthropic" Version="12.57.0" />
     <PackageVersion Include="OllamaSharp" Version="5.5.0" />
+    <!-- Fase 9b: server MCP e agente con i tool, come O2C e Trasporto. -->
+    <PackageVersion Include="ModelContextProtocol.AspNetCore" Version="2.2.0" />
+    <PackageVersion Include="ModelContextProtocol.Core" Version="2.2.0" />
+    <PackageVersion Include="Microsoft.Agents.AI" Version="1.25.0" />
   </ItemGroup>
   <ItemGroup Label="Data">
     <PackageVersion Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.13" />

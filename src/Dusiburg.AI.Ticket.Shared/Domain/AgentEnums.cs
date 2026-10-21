@@ -35,3 +35,13 @@ public enum DraftOutcome : byte
     SentEdited = 3,
     Discarded = 4
 }
+
+/// <summary>
+/// Come è nata la bozza (Fase 9b): pipeline fissa con le fonti scelte dal retrieval, oppure agente che sceglie le fonti con i tool
+/// del server MCP. Classificazione, verifica, confidenza, decisione e pubblicazione sono le stesse.
+/// </summary>
+public enum PipelineMode : byte
+{
+    Fixed = 1,
+    Agent = 2
+}

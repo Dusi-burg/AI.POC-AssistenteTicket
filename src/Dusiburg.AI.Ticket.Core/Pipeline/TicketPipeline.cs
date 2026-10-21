@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using Dusiburg.AI.Ticket.Ai;
 using Dusiburg.AI.Ticket.Core.Composition;
 using Dusiburg.AI.Ticket.Core.Context;
 using Dusiburg.AI.Ticket.Core.Drafting;
@@ -7,6 +8,7 @@ using Dusiburg.AI.Ticket.Core.Verification;
 using Dusiburg.AI.Ticket.Data;
 using Dusiburg.AI.Ticket.Rag.Cleaning;
 using Dusiburg.AI.Ticket.Rag.Retrieval;
+using Dusiburg.AI.Ticket.Shared.Domain;
 using Dusiburg.AI.Ticket.Shared.Telemetry;
 using Dusiburg.AI.Ticket.Zammad;
 using Microsoft.Extensions.AI;
@@ -18,6 +20,8 @@ namespace Dusiburg.AI.Ticket.Core.Pipeline;
 /// Pipeline deterministica (G8, PLAN §5 Fase 6): contesto → classificazione → retrieval → generazione → verifica → confidenza e
 /// decisione → composizione con la dicitura AI → pubblicazione. Il modello scrive, il codice decide. Ogni passo è cronometrato e
 /// ha il suo span. Non scrive nel database: lo fa <see cref="AgentRunService"/>, così la Cli può provare la pipeline a secco.
+/// Con <c>PIPELINE_MODE=agent</c> (Fase 9b) retrieval e generazione li sostituisce l'agente con i tool (<see cref="IToolAgentDrafter"/>);
+/// tutto il resto non cambia, e la verifica accetta solo le fonti che l'agente ha letto davvero.
 /// </summary>
 public sealed class TicketPipeline(
     TicketContextLoader loader,
@@ -26,14 +30,21 @@ public sealed class TicketPipeline(
     ZammadPublisher publisher,
     TicketDbContext db,
     AgentOptions options,
-    ZammadOptions zammadOptions)
+    ZammadOptions zammadOptions,
+    IToolAgentDrafter? toolAgent = null)
 {
     private static readonly ActivitySource Telemetry = new(TicketTelemetry.Sources.Pipeline);
 
     public AgentOptions Options => options;
 
-    /// <summary>La stessa pipeline con un altro modello: il confronto con il cloud della Fase 8 (G10).</summary>
-    public TicketPipeline WithModel(TicketLanguageModel other) => new(loader, other, retriever, publisher, db, options, zammadOptions);
+    /// <summary>
+    /// La stessa pipeline con un altro modello: il confronto con il cloud della Fase 8 (G10). L'agente, se c'è, usa la stessa fabbrica.
+    /// </summary>
+    public TicketPipeline WithModel(TicketLanguageModel other, IChatClientFactory? agentModels = null) =>
+        new(loader, other, retriever, publisher, db, options, zammadOptions, agentModels is null ? toolAgent : toolAgent?.WithModels(agentModels));
+
+    /// <summary>La stessa pipeline in un'altra modalità: la valutazione confronta fissa e agente sugli stessi casi.</summary>
+    public TicketPipeline WithMode(PipelineMode mode) => new(loader, model, retriever, publisher, db, options with { Mode = mode }, zammadOptions, toolAgent);
 
     /// <summary>Passi fino alla bozza composta, senza scrivere né in Zammad né nel database.</summary>
     public async Task<DraftProposal> ProposeAsync(long ticketId, long? articleId, CancellationToken cancellationToken)
@@ -54,12 +65,33 @@ public sealed class TicketPipeline(
         (ModelCall<ModelClassification> classification, TimeSpan classificationTime) = await StepAsync("classificazione", () =>
             model.ClassifyAsync(PromptBuilder.Classification(ticket), cancellationToken));
 
-        (RetrievalResult retrieval, TimeSpan retrievalTime) = await StepAsync("retrieval", () => retriever.SearchAsync(Query(ticket), cancellationToken));
-        IReadOnlyList<RetrievedSource> sources = retrieval.PromptSources;
+        RetrievalResult retrieval;
+        TimeSpan retrievalTime;
+        ModelCall<ModelDraft> draft;
+        TimeSpan generationTime;
+        IReadOnlyList<ToolCallRecord> toolCalls = [];
 
-        List<ChatMessage> prompt = PromptBuilder.Draft(ticket, classification.Value, sources);
-        (ModelCall<ModelDraft> draft, TimeSpan generationTime) = await StepAsync("generazione", () =>
-            model.DraftAsync(prompt, [.. sources.Select(s => s.Key)], cancellationToken));
+        if (options.Mode == PipelineMode.Agent)
+        {
+            IToolAgentDrafter agent = toolAgent
+                ?? throw new InvalidOperationException($"{AgentOptions.Keys.PipelineMode}=agent ma la modalità agente non è registrata (AddTicketAgentic).");
+
+            (ToolAgentDraft agentDraft, generationTime) = await StepAsync("agente", () => agent.DraftAsync(ticket, classification.Value, cancellationToken));
+            retrieval = await EvidenceAsync(ticket, agentDraft.Evidence, cancellationToken);
+            retrievalTime = TimeSpan.Zero;
+            draft = agentDraft.Draft;
+            toolCalls = agentDraft.ToolCalls;
+        }
+        else
+        {
+            (retrieval, retrievalTime) = await StepAsync("retrieval", () => retriever.SearchAsync(Query(ticket), cancellationToken));
+
+            List<ChatMessage> prompt = PromptBuilder.Draft(ticket, classification.Value, retrieval.PromptSources);
+            (draft, generationTime) = await StepAsync("generazione", () =>
+                model.DraftAsync(prompt, [.. retrieval.PromptSources.Select(s => s.Key)], cancellationToken));
+        }
+
+        IReadOnlyList<RetrievedSource> sources = retrieval.PromptSources;
 
         long verificationStart = Stopwatch.GetTimestamp();
         VerificationResult verification;
@@ -84,7 +116,17 @@ public sealed class TicketPipeline(
         var timings = new PipelineTimings(contextTime, classificationTime, retrievalTime, generationTime, verificationTime, TimeSpan.Zero,
             contextTime + Stopwatch.GetElapsedTime(start));
 
-        return new DraftProposal(ticket, classification, retrieval, draft, verification, confidence, composed, zammadTickets, timings);
+        return new DraftProposal(ticket, classification, retrieval, draft, verification, confidence, composed, zammadTickets, timings, options.Mode, toolCalls);
+    }
+
+    /// <summary>Le fonti lette dall'agente come risultato del retrieval, con i filtri del cliente: le leggono verifica, confidenza e nota.</summary>
+    private async Task<RetrievalResult> EvidenceAsync(IncomingTicket ticket, IReadOnlyList<SourceEvidence> evidence, CancellationToken cancellationToken)
+    {
+        ChunkCatalog catalog = await retriever.CatalogAsync(cancellationToken);
+        IReadOnlyList<RetrievedSource> sources = evidence.ToRetrievedSources(catalog);
+        TimeSpan none = TimeSpan.Zero;
+
+        return new RetrievalResult([.. sources.SelectMany(s => s.Chunks)], sources, sources, catalog.Resolve(Query(ticket)), new RetrievalTimings(none, none, none, none));
     }
 
     /// <summary>Bozza condivisa, nota interna e tag; restituisce la proposta con il tempo di pubblicazione e ciò che è stato scritto.</summary>

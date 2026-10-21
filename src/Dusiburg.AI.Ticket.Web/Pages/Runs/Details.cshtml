@@ -21,7 +21,8 @@
 
     <p>
         Ticket <strong>@(run.TicketNumber ?? $"id {run.ZammadTicketId}")</strong> @run.TicketTitle,
-        articolo @run.ZammadArticleId, da @RunPresentation.Label(run.Trigger), ricevuto il @RunPresentation.Time(run.ReceivedAt).
+        articolo @run.ZammadArticleId, da @RunPresentation.Label(run.Trigger), ricevuto il @RunPresentation.Time(run.ReceivedAt),
+        @(run.Mode == Dusiburg.AI.Ticket.Shared.Domain.PipelineMode.Agent ? "modalità agente con i tool" : "pipeline fissa").
     </p>
     <ul class="list-inline" id="links">
         @if (Model.Links.Ticket(run.ZammadTicketId) is { } ticketUrl)
@@ -137,7 +138,29 @@
             </div>
         </div>
 
-        <h2 class="h6">Fonti proposte al modello</h2>
+        @if (detail.ToolCalls is { Count: > 0 } calls)
+        {
+            <h2 class="h6">Chiamate ai tool dell'agente</h2>
+            <div class="table-responsive">
+                <table class="table table-sm align-middle small" id="tool-calls">
+                    <thead><tr><th>#</th><th>Tool</th><th>Argomenti</th><th>Esito</th><th>Durata</th></tr></thead>
+                    <tbody>
+                        @foreach (var call in calls)
+                        {
+                            <tr class="@(call.Outcome == "ok" ? "" : "table-warning")">
+                                <td>@call.Sequence</td>
+                                <td><code>@call.ToolName</code></td>
+                                <td class="text-prewrap"><code>@call.Arguments</code></td>
+                                <td>@call.Outcome@(call.Message is { Length: > 0 } message ? $": {message}" : "")</td>
+                                <td>@RunPresentation.Seconds(call.DurationMs)</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+
+        <h2 class="h6">@(run.Mode == Dusiburg.AI.Ticket.Shared.Domain.PipelineMode.Agent ? "Fonti lette dall'agente" : "Fonti proposte al modello")</h2>
         <div class="table-responsive">
             <table class="table table-sm align-middle small" id="sources">
                 <thead><tr><th>#</th><th>Fonte</th><th>Tipo</th><th>Citata</th><th>Verificata</th><th>Motivo del modello</th></tr></thead>

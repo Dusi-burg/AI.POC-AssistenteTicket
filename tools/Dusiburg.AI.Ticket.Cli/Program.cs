@@ -1,3 +1,4 @@
+using Dusiburg.AI.Ticket.Agentic;
 using Dusiburg.AI.Ticket.Ai;
 using Dusiburg.AI.Ticket.Cli;
 using Dusiburg.AI.Ticket.Cli.Configuration;
@@ -32,6 +33,9 @@ builder.Services.AddTicketZammad(builder.Configuration);
 builder.Services.AddTicketAi(builder.Configuration);
 builder.Services.AddTicketRag(builder.Configuration);
 builder.Services.AddTicketCore(builder.Configuration);
+
+// Modalità agente (eval drafts --modo agente): ticket-mcp sulla porta fissa, con l'AppHost acceso.
+builder.Services.AddTicketAgentic(builder.Configuration, ToolAgentOptions.LocalMcpUrl);
 builder.Services.AddSingleton(_ => new TicketDbContextOptions(AiOptions.ReadEmbeddingDimensions(builder.Configuration)));
 builder.Services.AddDbContext<TicketDbContext>(options => options.UseSqlServer(
     builder.Configuration.GetConnectionString("sql")

@@ -7,7 +7,10 @@ public enum ModelTask
     Classify,
 
     /// <summary>Bozza di risposta con le fonti citate.</summary>
-    Draft
+    Draft,
+
+    /// <summary>Modalità agente (Fase 9b): il modello sceglie le fonti con i tool del server MCP e poi scrive la bozza.</summary>
+    Agent
 }
 
 public static class ModelProviders

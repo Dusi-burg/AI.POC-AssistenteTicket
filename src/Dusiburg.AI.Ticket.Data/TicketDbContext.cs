@@ -46,6 +46,8 @@ public sealed class TicketDbContext(DbContextOptions<TicketDbContext> options, T
 
     public DbSet<AgentDraftSource> AgentDraftSources => Set<AgentDraftSource>();
 
+    public DbSet<AgentToolCall> AgentToolCalls => Set<AgentToolCall>();
+
     public DbSet<EnumLookup<DeploymentMode>> DeploymentModes => Set<EnumLookup<DeploymentMode>>();
 
     public DbSet<EnumLookup<TicketState>> TicketStates => Set<EnumLookup<TicketState>>();

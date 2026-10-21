@@ -12,5 +12,9 @@ public static class TicketTelemetry
         public const string Zammad = "Dusiburg.AI.Ticket.Zammad";
         public const string Retrieval = "Dusiburg.AI.Ticket.Rag.Retrieval";
         public const string Pipeline = "Dusiburg.AI.Ticket.Core.Pipeline";
+
+        /// <summary>Server MCP (<c>mcp.tool …</c>) e modalità agente (<c>agent.tool …</c>), Fase 9b.</summary>
+        public const string Mcp = "Dusiburg.AI.Ticket.Mcp";
+        public const string Agentic = "Dusiburg.AI.Ticket.Agentic";
     }
 }

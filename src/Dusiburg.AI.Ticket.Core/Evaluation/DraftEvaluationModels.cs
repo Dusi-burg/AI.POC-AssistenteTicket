@@ -50,12 +50,24 @@ public sealed record DraftCaseRecord(
     int Attempts,
     long? InputTokens,
     long? OutputTokens,
-    StepTimes? Timings)
+    StepTimes? Timings,
+    AgentTrace? Agent = null)
 {
     public bool Succeeded => Error is null;
 
     /// <summary>Il modello ha proposto una risposta (dichiarata possibile e non vuota), prima della decisione del codice.</summary>
     public bool ModelProposedAnswer => CanAnswer && !string.IsNullOrWhiteSpace(ModelAnswer);
+}
+
+/// <summary>Una chiamata a un tool nella modalità agente (Fase 9b).</summary>
+public sealed record ToolCallTrace(string Tool, string Arguments, string Outcome, int DurationMs);
+
+/// <summary>Che cosa ha fatto l'agente in un caso: le chiamate ai tool nell'ordine; le fonti lette sono le <c>PromptSources</c> del caso.</summary>
+public sealed record AgentTrace(IReadOnlyList<ToolCallTrace> Calls)
+{
+    public int Rejected => Calls.Count(c => c.Outcome.StartsWith("rejected:", StringComparison.Ordinal));
+
+    public int Errors => Calls.Count(c => c.Outcome.StartsWith("error:", StringComparison.Ordinal));
 }
 
 /// <summary>Le letture di un giro di valutazione: parametri, casi, risorse. È il JSON salvato accanto al report.</summary>
@@ -67,7 +79,8 @@ public sealed record DraftEvaluationRun(
     double ConfidenceMinForDraft,
     TimeSpan Duration,
     IReadOnlyList<string> LoadedModels,
-    IReadOnlyList<DraftCaseRecord> Cases);
+    IReadOnlyList<DraftCaseRecord> Cases,
+    PipelineMode Mode = PipelineMode.Fixed);
 
 /// <summary>Giudizio della griglia manuale (PLAN §5 Fase 8). "Utile" per il criterio del PLAN §1 sono i primi due.</summary>
 public enum DraftJudgment

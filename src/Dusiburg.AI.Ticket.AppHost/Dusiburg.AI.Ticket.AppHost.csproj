@@ -13,6 +13,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Dusiburg.AI.Ticket.Agent\Dusiburg.AI.Ticket.Agent.csproj" />
     <ProjectReference Include="..\Dusiburg.AI.Ticket.Web\Dusiburg.AI.Ticket.Web.csproj" />
+    <ProjectReference Include="..\Dusiburg.AI.Ticket.Mcp\Dusiburg.AI.Ticket.Mcp.csproj" />
   </ItemGroup>
 
 </Project>

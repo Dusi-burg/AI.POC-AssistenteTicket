@@ -27,6 +27,9 @@ internal sealed class UserSecretsStore(string path)
     /// <summary>Chiave Anthropic, facoltativa: solo per il confronto con il cloud della Fase 8.</summary>
     public const string AnthropicApiKeyKey = "Parameters:anthropic-api-key";
 
+    /// <summary>Chiave del server MCP della modalità agente (Fase 9b), generata e salvata dall'AppHost.</summary>
+    public const string McpKeyKey = "Parameters:ticket-mcp-key";
+
     public string Path { get; } = path;
 
     public static UserSecretsStore ForAppHost() => new(PathHelper.GetSecretsPathFromSecretsId(AppHostUserSecretsId));

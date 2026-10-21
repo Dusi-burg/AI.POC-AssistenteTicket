@@ -1,6 +1,8 @@
 using Dusiburg.AI.Ticket.Agent.Events;
 using Dusiburg.AI.Ticket.Agent.Health;
+using Dusiburg.AI.Ticket.Agent.Knowledge;
 using Dusiburg.AI.Ticket.Agent.Runs;
+using Dusiburg.AI.Ticket.Agentic;
 using Dusiburg.AI.Ticket.Ai;
 using Dusiburg.AI.Ticket.Core;
 using Dusiburg.AI.Ticket.Data;
@@ -36,6 +38,9 @@ builder.Services.AddDbContext<TicketDbContext>(options => options.UseSqlServer(
 builder.Services.AddTicketRag(builder.Configuration);
 builder.Services.AddTicketCore(builder.Configuration);
 
+// Modalità agente (Fase 9b, PIPELINE_MODE=agent): i tool di ticket-mcp, risolto dal service discovery, con TICKET_MCP_KEY.
+builder.Services.AddTicketAgentic(builder.Configuration);
+
 // Eventi di Zammad (P1) e coda con un solo consumatore (P2).
 builder.Services.AddSingleton<TicketWorkQueue>();
 builder.Services.AddSingleton<TicketEventIntake>();
@@ -66,7 +71,8 @@ app.MapGroup("/api")
     .MapHealthEndpoints()
     .MapRunEndpoints()
     .MapOutcomeEndpoints()
-    .MapCatalogEndpoints();
+    .MapCatalogEndpoints()
+    .MapKnowledgeEndpoints();
 
 app.MapZammadWebhook();
 

@@ -1,4 +1,5 @@
 using System.Globalization;
+using Dusiburg.AI.Ticket.Shared.Domain;
 using Microsoft.Extensions.Configuration;
 
 namespace Dusiburg.AI.Ticket.Core;
@@ -16,8 +17,10 @@ public enum TicketEventSourceKind
 /// <param name="FeedbackMaxEditDistance">
 /// Oltre questa distanza di modifica la risposta dell'operatore non nasce dalla bozza: l'esito è <c>Discarded</c> (Fase 7).
 /// </param>
+/// <param name="Mode">Pipeline fissa (default) o agente con i tool del server MCP (Fase 9b).</param>
 public sealed record AgentOptions(
-    double ConfidenceMinForDraft, TicketEventSourceKind EventSource, TimeSpan PollingInterval, Uri? DashboardUrl, double FeedbackMaxEditDistance)
+    double ConfidenceMinForDraft, TicketEventSourceKind EventSource, TimeSpan PollingInterval, Uri? DashboardUrl, double FeedbackMaxEditDistance,
+    PipelineMode Mode = PipelineMode.Fixed)
 {
     public const double DefaultConfidenceMinForDraft = 0.55;
     public const int DefaultPollingIntervalSeconds = 5;
@@ -33,8 +36,9 @@ public sealed record AgentOptions(
         public const string PollingInterval = "POLLING_INTERVAL_SECONDS";
         public const string DashboardUrl = "TICKET_DASHBOARD_URL";
         public const string FeedbackMaxEditDistance = "FEEDBACK_MAX_EDIT_DISTANCE";
+        public const string PipelineMode = "PIPELINE_MODE";
 
-        public static IReadOnlyList<string> All => [ConfidenceMinForDraft, EventSource, PollingInterval, FeedbackMaxEditDistance];
+        public static IReadOnlyList<string> All => [ConfidenceMinForDraft, EventSource, PollingInterval, FeedbackMaxEditDistance, PipelineMode];
     }
 
     public static AgentOptions FromConfiguration(IConfiguration configuration) => new(
@@ -42,7 +46,23 @@ public sealed record AgentOptions(
         ReadEventSource(configuration),
         TimeSpan.FromSeconds(ReadInt(configuration, Keys.PollingInterval, DefaultPollingIntervalSeconds, minimum: 1, maximum: 300)),
         Uri.TryCreate(configuration[Keys.DashboardUrl], UriKind.Absolute, out Uri? dashboard) ? dashboard : null,
-        ReadFraction(configuration, Keys.FeedbackMaxEditDistance, DefaultFeedbackMaxEditDistance));
+        ReadFraction(configuration, Keys.FeedbackMaxEditDistance, DefaultFeedbackMaxEditDistance),
+        ReadMode(configuration));
+
+    /// <summary><c>fixed</c> (default) o <c>agent</c>.</summary>
+    private static PipelineMode ReadMode(IConfiguration configuration)
+    {
+        string? value = configuration[Keys.PipelineMode];
+
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return PipelineMode.Fixed;
+        }
+
+        return Enum.TryParse(value.Trim(), ignoreCase: true, out PipelineMode mode) && Enum.IsDefined(mode)
+            ? mode
+            : throw Invalid($"{Keys.PipelineMode} '{value}' non supportato: usare fixed oppure agent.");
+    }
 
     /// <summary>Un numero fra 0 e 1 con il punto decimale.</summary>
     private static double ReadFraction(IConfiguration configuration, string key, double defaultValue)

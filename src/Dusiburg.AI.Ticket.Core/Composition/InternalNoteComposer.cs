@@ -36,11 +36,13 @@ public static class InternalNoteComposer
         }
 
         AppendSources(html, proposal, zammadUrl);
+        AppendToolCalls(html, proposal);
         AppendList(html, "Informazioni mancanti", classification.MissingInformation);
         AppendList(html, "Domande suggerite", proposal.ModelDraft.Value.Questions);
         AppendWarnings(html, proposal.Verification);
 
-        html.Append($"<p><small>Modelli: {Encode(proposal.Classification.ModelId)} (classificazione), {Encode(proposal.ModelDraft.ModelId)} (bozza). " +
+        html.Append($"<p><small>Modelli: {Encode(proposal.Classification.ModelId)} (classificazione), {Encode(proposal.ModelDraft.ModelId)} " +
+            $"({(proposal.Mode == PipelineMode.Agent ? "agente con i tool" : "bozza")}). " +
             $"Tempo {proposal.Timings.Total.TotalSeconds.ToString("0.0", Italian)} s" +
             (runId is { } id ? $", elaborazione n. {id}" : "") +
             (traceUrl is null ? "" : $", <a href=\"{Encode(traceUrl)}\">traccia</a>") + ".</small></p>");
@@ -57,7 +59,7 @@ public static class InternalNoteComposer
         }
 
         Dictionary<string, VerifiedCitation> cited = proposal.Verification.Citations.ToDictionary(c => c.Id, StringComparer.OrdinalIgnoreCase);
-        html.Append("<p>Fonti proposte al modello:</p><ol>");
+        html.Append(proposal.Mode == PipelineMode.Agent ? "<p>Fonti lette dall'agente con i tool:</p><ol>" : "<p>Fonti proposte al modello:</p><ol>");
 
         foreach (RetrievedSource source in proposal.Retrieval.PromptSources)
         {
@@ -68,6 +70,32 @@ public static class InternalNoteComposer
             string usage = cited.TryGetValue(source.Key, out VerifiedCitation? citation) ? $" — citata: {Encode(citation.Reason)}" : " — non citata";
 
             html.Append($"<li>{key} ({PromptBuilder.SourceLabel(source.Source)}{distance}){usage}</li>");
+        }
+
+        html.Append("</ol>");
+    }
+
+    /// <summary>Modalità agente (Fase 9b): quali tool ha chiamato, con quali argomenti, e quali chiamate ha fermato la guardia.</summary>
+    private static void AppendToolCalls(StringBuilder html, DraftProposal proposal)
+    {
+        if (proposal.Mode != PipelineMode.Agent)
+        {
+            return;
+        }
+
+        if (proposal.Calls.Count == 0)
+        {
+            html.Append("<p>Modalità agente: <strong>nessuna chiamata ai tool</strong>, quindi nessuna fonte.</p>");
+            return;
+        }
+
+        html.Append($"<p>Modalità agente: {proposal.Calls.Count} chiamate ai tool.</p><ol>");
+
+        foreach (ToolCallRecord call in proposal.Calls)
+        {
+            string outcome = call.Succeeded ? "" : $" — {Encode(call.Outcome)}{(call.Message is { Length: > 0 } m ? $": {Encode(m)}" : "")}";
+
+            html.Append($"<li><code>{Encode(call.ToolName)}</code> {Encode(call.Arguments)}{outcome}</li>");
         }
 
         html.Append("</ol>");

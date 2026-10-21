@@ -95,6 +95,17 @@ public sealed partial class ZammadClient
     }
 }
 
+public sealed partial class ZammadClient
+{
+    /// <summary>Ricerca libera (Elasticsearch) fra i ticket visibili al token, dal più pertinente (Fase 9b, tool <c>cerca_ticket_zammad</c>).</summary>
+    public async Task<IReadOnlyList<ZammadSearchHit>> SearchTicketsAsync(string text, int limit, CancellationToken cancellationToken) =>
+        await GetAsync<List<ZammadSearchHit>>(
+            $"{ZammadResources.Tickets}/search?query={Uri.EscapeDataString(text)}&limit={limit}&expand=true", cancellationToken);
+}
+
+/// <summary>Ticket trovato dalla ricerca: <see cref="RifStorico"/> è il numero del ticket storico importato (Fase 4), se lo è.</summary>
+public sealed record ZammadSearchHit(long Id, string Number, string Title, string? State, string? RifStorico, DateTimeOffset CreatedAt);
+
 /// <param name="State">Nome dello stato (<c>new</c>, <c>open</c>, <c>closed</c>…), presente solo con <c>expand=true</c>.</param>
 public sealed record ZammadTicketDetail(
     long Id, string Number, string Title, long GroupId, long? CustomerId, long? OrganizationId, DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt,

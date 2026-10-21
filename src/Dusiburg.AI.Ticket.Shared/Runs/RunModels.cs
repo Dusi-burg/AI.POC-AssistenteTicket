@@ -27,7 +27,8 @@ public sealed record RunSummary(
     string? TraceId,
     DraftKind? DraftKind,
     double? Confidence,
-    DraftOutcome? Outcome);
+    DraftOutcome? Outcome,
+    PipelineMode Mode = PipelineMode.Fixed);
 
 public sealed record RunSourceView(byte Rank, ChunkSource Source, string Key, bool IsCitedByModel, bool IsVerified, string? Reason);
 
@@ -65,7 +66,10 @@ public sealed record RunDraftView(
     RunOutcomeView Outcome,
     IReadOnlyList<RunSourceView> Sources);
 
-public sealed record RunDetail(RunSummary Run, RunDraftView? Draft);
+/// <summary>Una chiamata a un tool della modalità agente (Fase 9b).</summary>
+public sealed record RunToolCallView(byte Sequence, string ToolName, string Arguments, string Outcome, int DurationMs, string? Message);
+
+public sealed record RunDetail(RunSummary Run, RunDraftView? Draft, IReadOnlyList<RunToolCallView>? ToolCalls = null);
 
 /// <summary>Richiesta di controllo manuale dell'esito delle bozze di un ticket.</summary>
 public sealed record CheckOutcomeRequest(long TicketId);

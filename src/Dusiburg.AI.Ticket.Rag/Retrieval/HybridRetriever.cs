@@ -16,6 +16,9 @@ public sealed class HybridRetriever(TicketDbContext db, IEmbeddingService embedd
 
     public RetrievalOptions Options => options;
 
+    /// <summary>Il catalogo corrente: chi riceve dei chunk per id (le fonti lette dall'agente, Fase 9b) li ritrova qui.</summary>
+    public Task<ChunkCatalog> CatalogAsync(CancellationToken cancellationToken) => cache.GetAsync(db, cancellationToken);
+
     public Task<RetrievalResult> SearchAsync(RetrievalQuery query, CancellationToken cancellationToken) =>
         SearchAsync(query, queryVector: null, RetrievalSettings.Default, cancellationToken);
 

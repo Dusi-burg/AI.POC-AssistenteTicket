@@ -52,6 +52,8 @@ internal sealed class DraftKindConfiguration() : EnumLookupConfiguration<DraftKi
 
 internal sealed class DraftOutcomeConfiguration() : EnumLookupConfiguration<DraftOutcome>(TicketDbContext.AgentSchema);
 
+internal sealed class PipelineModeConfiguration() : EnumLookupConfiguration<PipelineMode>(TicketDbContext.AgentSchema);
+
 /// <summary>Lunghezze delle colonne: le usa anche chi controlla un valore prima di scriverlo (seed, importazioni).</summary>
 public static class ColumnSizes
 {
@@ -82,4 +84,6 @@ public static class ColumnSizes
     public const int ErrorCode = 50;
     public const int Error = 2000;
     public const int TraceId = 32;
+    public const int ToolName = 50;
+    public const int ToolArguments = 1000;
 }
