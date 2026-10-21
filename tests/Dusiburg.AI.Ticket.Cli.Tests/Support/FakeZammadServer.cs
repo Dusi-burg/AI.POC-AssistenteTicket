@@ -37,15 +37,33 @@ internal sealed class FakeZammadServer : HttpMessageHandler
         });
         Add("groups", new JsonObject { ["id"] = 1, ["name"] = "Users", ["active"] = true, ["shared_drafts"] = true });
         Add("settings", new JsonObject { ["id"] = 157, ["name"] = "import_mode", ["state_current"] = new JsonObject { ["value"] = false } });
+
+        // Impostazioni dell'AI nativa con i default del 7.2: i suggerimenti dalla knowledge base nascono accesi.
+        long settingId = 300;
+
+        foreach ((string name, bool value) in new[]
+        {
+            ("ai_provider", false), ("ai_assistance_ticket_summary", false), ("ai_assistance_text_tools", false),
+            ("ai_assistance_kb_answer_suggestions", true), ("ai_assistance_kb_answer_from_ticket_generation", true)
+        })
+        {
+            Add("settings", new JsonObject { ["id"] = ++settingId, ["name"] = name, ["state_current"] = new JsonObject { ["value"] = value } });
+        }
         Add("object_manager_attributes", new JsonObject { ["id"] = 1, ["name"] = "title", ["object"] = "Ticket", ["active"] = true, ["to_create"] = false, ["to_migrate"] = false });
 
-        foreach (string empty in new[] { "organizations", "tag_list", "webhooks", "triggers", "tickets", "ticket_articles" })
+        foreach (string empty in new[] { "organizations", "tag_list", "webhooks", "triggers", "tickets", "ticket_articles", "ai/provider_connections", "ai_agents" })
         {
             _resources[empty] = [];
         }
     }
 
     public List<RecordedRequest> Requests { get; } = [];
+
+    /// <summary>Se il container raggiunge Ollama: senza, Zammad rifiuta la connessione (422) e l'elenco dei modelli ha un errore.</summary>
+    public bool OllamaReachable { get; set; } = true;
+
+    /// <summary>Modelli presenti su Ollama, come li elenca Zammad.</summary>
+    public List<string> OllamaModels { get; } = ["qwen3.5:9b", "embeddinggemma:latest"];
 
     /// <summary>Valore di <c>import_mode</c> a ogni modifica, nell'ordine.</summary>
     public List<bool> ImportModeChanges { get; } = [];
@@ -108,8 +126,19 @@ internal sealed class FakeZammadServer : HttpMessageHandler
     {
         string[] segments = path.Split('/');
 
+        // Le risorse dell'AI nativa stanno sotto ai/: "ai/provider_connections" vale come un solo segmento.
+        if (segments is ["ai", var aiResource, .. var rest])
+        {
+            segments = [$"ai/{aiResource}", .. rest];
+        }
+
         return (method.Method, segments) switch
         {
+            ("POST", ["ai/provider_connections"]) when !OllamaReachable => Unreachable(),
+            ("PUT", ["ai/provider_connections", var id, "set_default"]) => SetDefault(long.Parse(id, System.Globalization.CultureInfo.InvariantCulture), body),
+            ("POST", ["ai/provider_connections", _, "models"]) => Json(HttpStatusCode.OK, OllamaReachable
+                ? new JsonObject { ["models"] = new JsonArray([.. OllamaModels.Select(m => (JsonNode?)new JsonObject { ["id"] = m })]), ["error"] = null }
+                : new JsonObject { ["models"] = new JsonArray(), ["error"] = "Connection refused" }),
             ("GET", ["users", "me"]) => Json(HttpStatusCode.OK, Me(caller)),
             ("GET", ["user_access_token"]) => Json(HttpStatusCode.OK, new JsonObject
             {
@@ -219,9 +248,26 @@ internal sealed class FakeZammadServer : HttpMessageHandler
             case "ticket_articles":
                 created["created_by_id"] = caller;
                 break;
+            case "ai/provider_connections":
+                // Come Zammad: la prima connessione serve anche gli embedding, con il modello raccomandato.
+                bool first = _resources[resource].Count == 0;
+                created["default_chat"] = first || (bool?)body["default_chat"] == true;
+                created["default_embedding"] = first;
+                created["config"]!["model_temperature_support"] = true;
+                created["status"] = new JsonObject();
+                break;
         }
 
         _resources[resource].Add(created);
+
+        // Come Zammad 7.2.2: l'embedding della prima connessione si assegna con un secondo salvataggio, assente dalla risposta.
+        if (resource == "ai/provider_connections")
+        {
+            JsonObject response = created.DeepClone().AsObject();
+            response["default_embedding"] = false;
+
+            return response;
+        }
 
         return created;
     }
@@ -247,6 +293,17 @@ internal sealed class FakeZammadServer : HttpMessageHandler
 
         return Json(HttpStatusCode.OK, item);
     }
+
+    private HttpResponseMessage SetDefault(long id, JsonObject body)
+    {
+        JsonObject connection = _resources["ai/provider_connections"].Single(c => FakeZammadServer.Id(c["id"]) == id);
+        connection[$"default_{(string)body["default"]!}"] = body["enabled"]?.GetValue<bool>() ?? true;
+
+        return Json(HttpStatusCode.OK, connection);
+    }
+
+    private static HttpResponseMessage Unreachable() =>
+        Json(HttpStatusCode.UnprocessableContent, new JsonObject { ["error"] = "Failed to open TCP connection to 172.24.176.1:11434 (Connection refused)" });
 
     private void Add(string resource, params JsonObject[] items)
     {

@@ -51,6 +51,17 @@ public sealed partial class ZammadClient
     public async Task SetSettingAsync(long id, object value, CancellationToken cancellationToken) =>
         await SendAsync(HttpMethod.Put, $"{ZammadResources.Settings}/{id}", new { StateCurrent = new { Value = value } }, onBehalfOf: null, cancellationToken);
 
+    /// <summary>Accende o spegne un uso di una connessione AI (<c>chat</c>, <c>embedding</c>, <c>ocr</c>).</summary>
+    public async Task SetAiProviderDefaultAsync(long connectionId, string purpose, bool enabled, CancellationToken cancellationToken) =>
+        await SendAsync(HttpMethod.Put, $"{ZammadResources.AiProviderConnections}/{connectionId}/set_default", new { Default = purpose, Enabled = enabled }, onBehalfOf: null, cancellationToken);
+
+    /// <summary>
+    /// I modelli che Zammad legge dall'endpoint della connessione, con la configurazione salvata: è la prova che il container
+    /// raggiunge il provider. Un endpoint irraggiungibile risponde 200 con <c>error</c>.
+    /// </summary>
+    public async Task<ZammadAiModelList> ListAiModelsAsync(long connectionId, CancellationToken cancellationToken) =>
+        await SendAsync<ZammadAiModelList>(HttpMethod.Post, $"{ZammadResources.AiProviderConnections}/{connectionId}/models", new { }, onBehalfOf: null, cancellationToken);
+
     /// <summary>Crea un token personale dell'utente <paramref name="onBehalfOf"/>; il valore si vede solo qui.</summary>
     public async Task<string> CreateAccessTokenAsync(string name, IReadOnlyList<string> permissions, string onBehalfOf, CancellationToken cancellationToken)
     {

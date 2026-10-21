@@ -14,6 +14,9 @@ public sealed record ZammadOptions(Uri BaseUrl, string? ApiToken)
     /// <summary>Windows visto da WSL e dai container (fase-0.md §1 bis): lì ascolta l'Agent.</summary>
     public const string DefaultWebhookTarget = "http://172.24.176.1:5401/webhooks/zammad";
 
+    /// <summary>Ollama di Windows visto dai container (Fase 9a): serve che ascolti su tutte le interfacce.</summary>
+    public const string DefaultAiOllamaUrl = "http://172.24.176.1:11434";
+
     public static class Keys
     {
         public const string BaseUrl = "ZAMMAD_URL";
@@ -24,6 +27,9 @@ public sealed record ZammadOptions(Uri BaseUrl, string? ApiToken)
 
         /// <summary>Indirizzo scritto nel webhook da <c>zammad bootstrap</c>.</summary>
         public const string WebhookTarget = "ZAMMAD_WEBHOOK_TARGET";
+
+        /// <summary>Indirizzo di Ollama scritto nella connessione dell'AI nativa da <c>zammad ai on</c> (Fase 9a).</summary>
+        public const string AiOllamaUrl = "ZAMMAD_AI_OLLAMA_URL";
     }
 
     public bool HasApiToken => !string.IsNullOrWhiteSpace(ApiToken);

@@ -19,6 +19,11 @@ public static class ZammadResources
     public const string Settings = "settings";
     public const string Tickets = "tickets";
     public const string Articles = "ticket_articles";
+
+    /// <summary>Connessioni ai provider dell'AI nativa (Fase 9a): nel 7.2 hanno sostituito la configurazione unica del provider.</summary>
+    public const string AiProviderConnections = "ai/provider_connections";
+
+    public const string AiAgents = "ai_agents";
 }
 
 public sealed record ZammadGroup(long Id, string Name, bool Active, bool? SharedDrafts);
@@ -54,6 +59,25 @@ public sealed record ZammadSetting(long Id, string Name, JsonElement StateCurren
         && StateCurrent.TryGetProperty("value", out JsonElement value)
         && value.ValueKind == JsonValueKind.True;
 }
+
+/// <summary>
+/// Connessione a un provider AI: <c>config</c> porta <c>url</c> e <c>model</c>, <c>status</c> l'esito dell'ultima chiamata
+/// (<c>state</c> ok/error, <c>message</c>). Una sola connessione serve la chat (<c>default_chat</c>).
+/// </summary>
+public sealed record ZammadAiProviderConnection(long Id, string Name, string Provider, JsonElement Config, bool DefaultChat, bool DefaultEmbedding, JsonElement Status)
+{
+    public string? ConfigValue(string name) =>
+        Config.ValueKind == JsonValueKind.Object && Config.TryGetProperty(name, out JsonElement value) && value.ValueKind == JsonValueKind.String ? value.GetString() : null;
+
+    public string? StatusValue(string name) =>
+        Status.ValueKind == JsonValueKind.Object && Status.TryGetProperty(name, out JsonElement value) && value.ValueKind == JsonValueKind.String ? value.GetString() : null;
+}
+
+/// <summary>Modelli che Zammad vede sull'endpoint del provider; <c>error</c> se non lo raggiunge.</summary>
+public sealed record ZammadAiModelList(IReadOnlyList<JsonElement>? Models, string? Error);
+
+/// <summary>Agente AI di Zammad: istruzioni, contesto e struttura del risultato in <c>definition</c>, mappatura sul ticket in <c>action_definition</c>.</summary>
+public sealed record ZammadAiAgent(long Id, string Name, bool Active, string? AgentType, JsonElement Definition, JsonElement ActionDefinition);
 
 /// <summary>Ticket con i campi personalizzati del POC (Fase 4): <see cref="RifStorico"/> è il numero del ticket storico importato.</summary>
 public sealed record ZammadTicket(long Id, string Number, string Title, long GroupId, long? CustomerId, string? RifStorico);

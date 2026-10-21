@@ -83,6 +83,15 @@ dotnet run --project tools/Dusiburg.AI.Ticket.Cli -- eval drafts --provider anth
 - **Dicitura AI**: testo e perimetro normativo da validare con chi segue la compliance.
 - Nessuna autenticazione reale né alta disponibilità; Zammad in configurazione di prova.
 
+### AI di Zammad a fianco (facoltativa)
+
+`zammad ai on` accende l'AI nativa di Zammad 7.2 sullo stesso `qwen3.5:9b`: riassunto del ticket, strumenti di testo
+dell'editor e un agente di triage che scrive categoria, priorità e il tag `zammad-ai-triage`. Zammad non scrive risposte con
+storico, knowledge base e note di rilascio: è ciò che aggiunge il POC. Sui 6 scenari demo (2026-10-21) il triage concorda con la
+nostra classificazione su 5 categorie e 5 priorità su 6, in ~5 s; la bozza costa +1–2 s di coda sulla GPU, dopo aver dato a
+Ollama lo stesso contesto della pipeline (con contesti diversi il modello si ricaricava a ogni ticket: +8 s). Prerequisiti e
+comandi in [docs/demo.md](docs/demo.md#ai-di-zammad-facoltativa-fase-9a).
+
 ## Architettura
 
 .NET 10 + Aspire. Il servizio `Agent` è proprietario del database, ospita i client dei modelli e parla con Zammad; la console

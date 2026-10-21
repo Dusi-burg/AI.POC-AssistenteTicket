@@ -13,7 +13,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Console;
 
-// Uso: dotnet run --project tools/Dusiburg.AI.Ticket.Cli -- <comando> (zammad bootstrap | zammad seed | demo <n> | embed | search | eval retrieval | draft <ticket> | reply <ticket> | close <ticket>)
+// Uso: dotnet run --project tools/Dusiburg.AI.Ticket.Cli -- <comando> (zammad bootstrap | zammad seed | zammad ai on|off|status | demo <n> | embed | search | eval retrieval | draft <ticket> | reply <ticket> | close <ticket>)
 // Gli argomenti non vanno alla configurazione: li interpreta System.CommandLine.
 var builder = Host.CreateApplicationBuilder(new HostApplicationBuilderSettings { ContentRootPath = AppContext.BaseDirectory });
 

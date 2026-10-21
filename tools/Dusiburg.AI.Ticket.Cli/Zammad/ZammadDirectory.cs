@@ -1,5 +1,6 @@
 using System.Text;
 using Dusiburg.AI.Ticket.Shared.Demo;
+using Dusiburg.AI.Ticket.Core.Drafting;
 using Dusiburg.AI.Ticket.Shared.Domain;
 
 namespace Dusiburg.AI.Ticket.Cli.Zammad;
@@ -36,9 +37,12 @@ internal static class ZammadDirectory
 
     public const string OperatorDomain = "dusiburg-software.example.it";
 
-    /// <summary>P3 (bozza, bassa confidenza) e P8 (contenuto generato da AI).</summary>
+    /// <summary>Ticket smistato dall'agente AI di Zammad (Fase 9a): prefisso diverso dai tag <c>ai-*</c> del POC.</summary>
+    public const string ZammadTriageTag = "zammad-ai-triage";
+
+    /// <summary>P3 (bozza, bassa confidenza), P8 (contenuto generato da AI) e il triage dell'AI nativa (Fase 9a).</summary>
     public static IReadOnlyList<string> Tags { get; } =
-        ["ai-bozza", "ai-bassa-confidenza", "ai-generata", "ai-generata-in-parte", "ai-dicitura-rimossa"];
+        ["ai-bozza", "ai-bassa-confidenza", "ai-generata", "ai-generata-in-parte", "ai-dicitura-rimossa", ZammadTriageTag];
 
     public const string WebhookName = "Assistente ticket";
     public const string TriggerName = "Assistente ticket — articolo del cliente";
@@ -93,6 +97,9 @@ internal static class ZammadDirectory
     public const string SlaField = "livello_sla";
     public const string HistoricalNumberField = "rif_storico";
 
+    /// <summary>Categoria scelta dall'agente AI di Zammad (Fase 9a), con le stesse voci della nostra classificazione.</summary>
+    public const string ZammadCategoryField = "categoria_ai";
+
     public static IReadOnlyList<AttributeDefinition> Attributes { get; } =
     [
         new("Organization", ProductField, "Prodotto", "select", Select(ProductOptions()), OrganizationScreens(), 1500),
@@ -102,6 +109,8 @@ internal static class ZammadDirectory
         new("Ticket", ProductField, "Prodotto", "select", Select(ProductOptions()), TicketScreens(), 1500),
         new("Ticket", VersionField, "Versione del prodotto", "input", Input(20), TicketScreens(), 1510),
         new("Ticket", HistoricalNumberField, "Riferimento storico", "input", Input(20), TicketScreens(), 1520),
+        new("Ticket", ZammadCategoryField, "Categoria (AI di Zammad)", "select",
+            Select(TicketCategories.All.ToDictionary(c => c, c => c)), TicketScreens(), 1530),
     ];
 
     public static string GroupFor(string productCode) => productCode switch

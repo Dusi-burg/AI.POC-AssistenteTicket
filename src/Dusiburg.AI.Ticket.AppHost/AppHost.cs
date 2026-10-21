@@ -28,10 +28,20 @@ var ollamaEndpoint = new Uri(builder.Configuration[ModelSettings.OllamaEndpointK
 
 if (builder.ExecutionContext.IsRunMode && ollamaEndpoint.IsLoopback && !AppHostExtensions.IsListening(ollamaEndpoint))
 {
-    string ollamaHost = $"{ollamaEndpoint.Host}:{ollamaEndpoint.Port}";
+    // Con l'AI nativa di Zammad (Fase 9a) Ollama deve ascoltare anche verso WSL: la variabile d'ambiente OLLAMA_HOST dell'utente
+    // (0.0.0.0:11434) vale anche per l'Ollama avviato qui. L'Agent continua a chiamarlo su 127.0.0.1 (G5); la regola del
+    // firewall "WSL -> Ollama (TCP 11434)" ammette solo la rete di WSL.
+    string ollamaHost = builder.Configuration[ModelSettings.OllamaHostKey] is { Length: > 0 } inherited
+        ? inherited
+        : $"{ollamaEndpoint.Host}:{ollamaEndpoint.Port}";
+
+    // Contesto di default uguale a OLLAMA_NUM_CTX della pipeline: l'AI di Zammad non passa num_ctx, e con un contesto diverso
+    // Ollama ricarica il modello a ogni cambio di chiamante (~4,5 s, misurato nella Fase 9a).
+    string contextLength = builder.Configuration[ModelSettings.OllamaNumCtxKey] is { Length: > 0 } numCtx ? numCtx : ModelSettings.DefaultOllamaNumCtx;
 
     var ollama = builder.AddExecutable("ollama", "ollama", ".", "serve")
-        .WithEnvironment("OLLAMA_HOST", ollamaHost);
+        .WithEnvironment("OLLAMA_HOST", ollamaHost)
+        .WithEnvironment("OLLAMA_CONTEXT_LENGTH", contextLength);
 
     agent.WaitFor(ollama);
 }

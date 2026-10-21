@@ -10,11 +10,19 @@ internal static class ModelSettings
 
     public const string DefaultOllamaEndpoint = "http://127.0.0.1:11434";
 
+    /// <summary>Variabile di Ollama per l'indirizzo di ascolto: se l'utente l'ha impostata, l'Ollama avviato dall'AppHost la rispetta.</summary>
+    public const string OllamaHostKey = "OLLAMA_HOST";
+
+    public const string OllamaNumCtxKey = "OLLAMA_NUM_CTX";
+
+    /// <summary>Come <c>AiOptions.DefaultOllamaContextLength</c>.</summary>
+    public const string DefaultOllamaNumCtx = "8192";
+
     public static readonly string[] All =
     [
         OllamaEndpointKey,
         "OLLAMA_CHAT_MODEL",
-        "OLLAMA_NUM_CTX",
+        OllamaNumCtxKey,
         "OLLAMA_NUM_GPU",
         "ANTHROPIC_MODEL",
         "MODEL_CLASSIFY_PROVIDER",

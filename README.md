@@ -82,6 +82,15 @@ dotnet run --project tools/Dusiburg.AI.Ticket.Cli -- eval drafts --provider anth
 - **AI disclosure**: wording and legal scope to be validated by whoever handles compliance.
 - No real authentication or high availability; Zammad in a test configuration.
 
+### Zammad's own AI alongside (optional)
+
+`zammad ai on` switches on Zammad 7.2's native AI on the same `qwen3.5:9b`: ticket summary, the editor's text tools and a triage
+agent that sets category, priority and the `zammad-ai-triage` tag. Zammad does not write answers from history, knowledge base
+and release notes: that is what the POC adds. On the 6 demo scenarios (2026-10-21) the triage matches our classification on 5
+categories and 5 priorities out of 6, in ~5 s; the draft pays +1–2 s of GPU queueing, once Ollama gets the same context size as
+the pipeline (with different context sizes the model reloaded on every ticket: +8 s). Prerequisites and commands in
+[docs/demo.md](docs/demo.md#ai-di-zammad-facoltativa-fase-9a) (Italian).
+
 ## Architecture
 
 .NET 10 + Aspire. The `Agent` service owns the database, hosts the model clients and talks to Zammad; the `Web` console shows

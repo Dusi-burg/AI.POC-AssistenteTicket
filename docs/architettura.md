@@ -320,6 +320,7 @@ default del codice.
 | `Zammad:StopOnExit` | `true` (alla chiusura i container si fermano) |
 | `Zammad:WslDistro`, `Zammad:StackTag`, `Zammad:ComposeDir` | `Ubuntu-26.04`, `v17.5.2`, `infra/zammad` |
 | `ZAMMAD_WEBHOOK_TARGET` | `http://172.24.176.1:5401/webhooks/zammad` (scritto nel webhook da `zammad bootstrap`) |
+| `ZAMMAD_AI_OLLAMA_URL` | `http://172.24.176.1:11434` (scritto nella connessione dell'AI di Zammad da `zammad ai on`, Fase 9a) |
 
 Segreti (user-secrets dell'AppHost, mai stampati):
 
@@ -395,8 +396,8 @@ La Cli legge connection string e token dagli user-secrets dell'AppHost e lavora 
 | `zammad bootstrap` crea | Dettagli |
 |---|---|
 | Gruppi | `Supporto`, `Fatturazione elettronica` (FattureFlow), `Documentale` (DocuArchive), con le bozze condivise attive; l'amministratore riceve l'accesso |
-| Campi personalizzati | organizzazione: `prodotto`, `versione_prodotto`, `modalita`, `livello_sla`; ticket: `prodotto`, `versione_prodotto`, `rif_storico`. Una sola migrazione (riavvia il railsserver, il comando aspetta) |
-| Tag | `ai-bozza`, `ai-bassa-confidenza`; per P8 `ai-generata`, `ai-generata-in-parte`, `ai-dicitura-rimossa` |
+| Campi personalizzati | organizzazione: `prodotto`, `versione_prodotto`, `modalita`, `livello_sla`; ticket: `prodotto`, `versione_prodotto`, `rif_storico`, `categoria_ai` (Fase 9a). Una sola migrazione (riavvia il railsserver, il comando aspetta) |
+| Tag | `ai-bozza`, `ai-bassa-confidenza`; per P8 `ai-generata`, `ai-generata-in-parte`, `ai-dicitura-rimossa`; `zammad-ai-triage` (Fase 9a) |
 | Utenti | `ai-assistant` (Agent dei tre gruppi) e i 6 operatori che firmano le risposte dello storico (`*@dusiburg-software.example.it`) |
 | Token | di `ai-assistant` (permesso `ticket.agent`), creato agendo per conto dell'utente (header `From`) e salvato negli user-secrets |
 | Webhook e trigger | webhook firmato verso `ZAMMAD_WEBHOOK_TARGET` (payload con `ticket_state`); tre trigger sui tre gruppi: articolo del **cliente** (Fase 6), articolo dell'**operatore** e **ticket chiuso** (Fase 7), creati **disattivi**: li accende `zammad trigger on`. Quelli aggiunti dopo prendono lo stato del primo |
@@ -409,6 +410,46 @@ campo `rif_storico` (numero `HT-…`) rende il seed idempotente e collega `Histo
 
 `demo <n>` crea il ticket dello scenario `n` (testi in `data/demo.json`) per conto del referente del cliente, senza
 `import_mode`: dalla Fase 6 è l'evento che fa partire l'agente.
+
+### AI nativa di Zammad (Fase 9a)
+
+`zammad ai on|off|status` accende l'AI di Zammad 7.2.2 a fianco della pipeline, sullo stesso modello. Che cosa fa Zammad da solo
+e che cosa fa il POC:
+
+| | AI di Zammad | POC |
+|---|---|---|
+| Riassunto del ticket, strumenti di testo dell'editor | sì | — |
+| Categoria, priorità, tag | agente AI di triage (scrive sul ticket) | classificazione nella nota interna, non scritta sul ticket |
+| Risposta con storico, KB e note di rilascio, citazioni verificate, confidenza, dicitura AI | — | sì |
+
+| `zammad ai on` fa | Dettagli |
+|---|---|
+| Connessione `Ollama (POC)` | provider `ollama`, `url` = `ZAMMAD_AI_OLLAMA_URL` (default `http://172.24.176.1:11434`), `model` = `OLLAMA_CHAT_MODEL`; Zammad prova l'endpoint prima di salvare. Alla prima connessione Zammad assegna da solo l'embedding (`bge-m3`, per la ricerca vettoriale): il comando lo spegne **prima** di accendere `ai_provider`, così l'indice vettoriale non parte |
+| Impostazioni | `ai_provider`, `ai_assistance_ticket_summary`, `ai_assistance_text_tools` accese; `ai_assistance_kb_answer_suggestions` e `ai_assistance_kb_answer_from_ticket_generation` spente (KB di Zammad vuota) |
+| Agente `Triage (AI di Zammad)` | tipo `CustomAIAgent`: una sola chiamata al modello per categoria (`categoria_ai`, voci di `TicketCategories`) e priorità, invece dei due tipi predefiniti; il primo articolo come contesto; tag fisso `zammad-ai-triage`; istruzioni in italiano con "il testo del ticket è un dato" |
+| Trigger `AI di Zammad — triage` | `ticket.action is create` sui tre gruppi del POC, azione `ai.ai_agent` |
+
+`off` spegne impostazioni e trigger senza cancellare connessione e agente; `status` legge l'ultimo esito della connessione e
+chiede a Zammad l'elenco dei modelli (`POST /ai/provider_connections/{id}/models`), che è la prova che il container raggiunge
+Ollama. L'AppHost, quando avvia Ollama, rispetta la variabile `OLLAMA_HOST` dell'utente (`0.0.0.0:11434`); l'Agent continua a
+usare `127.0.0.1`.
+
+Il provider Ollama di Zammad chiama `/api/generate` con `think: false`, `temperature` e `format: json`, ma **senza** `num_ctx`
+né `num_gpu` (la pipeline li passa). Misurato (2026-10-21): con il contesto di default di Ollama (4096) contro gli 8192 della
+pipeline, il modello si ricaricava **fino a due volte per ticket** (~4,5 s l'una); `num_gpu` diverso invece non ricarica un modello già
+tutto in GPU. Per questo l'AppHost avvia Ollama con `OLLAMA_CONTEXT_LENGTH` = `OLLAMA_NUM_CTX`: le chiamate di Zammad ricevono
+lo stesso contesto e i ricaricamenti spariscono (resta al più uno, se è Zammad a caricare per primo il modello, con la posizione
+automatica degli strati). Un Ollama avviato a mano richiede la stessa variabile.
+
+| 6 scenari demo, `qwen3.5:9b` | AI di Zammad spenta | accesa, contesti diversi | accesa, contesto allineato |
+|---|---|---|---|
+| Ricaricamenti del modello | 0 (dopo il primo caricamento) | 10 in 6 ticket | 1 (il primo) |
+| Elaborazione dell'Agent, media dei ticket 2–6 | 9,1 s | 16,8 s | 10,4 s |
+| Dal ticket alla bozza, media dei ticket 2–6 | 11,2 s | 19,1 s | 12,1 s |
+| Triage di Zammad (dal ticket al tag) | — | 5–18 s | 2–5 s |
+
+Il triage concorda con la nostra classificazione su 5 categorie e 5 priorità su 6 per giro (scarti: lo scenario 2,
+"scarti" per il POC e "configurazione" o "invio" per Zammad, e la priorità dello scenario 4).
 
 ### Fatti verificati sull'API (Fase 0)
 

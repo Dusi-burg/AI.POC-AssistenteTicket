@@ -1,4 +1,5 @@
 using System.CommandLine;
+using Dusiburg.AI.Ticket.Ai;
 using Dusiburg.AI.Ticket.Cli.Configuration;
 using Dusiburg.AI.Ticket.Cli.Zammad;
 using Dusiburg.AI.Ticket.Data;
@@ -19,8 +20,52 @@ internal static class ZammadCommands
     {
         Bootstrap(services),
         Seed(services),
-        Trigger(services)
+        Trigger(services),
+        NativeAi(services)
     };
+
+    /// <summary>
+    /// <c>zammad ai on|off|status</c> (fase-9.md, 9a): l'AI nativa di Zammad con lo stesso modello della pipeline. Richiede
+    /// <c>zammad bootstrap</c> (campo della categoria e tag) e Ollama raggiungibile da WSL.
+    /// </summary>
+    private static Command NativeAi(IServiceProvider services)
+    {
+        var state = new Argument<string>("azione") { Description = "on, off oppure status." };
+        state.AcceptOnlyFromAmong("on", "off", "status");
+        var command = new Command("ai", "AI nativa di Zammad: provider Ollama, riassunto, strumenti di testo e triage (idempotente).") { state };
+
+        command.SetAction(async (parse, cancellationToken) =>
+        {
+            IConfiguration configuration = services.GetRequiredService<IConfiguration>();
+            var settings = new ZammadAiSettings(
+                new Uri(configuration[ZammadOptions.Keys.AiOllamaUrl] is { Length: > 0 } url ? url : ZammadOptions.DefaultAiOllamaUrl),
+                configuration[AiOptions.Keys.OllamaChatModel] is { Length: > 0 } model ? model : AiOptions.DefaultOllamaChatModel);
+            var configurator = new ZammadAiConfigurator(services.GetRequiredService<ZammadClient>(), settings, Console.Out);
+
+            Console.WriteLine($"AI di Zammad su {services.GetRequiredService<ZammadOptions>().BaseUrl}: provider {settings.OllamaUrl} · {settings.Model}");
+
+            if (parse.GetValue(state) == "status")
+            {
+                foreach (string line in await configurator.StatusAsync(cancellationToken))
+                {
+                    Console.WriteLine($"  {line}");
+                }
+
+                return 0;
+            }
+
+            BootstrapReport report = parse.GetValue(state) == "on"
+                ? await configurator.OnAsync(cancellationToken)
+                : await configurator.OffAsync(cancellationToken);
+
+            Console.WriteLine();
+            Console.WriteLine(report.Changed.Count == 0 ? "Nulla da fare." : $"Fatto: {report.Changed.Count} modifiche.");
+
+            return 0;
+        });
+
+        return command;
+    }
 
     /// <summary>
     /// <c>zammad trigger on|off</c>: i trigger del webhook nascono disattivi (Fase 4); si accendono quando l'Agent è pronto a

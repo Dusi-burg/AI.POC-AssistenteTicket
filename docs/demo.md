@@ -77,6 +77,57 @@ dotnet run --project tools/Dusiburg.AI.Ticket.Cli -- reply 71179 --modifica --se
 dotnet run --project tools/Dusiburg.AI.Ticket.Cli -- close 71178                                # chiude senza rispondere
 ```
 
+## AI di Zammad (facoltativa, Fase 9a)
+
+Le funzioni AI di Zammad 7.2 con lo stesso `qwen3.5:9b`, **a fianco** della bozza: mostrano che cosa dà il prodotto di serie e che
+cosa aggiunge il POC.
+
+| Funzione di Zammad | Dove si vede | Rispetto al POC |
+|---|---|---|
+| Riassunto del ticket | barra laterale del ticket, all'apertura | solo per l'operatore |
+| Strumenti di testo (migliora, accorcia, correggi, traduci…) | menu dell'editor di risposta, anche sulla nostra bozza | se cambiano il testo, all'invio il tag diventa `ai-generata-in-parte` |
+| Agente AI "Triage (AI di Zammad)" | campo **Categoria (AI di Zammad)**, priorità e tag `zammad-ai-triage` sui ticket nuovi | stesse categorie della nostra classificazione, che sta nella nota interna |
+
+Nessuna funzione di Zammad scrive la risposta con storico, knowledge base e note di rilascio: è il pezzo del POC. I suggerimenti
+dalla knowledge base di Zammad restano spenti (la nostra KB è nel database del POC).
+
+**Prerequisiti, una volta sola** (i container di Zammad devono raggiungere Ollama su Windows, come fa il webhook con l'Agent):
+
+```powershell
+# Ollama in ascolto anche verso WSL (vale per l'app di Ollama e per l'Ollama avviato dall'AppHost; riaprire terminale e IDE)
+[Environment]::SetEnvironmentVariable('OLLAMA_HOST', '0.0.0.0:11434', 'User')
+
+# Da PowerShell come amministratore: la 11434 aperta solo alla rete di WSL, come la regola della 5401
+New-NetFirewallRule -DisplayName "WSL -> Ollama (TCP 11434)" -Direction Inbound -Protocol TCP -LocalPort 11434 `
+    -RemoteAddress 172.24.176.0/20 -Action Allow -Profile Any
+```
+
+Al primo avvio di Ollama su tutte le interfacce Windows chiede se consentire `ollama.exe` sulle reti: accettando crea due regole
+"ollama.exe" (TCP e UDP) aperte **a qualsiasi indirizzo e porta**, cioè Ollama, senza autenticazione, raggiungibile dalla LAN.
+Vanno ristrette (cancellarle farebbe ricomparire la richiesta), sempre come amministratore:
+
+```powershell
+Get-NetFirewallRule -DisplayName "ollama.exe" | Where-Object { ($_ | Get-NetFirewallPortFilter).Protocol -eq 'TCP' } |
+    Set-NetFirewallRule -EdgeTraversalPolicy Block -RemoteAddress 172.24.176.0/20 -LocalPort 11434
+Get-NetFirewallRule -DisplayName "ollama.exe" | Where-Object { ($_ | Get-NetFirewallPortFilter).Protocol -eq 'UDP' } |
+    Disable-NetFirewallRule
+```
+
+Poi, con l'AppHost acceso:
+
+```powershell
+dotnet run --project tools/Dusiburg.AI.Ticket.Cli -- zammad bootstrap      # campo Categoria (AI di Zammad) e tag zammad-ai-triage
+dotnet run --project tools/Dusiburg.AI.Ticket.Cli -- zammad ai on          # connessione a Ollama, funzioni, agente e trigger
+dotnet run --project tools/Dusiburg.AI.Ticket.Cli -- zammad ai status      # Zammad raggiunge Ollama? modello presente?
+dotnet run --project tools/Dusiburg.AI.Ticket.Cli -- zammad ai off         # spegne tutto, la configurazione resta
+```
+
+Il triage parte sullo stesso evento della nostra bozza e usa la stessa GPU: le due richieste si mettono in coda in Ollama
+(+1–2 s sulla bozza, triage in ~5 s). Zammad non passa la dimensione del contesto: l'AppHost avvia Ollama con
+`OLLAMA_CONTEXT_LENGTH` uguale a quella della pipeline, altrimenti il modello si ricarica a ogni chiamata (~4,5 s). Se Ollama è
+già acceso (app di Ollama), impostare anche `[Environment]::SetEnvironmentVariable('OLLAMA_CONTEXT_LENGTH', '8192', 'User')` e
+riavviarlo.
+
 ## Se qualcosa non va
 
 | Sintomo | Che cosa fare |
