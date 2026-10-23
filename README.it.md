@@ -1,5 +1,7 @@
 # AI.POC-AssistenteTicket
 
+[![CI](https://github.com/Dusi-burg/AI.POC-AssistenteTicket/actions/workflows/ci.yml/badge.svg)](https://github.com/Dusi-burg/AI.POC-AssistenteTicket/actions/workflows/ci.yml)
+
 **Bozze di risposta dentro Zammad, basate sullo storico dei ticket e sulla knowledge base, con un modello locale.**
 
 *[Read in English](README.md)*
