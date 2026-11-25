@@ -15,8 +15,8 @@ public class DemoCatalogTests
         IReadOnlyList<DemoProduct> products = DemoCatalog.Products;
 
         Assert.That(products.Select(p => p.Code), Is.Unique);
-        Assert.That(products, Has.All.Matches<DemoProduct>(p => p.Versions.Select(v => v.Version).Distinct().Count() == p.Versions.Count));
-        Assert.That(products, Has.All.Matches<DemoProduct>(p => p.Versions.Count is >= 4 and <= 5), "PLAN §6.1: 4–5 versioni per prodotto");
+        Assert.That(products, Has.All.Matches<DemoProduct>(p => p!.Versions.Select(v => v.Version).Distinct().Count() == p.Versions.Count));
+        Assert.That(products, Has.All.Matches<DemoProduct>(p => p!.Versions.Count is >= 4 and <= 5), "PLAN §6.1: 4–5 versioni per prodotto");
         Assert.That(DemoCatalog.ErrorCodes.Select(e => e.Code), Is.Unique);
         Assert.That(DemoCatalog.Customers.Select(c => c.EmailDomain), Is.Unique);
         Assert.That(DemoCatalog.Scenarios.Select(s => s.Number), Is.EqualTo(new[] { 1, 2, 3, 4, 5, 6 }));
@@ -31,9 +31,9 @@ public class DemoCatalogTests
         IReadOnlyList<DemoCustomer> customers = DemoCatalog.Customers;
 
         Assert.That(customers.Where(c => c.Version is not null),
-            Has.All.Matches<DemoCustomer>(c => DemoCatalog.Product(c.ProductCode).Versions.Any(v => v.Version == c.Version)));
-        Assert.That(DemoCatalog.ErrorCodes, Has.All.Matches<DemoErrorCode>(e => e.Code.StartsWith(e.ProductCode + "-E", StringComparison.Ordinal)));
-        Assert.That(DemoCatalog.Products, Has.All.Matches<DemoProduct>(p => IsChronological(p.Versions)));
+            Has.All.Matches<DemoCustomer>(c => DemoCatalog.Product(c!.ProductCode).Versions.Any(v => v.Version == c.Version)));
+        Assert.That(DemoCatalog.ErrorCodes, Has.All.Matches<DemoErrorCode>(e => e!.Code.StartsWith(e.ProductCode + "-E", StringComparison.Ordinal)));
+        Assert.That(DemoCatalog.Products, Has.All.Matches<DemoProduct>(p => IsChronological(p!.Versions)));
     }
 
     [Test]
@@ -43,7 +43,7 @@ public class DemoCatalogTests
         IEnumerable<DemoCustomer> saas = DemoCatalog.Customers.Where(c => c.DeploymentMode == DeploymentMode.Saas);
 
         Assert.That(saas, Is.Not.Empty);
-        Assert.That(saas, Has.All.Matches<DemoCustomer>(c => c.Version == DemoCatalog.Product(c.ProductCode).Versions[^1].Version));
+        Assert.That(saas, Has.All.Matches<DemoCustomer>(c => c!.Version == DemoCatalog.Product(c.ProductCode).Versions[^1].Version));
     }
 
     [Test]

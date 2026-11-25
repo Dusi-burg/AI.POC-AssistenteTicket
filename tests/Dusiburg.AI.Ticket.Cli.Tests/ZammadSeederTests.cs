@@ -61,7 +61,7 @@ public class ZammadSeederTests
 
         Assert.That((report.OrganizationsCreated, report.TicketsCreated), Is.EqualTo((_data.Customers.Count, Count)));
         Assert.That(zammad.ImportModeChanges, Is.EqualTo(new[] { true, false }), "import_mode acceso e poi rispento");
-        Assert.That(zammad.Resource("organizations"), Has.All.Matches<JsonObject>(o => (bool?)o["domain_assignment"] == true && o["prodotto"] is not null));
+        Assert.That(zammad.Resource("organizations"), Has.All.Matches<JsonObject>(o => (bool?)o!["domain_assignment"] == true && o["prodotto"] is not null));
         Assert.That(zammad.Resource("tickets").Select(t => (string?)t["rif_storico"]), Is.All.Match("^HT-20"));
 
         // Ticket e articoli per conto di chi li ha scritti: cliente o operatore, mai l'amministratore.
@@ -166,7 +166,7 @@ public class ZammadSeederTests
 
         Assert.That(tickets.Select(t => t.Scenario), Is.EquivalentTo(DemoCatalog.Scenarios.Select(s => s.Number)));
         Assert.That(DemoCatalog.Scenarios.Where(s => s.ErrorCode is not null),
-            Has.All.Matches<DemoScenario>(s => tickets.Single(t => t.Scenario == s.Number).Body.Contains(s.ErrorCode!, StringComparison.Ordinal)));
+            Has.All.Matches<DemoScenario>(s => tickets.Single(t => t.Scenario == s!.Number).Body.Contains(s!.ErrorCode!, StringComparison.Ordinal)));
     }
 
     private async Task<ServiceProvider> BootstrappedAsync(FakeZammadServer zammad)

@@ -37,7 +37,7 @@ public class HealthServiceTests
         ProbeReport report = await service.RunAsync(CancellationToken.None);
 
         Assert.That(report.Checks, Has.Count.EqualTo(2));
-        Assert.That(report.Checks, Has.Some.Matches<ProbeResult>(c => c.Status == ProbeStatus.Error && c.Detail == "Ollama esploso"));
+        Assert.That(report.Checks, Has.Some.Matches<ProbeResult>(c => c!.Status == ProbeStatus.Error && c.Detail == "Ollama esploso"));
         Assert.That(report.HasErrors, Is.True);
     }
 

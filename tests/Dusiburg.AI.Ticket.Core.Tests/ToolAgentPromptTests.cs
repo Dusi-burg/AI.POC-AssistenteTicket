@@ -43,7 +43,7 @@ public class ToolAgentPromptTests
         string fixedSystem = PromptBuilder.Draft(ticket, Classification, [])[0].Text;
         Assert.That(Rules(instructions), Is.EqualTo(Rules(fixedSystem)));
         Assert.That(instructions, Does.Contain("al più 6 chiamate"));
-        Assert.That(TicketToolNames.All, Has.All.Matches<string>(name => instructions.Contains(name, StringComparison.Ordinal)));
+        Assert.That(TicketToolNames.All, Has.All.Matches<string>(name => instructions.Contains(name!, StringComparison.Ordinal)));
         Assert.That(instructions, Does.Not.Contain("Rispondi solo con il JSON richiesto"), "nella fase di lavoro niente JSON");
         Assert.That(task, Does.Contain("<<<TICKET>>>").And.Contain("CONTESTO DEL CLIENTE").And.Contain("categoria trasmissione"));
     }

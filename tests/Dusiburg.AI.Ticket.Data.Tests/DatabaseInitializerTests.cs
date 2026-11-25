@@ -173,10 +173,13 @@ public class DatabaseInitializerTests
         //SUT
         await db.SaveChangesAsync(CancellationToken);
 
-        db.ChangeTracker.Clear();
-        Chunk saved = await db.Chunks.SingleAsync(c => c.KbArticleId == article.Id, CancellationToken);
+        // Da EF Core 11 le proprietà SqlVector<T> non sono più nella SELECT dell'entità (restano null): si leggono con una proiezione.
+        SqlVector<float>? saved = await db.Chunks
+            .Where(c => c.KbArticleId == article.Id)
+            .Select(c => c.Embedding)
+            .SingleAsync(CancellationToken);
 
-        Assert.That(saved.Embedding?.Memory.ToArray(), Is.EqualTo(vector));
+        Assert.That(saved?.Memory.ToArray(), Is.EqualTo(vector));
     }
 
     [Test]

@@ -204,7 +204,7 @@ public class AgentRunTests
         IReadOnlyList<DraftCaseRecord> records = await evaluator.RunAsync(cases, pipeline, null, CancellationToken);
 
         Assert.That(selected.Count(c => c.Trap is not null), Is.EqualTo(15), "tutti i trabocchetti del test set");
-        Assert.That(records, Has.Count.EqualTo(3).And.All.Matches<DraftCaseRecord>(r => r.Succeeded));
+        Assert.That(records, Has.Count.EqualTo(3).And.All.Matches<DraftCaseRecord>(r => r!.Succeeded));
         Assert.That(records.Select(r => r.TicketNumber), Is.EqualTo(cases.Select(c => c.TicketNumber)));
 
         DraftCaseRecord normal = records[0];

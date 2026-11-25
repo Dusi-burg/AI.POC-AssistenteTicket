@@ -43,7 +43,7 @@ public class ZammadBootstrapperTests
         BootstrapReport report = await Bootstrapper(services).RunAsync(rotateToken: false, CancellationToken);
 
         Assert.That(zammad.Resource("groups").Select(g => (string?)g["name"]), Is.SupersetOf(ZammadDirectory.Groups));
-        Assert.That(zammad.Resource("groups").Where(g => ZammadDirectory.Groups.Contains((string?)g["name"])), Has.All.Matches<JsonObject>(g => (bool?)g["shared_drafts"] == true));
+        Assert.That(zammad.Resource("groups").Where(g => ZammadDirectory.Groups.Contains((string?)g["name"])), Has.All.Matches<JsonObject>(g => (bool?)g!["shared_drafts"] == true));
         Assert.That(zammad.Resource("object_manager_attributes").Count(a => (string?)a["name"] != "title"), Is.EqualTo(ZammadDirectory.Attributes.Count));
         Assert.That(zammad.Requests.Count(r => r.Path == "object_manager_attributes_execute_migrations"), Is.EqualTo(1), "una sola migrazione");
         Assert.That(zammad.Resource("tag_list").Select(t => (string?)t["name"]), Is.EquivalentTo(ZammadDirectory.Tags));
@@ -87,7 +87,7 @@ public class ZammadBootstrapperTests
         BootstrapReport second = await Bootstrapper(services).RunAsync(rotateToken: false, CancellationToken);
 
         Assert.That(second.Changed, Is.Empty);
-        Assert.That(zammad.Requests.Skip(requestsAfterFirstRun), Has.None.Matches<RecordedRequest>(r => r.Method != HttpMethod.Get), "solo letture");
+        Assert.That(zammad.Requests.Skip(requestsAfterFirstRun), Has.None.Matches<RecordedRequest>(r => r!.Method != HttpMethod.Get), "solo letture");
     }
 
     [Test]
@@ -119,7 +119,7 @@ public class ZammadBootstrapperTests
         //SUT
         Assert.That(async () => await Bootstrapper(services).RunAsync(rotateToken: false, CancellationToken),
             Throws.InvalidOperationException.With.Message.Contains("non è amministratore"));
-        Assert.That(zammad.Requests, Has.None.Matches<RecordedRequest>(r => r.Method != HttpMethod.Get));
+        Assert.That(zammad.Requests, Has.None.Matches<RecordedRequest>(r => r!.Method != HttpMethod.Get));
     }
 
     [Test]

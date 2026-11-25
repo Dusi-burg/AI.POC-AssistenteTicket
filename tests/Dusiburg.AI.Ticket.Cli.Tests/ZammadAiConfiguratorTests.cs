@@ -91,7 +91,7 @@ public class ZammadAiConfiguratorTests
         BootstrapReport second = await Configurator(services).OnAsync(CancellationToken);
 
         Assert.That(second.Changed, Is.Empty);
-        Assert.That(zammad.Requests.Skip(start), Has.None.Matches<RecordedRequest>(r => r.Method != HttpMethod.Get), "solo letture");
+        Assert.That(zammad.Requests.Skip(start), Has.None.Matches<RecordedRequest>(r => r!.Method != HttpMethod.Get), "solo letture");
     }
 
     [Test]
@@ -120,7 +120,7 @@ public class ZammadAiConfiguratorTests
         //SUT
         Assert.That(async () => await Configurator(services).OnAsync(CancellationToken),
             Throws.InvalidOperationException.With.Message.Contains("zammad bootstrap"));
-        Assert.That(zammad.Requests, Has.None.Matches<RecordedRequest>(r => r.Method != HttpMethod.Get));
+        Assert.That(zammad.Requests, Has.None.Matches<RecordedRequest>(r => r!.Method != HttpMethod.Get));
     }
 
     [Test]
