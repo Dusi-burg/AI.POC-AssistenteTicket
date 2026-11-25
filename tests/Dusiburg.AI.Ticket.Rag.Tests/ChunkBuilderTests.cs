@@ -62,7 +62,7 @@ public class ChunkBuilderTests
 
         Assert.That(chunks.Select(c => c.Text), Is.EqualTo(new[] { "Errore FF-E2041 — Sintomo\nL'invio fallisce.", "Errore FF-E2041 — Soluzione\nAbilitare TLS 1.3." }));
         Assert.That(chunks.Select(c => c.Section), Is.EqualTo(new short[] { 1, 2 }));
-        Assert.That(chunks, Has.All.Matches<Chunk>(c => c.KbArticleId == 3 && c.VersionFromId == 2 && c.VersionToId == null && c.DeploymentMode == DeploymentMode.OnPrem));
+        Assert.That(chunks, Has.All.Matches<Chunk>(c => c!.KbArticleId == 3 && c.VersionFromId == 2 && c.VersionToId == null && c.DeploymentMode == DeploymentMode.OnPrem));
     }
 
     [Test]

@@ -46,13 +46,13 @@ public partial class SeedDataCoherenceTests
         ];
 
         //SUT
-        Assert.That(Data.Customers.Where(c => c.Version is not null), Has.All.Matches<CustomerDefinition>(c => Exists(c.Product, c.Version!)));
-        Assert.That(Data.ReleaseNotes, Has.All.Matches<ReleaseNoteDefinition>(n => Exists(n.Product, n.Version)));
+        Assert.That(Data.Customers.Where(c => c.Version is not null), Has.All.Matches<CustomerDefinition>(c => Exists(c!.Product, c.Version!)));
+        Assert.That(Data.ReleaseNotes, Has.All.Matches<ReleaseNoteDefinition>(n => Exists(n!.Product, n.Version)));
         Assert.That(ranges, Has.All.Matches<(string Product, string? From, string? To)>(r =>
             (r.From is null || Exists(r.Product, r.From)) && (r.To is null || Exists(r.Product, r.To))
             && (r.From is null || r.To is null || Sequence(r.Product, r.From) <= Sequence(r.Product, r.To))));
         Assert.That(Data.Customers.Where(c => c.Mode == DeploymentMode.Saas),
-            Has.All.Matches<CustomerDefinition>(c => c.Version == DemoCatalog.Product(c.Product).Versions[^1].Version), "i clienti SaaS sono sull'ultima versione");
+            Has.All.Matches<CustomerDefinition>(c => c!.Version == DemoCatalog.Product(c.Product).Versions[^1].Version), "i clienti SaaS sono sull'ultima versione");
     }
 
     [Test]
@@ -97,9 +97,9 @@ public partial class SeedDataCoherenceTests
         Assert.That(Data.Cases.SelectMany(c => c.Kb).Distinct(), Is.SubsetOf(articles));
         Assert.That(Data.Cases.SelectMany(c => c.ReleaseNotes).Distinct(), Is.SubsetOf(notes));
         Assert.That(Data.Cases, Has.All.Matches<CaseInstance>(c =>
-            c.Kb.All(code => code.StartsWith($"KB-{c.Product}-", StringComparison.Ordinal))
+            c!.Kb.All(code => code.StartsWith($"KB-{c.Product}-", StringComparison.Ordinal))
             && c.ReleaseNotes.All(code => code.StartsWith($"RN-{c.Product}-", StringComparison.Ordinal))));
-        Assert.That(Data.Cases, Has.All.Matches<CaseInstance>(c => c.Kb.Count + c.ReleaseNotes.Count > 0 || c.Definition.Category is "indicizzazione" or "prestazioni" or "backup"),
+        Assert.That(Data.Cases, Has.All.Matches<CaseInstance>(c => c!.Kb.Count + c.ReleaseNotes.Count > 0 || c.Definition.Category is "indicizzazione" or "prestazioni" or "backup"),
             "ogni caso ha almeno una fonte documentale, salvo quelli che vivono solo nello storico");
     }
 
@@ -126,9 +126,9 @@ public partial class SeedDataCoherenceTests
         IEnumerable<CaseDefinition> cases = Data.Cases.Select(c => c.Definition).Distinct();
 
         Assert.That(cases.Count(), Is.EqualTo(54));
-        Assert.That(cases, Has.All.Matches<CaseDefinition>(c => c.Symptoms.Count >= 3 && c.Subjects.Count > 0 && c.Solutions.Count > 0 && c.Replies.Count > 0 && c.Weight > 0));
+        Assert.That(cases, Has.All.Matches<CaseDefinition>(c => c!.Symptoms.Count >= 3 && c.Subjects.Count > 0 && c.Solutions.Count > 0 && c.Replies.Count > 0 && c.Weight > 0));
         Assert.That(cases.Where(c => c.ErrorCode is null),
-            Has.None.Matches<CaseDefinition>(c => CaseDefinitionTexts(c).Any(t => t.Contains("{codice}", StringComparison.Ordinal))),
+            Has.None.Matches<CaseDefinition>(c => CaseDefinitionTexts(c!).Any(t => t.Contains("{codice}", StringComparison.Ordinal))),
             "{codice} solo nei casi con un codice errore");
     }
 
@@ -142,10 +142,10 @@ public partial class SeedDataCoherenceTests
         //SUT
         Assert.That(indexed, Has.Count.EqualTo(TicketGenerator.IndexedTickets));
         Assert.That(testSet, Has.Count.EqualTo(150));
-        Assert.That(indexed, Has.None.Matches<GeneratedTicket>(t => t.TrapKind is not null));
+        Assert.That(indexed, Has.None.Matches<GeneratedTicket>(t => t!.TrapKind is not null));
         Assert.That(testSet.Count(t => t.TrapKind is not null), Is.InRange(10, 15));
         Assert.That(Data.Cases, Has.None.Matches<CaseInstance>(c =>
-            indexed.Any(t => t.Description.Contains(c.Expand(c.Definition.ReservedSymptom, null)[1..], StringComparison.Ordinal))),
+            indexed.Any(t => t.Description.Contains(c!.Expand(c.Definition.ReservedSymptom, null)[1..], StringComparison.Ordinal))),
             "la variante riservata al test set non compare nei ticket indicizzati");
         Assert.That(indexed.Select(t => t.CaseCode).Distinct().Count(), Is.EqualTo(54), "ogni caso è nell'indice");
         Assert.That(testSet.Where(t => t.TrapKind is null).Select(t => t.CaseCode).Distinct().Count(), Is.EqualTo(54), "ogni caso è nel test set");
@@ -166,9 +166,9 @@ public partial class SeedDataCoherenceTests
         Assert.That(indexed.Count(t => t.State == TicketState.Unresolved), Is.GreaterThan(40));
         Assert.That(duplicates, Has.Count.EqualTo(TicketGenerator.Duplicates));
         Assert.That(duplicates, Has.All.Matches<GeneratedTicket>(d =>
-            byNumber[d.DuplicateOf!].OpenedAt < d.OpenedAt && byNumber[d.DuplicateOf!].Customer == d.Customer && byNumber[d.DuplicateOf!].CaseCode == d.CaseCode
+            byNumber[d!.DuplicateOf!].OpenedAt < d.OpenedAt && byNumber[d.DuplicateOf!].Customer == d.Customer && byNumber[d.DuplicateOf!].CaseCode == d.CaseCode
             && d.Messages.Any(m => m.Body.Contains(d.DuplicateOf!, StringComparison.Ordinal))));
-        Assert.That(Tickets.Where(t => t.State == TicketState.Resolved && t.DuplicateOf is null), Has.All.Matches<GeneratedTicket>(t => t.Resolution is not null));
+        Assert.That(Tickets.Where(t => t.State == TicketState.Resolved && t.DuplicateOf is null), Has.All.Matches<GeneratedTicket>(t => t!.Resolution is not null));
     }
 
     [Test]
@@ -179,12 +179,12 @@ public partial class SeedDataCoherenceTests
 
         //SUT
         Assert.That(Tickets, Has.All.Matches<GeneratedTicket>(t =>
-            customers[t.Customer].Product == t.Product && customers[t.Customer].Mode == t.Mode));
+            customers[t!.Customer].Product == t.Product && customers[t.Customer].Mode == t.Mode));
         Assert.That(Tickets.Where(t => t.Version is not null), Has.All.Matches<GeneratedTicket>(t =>
-            DemoCatalog.Product(t.Product).Versions.Single(v => v.Version == t.Version).ReleasedOn <= DateOnly.FromDateTime(t.OpenedAt.Date)));
-        Assert.That(Tickets.Where(t => t.TrapKind is null && t.Version is not null), Has.All.Matches<GeneratedTicket>(InCaseRange));
-        Assert.That(Tickets, Has.None.Matches<GeneratedTicket>(IsAnachronistic), "nessun messaggio cita una versione non ancora rilasciata");
-        Assert.That(Tickets.SelectMany(t => t.Messages).Where(m => m.Author == MessageAuthor.Agent), Has.All.Matches<GeneratedMessage>(InOfficeHours));
+            DemoCatalog.Product(t!.Product).Versions.Single(v => v.Version == t.Version).ReleasedOn <= DateOnly.FromDateTime(t.OpenedAt.Date)));
+        Assert.That(Tickets.Where(t => t.TrapKind is null && t.Version is not null), Has.All.Matches<GeneratedTicket>(x => InCaseRange(x!)));
+        Assert.That(Tickets, Has.None.Matches<GeneratedTicket>(x => IsAnachronistic(x!)), "nessun messaggio cita una versione non ancora rilasciata");
+        Assert.That(Tickets.SelectMany(t => t.Messages).Where(m => m.Author == MessageAuthor.Agent), Has.All.Matches<GeneratedMessage>(x => InOfficeHours(x!)));
         Assert.That(Tickets.Select(t => t.Number), Is.Unique.And.All.Match(@"^HT-20\d\d-\d{4}$"));
     }
 

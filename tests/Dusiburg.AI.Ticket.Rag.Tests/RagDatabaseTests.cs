@@ -119,7 +119,7 @@ public class RagDatabaseTests
         List<Chunk> chunks = await db.Chunks.AsNoTracking().Where(c => ids.Contains(c.Id)).ToListAsync(CancellationToken);
         Assert.That(hits, Has.Count.EqualTo(15));
         Assert.That(hits.Select(h => h.Distance), Is.Ordered);
-        Assert.That(chunks, Has.All.Matches<Chunk>(c => c.ProductId == docuArchive && (c.DeploymentMode == null || c.DeploymentMode == DeploymentMode.Saas)));
+        Assert.That(chunks, Has.All.Matches<Chunk>(c => c!.ProductId == docuArchive && (c.DeploymentMode == null || c.DeploymentMode == DeploymentMode.Saas)));
     }
 
     [Test]
